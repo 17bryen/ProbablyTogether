@@ -1096,6 +1096,12 @@ public static class DayNight
 			ready = array
 		});
 		Log.Info("dayNight: day " + nightDay + " ends: " + why + "; the night runs now");
+		if (Net.IsHost)
+		{
+			waiting.Clear();
+			pendingReady = false;
+			DayNightOuting.SetMapView(open: false);
+		}
 		Raise(DayNight.DayEnded, nightDay, why);
 		ApplyTabletServiceWrites();
 		bool consumed;
