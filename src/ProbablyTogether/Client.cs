@@ -193,7 +193,7 @@ internal static class Client
 		string text = ((Args.Bot != null) ? (LabHelloMod ?? Args.Get("--br-hello-mod")) : null);
 		if (string.IsNullOrEmpty(text) || text.Length > 12)
 		{
-			return "0.2.8";
+			return Mod.Version;
 		}
 		return text;
 	}

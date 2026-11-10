@@ -42,7 +42,7 @@ public sealed class VoiceOffline : VoiceBotBase
 		GameObject[] array = Resources.FindObjectsOfTypeAll<GameObject>();
 		foreach (GameObject val in array)
 		{
-			if ((Object)(object)val != (Object)null && ((Object)val).name.StartsWith("humangenome_accomplice_voice_", StringComparison.Ordinal))
+			if ((Object)(object)val != (Object)null && ((Object)val).name.StartsWith("bellun_probably_together_voice_", StringComparison.Ordinal))
 			{
 				return true;
 			}

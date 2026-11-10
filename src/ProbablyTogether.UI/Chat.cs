@@ -38,7 +38,7 @@ public static class Chat
 
 	public const string KeyBindOption = "chat";
 
-	private const string ChatKeySave = "humangenome_accomplice.chatKey";
+	private const string ChatKeySave = "bellun_probably_together.chatKey";
 
 	private static bool keyBindAdded;
 
@@ -109,7 +109,7 @@ public static class Chat
 			keyLoaded = true;
 			try
 			{
-				ES3.Save<int>("humangenome_accomplice.chatKey", (int)value);
+				ES3.Save<int>("bellun_probably_together.chatKey", (int)value);
 			}
 			catch (Exception ex)
 			{
@@ -144,9 +144,9 @@ public static class Chat
 		keyLoaded = true;
 		try
 		{
-			if (ES3.KeyExists("humangenome_accomplice.chatKey"))
+			if (ES3.KeyExists("bellun_probably_together.chatKey"))
 			{
-				chatKey = (KeyCode)ES3.Load<int>("humangenome_accomplice.chatKey");
+				chatKey = (KeyCode)ES3.Load<int>("bellun_probably_together.chatKey");
 			}
 		}
 		catch
@@ -169,7 +169,7 @@ public static class Chat
 		try
 		{
 			GameOptionRegistry.EnsureVanilla();
-			ModHelper.AddGameOptionKeyBind("humangenome_accomplice", "keybind", "chat", (Func<string>)(() => Lang.Tr("Co-op chat")), (Func<KeyCode>)(() => ChatKey), (Action<KeyCode>)delegate(KeyCode k)
+			ModHelper.AddGameOptionKeyBind("bellun_probably_together", "keybind", "chat", (Func<string>)(() => Lang.Tr("Co-op chat")), (Func<KeyCode>)(() => ChatKey), (Action<KeyCode>)delegate(KeyCode k)
 			{
 				ChatKey = k;
 			}, (Func<string>)(() => Lang.Tr("Opens the chat box when you are on a co-op server.")));
@@ -485,7 +485,7 @@ public static class Chat
 		input = null;
 		try
 		{
-			CustomUIBuilder obj2 = CustomUIManager.Instance.BuildInto(Overlay.InputRoot, true, "humangenome_accomplice.chat");
+			CustomUIBuilder obj2 = CustomUIManager.Instance.BuildInto(Overlay.InputRoot, true, "bellun_probably_together.chat");
 			obj2.AddInput(Lang.Tr("Say something to the shop..."), "", (Action<string>)null, "text", (Action<string>)null);
 			input = obj2.Last;
 			if ((Object)(object)input?.input != (Object)null)
@@ -498,7 +498,7 @@ public static class Chat
 					Submit();
 				});
 				input.SetPreferredSize(540f, 40f).SetFlexible(1f, -1f);
-				((Object)((Component)obj3).gameObject).name = "humangenome_accomplice_chat_input";
+				((Object)((Component)obj3).gameObject).name = "bellun_probably_together_chat_input";
 			}
 			else
 			{

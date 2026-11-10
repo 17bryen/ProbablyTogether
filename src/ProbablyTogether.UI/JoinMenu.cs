@@ -25,17 +25,17 @@ public static class JoinMenu
 		public string lastJoined = "";
 	}
 
-	public const string ButtonName = "humangenome_accomplice_join";
+	public const string ButtonName = "bellun_probably_together_join";
 
-	public const string WindowId = "humangenome_accomplice.join";
+	public const string WindowId = "bellun_probably_together.join";
 
-	public const string NoticeId = "humangenome_accomplice.notice";
+	public const string NoticeId = "bellun_probably_together.notice";
 
-	public const string AboutId = "humangenome_accomplice.about";
+	public const string AboutId = "bellun_probably_together.about";
 
-	private const string ServersSave = "humangenome_accomplice.servers";
+	private const string ServersSave = "bellun_probably_together.servers";
 
-	private const string NameSave = "humangenome_accomplice.name";
+	private const string NameSave = "bellun_probably_together.name";
 
 	private const int MaxRemembered = 8;
 
@@ -59,7 +59,7 @@ public static class JoinMenu
 
 	private static SavedServer rejoin;
 
-	public const string ModsId = "humangenome_accomplice.mods";
+	public const string ModsId = "bellun_probably_together.mods";
 
 	private const string WorkshopPage = "https://steamcommunity.com/sharedfiles/filedetails/?id=";
 
@@ -83,7 +83,7 @@ public static class JoinMenu
 		{
 			if ((Object)(object)CustomUIManager.Instance != (Object)null)
 			{
-				return CustomUIManager.Instance.IsOpen("humangenome_accomplice.join");
+				return CustomUIManager.Instance.IsOpen("bellun_probably_together.join");
 			}
 			return false;
 		}
@@ -115,7 +115,7 @@ public static class JoinMenu
 		{
 			if ((Object)(object)CustomUIManager.Instance != (Object)null)
 			{
-				return CustomUIManager.Instance.IsOpen("humangenome_accomplice.about");
+				return CustomUIManager.Instance.IsOpen("bellun_probably_together.about");
 			}
 			return false;
 		}
@@ -133,7 +133,7 @@ public static class JoinMenu
 		{
 			if ((Object)(object)CustomUIManager.Instance != (Object)null)
 			{
-				return CustomUIManager.Instance.IsOpen("humangenome_accomplice.mods");
+				return CustomUIManager.Instance.IsOpen("bellun_probably_together.mods");
 			}
 			return false;
 		}
@@ -183,7 +183,7 @@ public static class JoinMenu
 		{
 			Transform parent = moddingButton.transform.parent;
 			GameObject val = Object.Instantiate<GameObject>(moddingButton, parent);
-			((Object)val).name = "humangenome_accomplice_join";
+			((Object)val).name = "bellun_probably_together_join";
 			buttonLabel = val.GetComponentInChildren<TextMeshProUGUI>(true);
 			Button componentInChildren = val.GetComponentInChildren<Button>(true);
 			if ((Object)(object)buttonLabel == (Object)null || (Object)(object)componentInChildren == (Object)null)
@@ -249,13 +249,13 @@ public static class JoinMenu
 		CustomUIManager instance = CustomUIManager.Instance;
 		if (!((Object)(object)instance == (Object)null))
 		{
-			Button = instance.CreateWindow("humangenome_accomplice.menu", (string)null, "menu", (GameObject)null, (CustomUIManager.Style)0).AddButton(Lang.Tr("Join server"), (Action)OpenDialog, "join").SetSize(260f, 90f)
+			Button = instance.CreateWindow("bellun_probably_together.menu", (string)null, "menu", (GameObject)null, (CustomUIManager.Style)0).AddButton(Lang.Tr("Join server"), (Action)OpenDialog, "join").SetSize(260f, 90f)
 				.SetPosition(new Vector2(0f, -420f))
 				.Show()
 				.Get("join")?.root;
 			if ((Object)(object)Button != (Object)null)
 			{
-				((Object)Button).name = "humangenome_accomplice_join";
+				((Object)Button).name = "bellun_probably_together_join";
 			}
 			buttonLabel = null;
 			UsingFallbackButton = true;
@@ -400,6 +400,10 @@ public static class JoinMenu
 		return string.Join(",", list);
 	}
 
+	internal static bool UpstreamWarning;
+
+	internal static string UpstreamText => Lang.Tr("ProbablyTogether is also turned on. Turn it off in Mods and restart: the two cannot run together.");
+
 	public static void OpenDialog()
 	{
 		CustomUIManager instance = CustomUIManager.Instance;
@@ -414,7 +418,7 @@ public static class JoinMenu
 		}
 		List<SavedServer> list = LoadServers();
 		SavedServer savedServer = ((list.Count > 0) ? list[0] : null);
-		CustomUIBuilder obj = instance.CreateWindow("humangenome_accomplice.join", Lang.Tr("Join server"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 720f);
+		CustomUIBuilder obj = instance.CreateWindow("bellun_probably_together.join", Lang.Tr("Join server"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 720f);
 		string name;
 		bool flag = SteamName(out name);
 		obj.AddLabel(Lang.Tr("Server address (from your server panel, like 203.0.113.5:27700)"), (string)null).AddInput(Lang.Tr("address:port"), savedServer?.address ?? "", (Action<string>)null, "address", (Action<string>)null).AddLabel(Lang.Tr(flag ? "Your name in the shop (your Steam name)" : "Your name in the shop"), (string)null)
@@ -458,7 +462,7 @@ public static class JoinMenu
 			val3.richText = false;
 		}
 		NameReadOnly = (Object)(object)val3 != (Object)null && val3.readOnly;
-		SetStatus((LastMessage.Length > 0 && Net.ClientState == ClientState.Idle) ? LastMessage : "");
+		SetStatus(UpstreamWarning ? UpstreamText : ((LastMessage.Length > 0 && Net.ClientState == ClientState.Idle) ? LastMessage : ""));
 		RefitFonts();
 		Log.Info("ui: Join window opened (" + list.Count + " remembered server(s))");
 	}
@@ -469,7 +473,7 @@ public static class JoinMenu
 		CustomUIManager instance = CustomUIManager.Instance;
 		if (instance != null)
 		{
-			instance.CloseWindow("humangenome_accomplice.join");
+			instance.CloseWindow("bellun_probably_together.join");
 		}
 	}
 
@@ -654,10 +658,10 @@ public static class JoinMenu
 		}
 		if (AboutOpen)
 		{
-			instance.CloseWindow("humangenome_accomplice.about");
+			instance.CloseWindow("bellun_probably_together.about");
 		}
 		string[] array = AboutParagraphs(Chat.ChatKeyName);
-		CustomUIBuilder val = instance.CreateWindow("humangenome_accomplice.about", "ProbablyTogether".ToUpperInvariant(), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(620f, 560f);
+		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.about", Mod.Name.ToUpperInvariant(), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(620f, 560f);
 		for (int i = 0; i < array.Length; i++)
 		{
 			if (i > 0)
@@ -694,7 +698,7 @@ public static class JoinMenu
 		{
 			Lang.Tr("Online co-op for Probably Stolen: 2 to 4 players run one shop together. One player hosts from the main menu (Host a shop) or runs a dedicated server; the others join by address and password."),
 			Lang.Tr("One player serves the counter at a time while the others work the back room. The night starts when everyone is ready. Press {0} to chat.").Replace("{0}", chatKey ?? "Enter"),
-			Lang.Tr("A free, unofficial mod based on the upstream mod 0.2.8 by HumanGenome (MIT). Not made by or affiliated with Questing Goose Studio or tinyBuild.")
+			Mod.Name + " " + Mod.Version + ". " + Lang.Tr("A free, unofficial mod by a player, based on the upstream mod 0.2.8 by HumanGenome (MIT). Not made by or affiliated with Questing Goose Studio or tinyBuild.")
 		};
 	}
 
@@ -731,7 +735,7 @@ public static class JoinMenu
 	{
 		if (AboutOpen)
 		{
-			CustomUIManager.Instance.CloseWindow("humangenome_accomplice.about");
+			CustomUIManager.Instance.CloseWindow("bellun_probably_together.about");
 		}
 	}
 
@@ -1019,9 +1023,9 @@ public static class JoinMenu
 	{
 		try
 		{
-			if (ES3.KeyExists("humangenome_accomplice.name"))
+			if (ES3.KeyExists("bellun_probably_together.name"))
 			{
-				string text = ES3.Load<string>("humangenome_accomplice.name");
+				string text = ES3.Load<string>("bellun_probably_together.name");
 				if (!string.IsNullOrWhiteSpace(text))
 				{
 					return text;
@@ -1056,7 +1060,7 @@ public static class JoinMenu
 	{
 		try
 		{
-			ES3.Save<string>("humangenome_accomplice.name", n);
+			ES3.Save<string>("bellun_probably_together.name", n);
 		}
 		catch (Exception ex)
 		{
@@ -1068,11 +1072,11 @@ public static class JoinMenu
 	{
 		try
 		{
-			if (!ES3.KeyExists("humangenome_accomplice.servers"))
+			if (!ES3.KeyExists("bellun_probably_together.servers"))
 			{
 				return new List<SavedServer>();
 			}
-			List<SavedServer> list = JsonConvert.DeserializeObject<List<SavedServer>>(ES3.Load<string>("humangenome_accomplice.servers"), new JsonSerializerSettings
+			List<SavedServer> list = JsonConvert.DeserializeObject<List<SavedServer>>(ES3.Load<string>("bellun_probably_together.servers"), new JsonSerializerSettings
 			{
 				TypeNameHandling = (TypeNameHandling)0
 			});
@@ -1098,7 +1102,7 @@ public static class JoinMenu
 			{
 				list.RemoveAt(list.Count - 1);
 			}
-			ES3.Save<string>("humangenome_accomplice.servers", JsonConvert.SerializeObject((object)list));
+			ES3.Save<string>("bellun_probably_together.servers", JsonConvert.SerializeObject((object)list));
 		}
 		catch (Exception ex)
 		{
@@ -1182,7 +1186,7 @@ public static class JoinMenu
 		}
 		string text = notice;
 		notice = null;
-		CustomUIBuilder val = instance.CreateWindow("humangenome_accomplice.notice", Lang.Tr("Disconnected"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 300f);
+		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.notice", Lang.Tr("Disconnected"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 300f);
 		if (!string.IsNullOrEmpty(noticeServer))
 		{
 			val.AddLabel(Lang.Trf("From {0}:", Kit.Name(noticeServer)), (string)null);
@@ -1193,7 +1197,7 @@ public static class JoinMenu
 			CustomUIManager instance2 = CustomUIManager.Instance;
 			if (instance2 != null)
 			{
-				instance2.CloseWindow("humangenome_accomplice.notice");
+				instance2.CloseWindow("bellun_probably_together.notice");
 			}
 			OpenDialog();
 		}, "rejoin").AddButton(Lang.Tr("OK"), (Action)delegate
@@ -1201,7 +1205,7 @@ public static class JoinMenu
 			CustomUIManager instance2 = CustomUIManager.Instance;
 			if (instance2 != null)
 			{
-				instance2.CloseWindow("humangenome_accomplice.notice");
+				instance2.CloseWindow("bellun_probably_together.notice");
 			}
 		}, "ok");
 		val.Center().Show();
@@ -1308,12 +1312,12 @@ public static class JoinMenu
 			return false;
 		}
 		modsRebuilding = true;
-		instance.CloseWindow("humangenome_accomplice.mods");
+		instance.CloseWindow("bellun_probably_together.mods");
 		modsRebuilding = false;
 		modsNeeded = list;
 		modsExtra = code == "extramods";
 		bool flag = !modsExtra && HasWorkshop(list);
-		CustomUIBuilder val = instance.CreateWindow("humangenome_accomplice.mods", Lang.Tr("Mods for this server"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 640f);
+		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.mods", Lang.Tr("Mods for this server"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 640f);
 		val.AddLabel(Kit.Safe(Intro(list.Count, flag)), "reason");
 		val.AddSpace(4f).BeginScroll((float)list.Count * 48f);
 		for (int i = 0; i < list.Count; i++)
@@ -1344,7 +1348,7 @@ public static class JoinMenu
 			CustomUIManager instance2 = CustomUIManager.Instance;
 			if (instance2 != null)
 			{
-				instance2.CloseWindow("humangenome_accomplice.mods");
+				instance2.CloseWindow("bellun_probably_together.mods");
 			}
 		}, "closemods");
 		val.OnClose((Action)OnModsClosed).Center();
@@ -1623,11 +1627,11 @@ public static class JoinMenu
 		CustomUIManager instance = CustomUIManager.Instance;
 		if (instance != null)
 		{
-			instance.CloseWindow("humangenome_accomplice.mods");
+			instance.CloseWindow("bellun_probably_together.mods");
 		}
 		if (instance != null)
 		{
-			instance.CloseWindow("humangenome_accomplice.join");
+			instance.CloseWindow("bellun_probably_together.join");
 		}
 		try
 		{

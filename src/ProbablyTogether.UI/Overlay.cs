@@ -6,7 +6,7 @@ namespace ProbablyTogether.UI;
 
 internal static class Overlay
 {
-	internal const string RootName = "humangenome_accomplice_presence";
+	internal const string RootName = "bellun_probably_together_presence";
 
 	internal static RectTransform Root;
 
@@ -49,12 +49,12 @@ internal static class Overlay
 		{
 			return false;
 		}
-		Transform val = ((Transform)layerRoot).Find("humangenome_accomplice_presence");
+		Transform val = ((Transform)layerRoot).Find("bellun_probably_together_presence");
 		if ((Object)(object)val != (Object)null)
 		{
 			Object.Destroy((Object)(object)((Component)val).gameObject);
 		}
-		Root = Kit.Rect("humangenome_accomplice_presence", (Transform)(object)layerRoot);
+		Root = Kit.Rect("bellun_probably_together_presence", (Transform)(object)layerRoot);
 		Kit.Stretch(Root);
 		((Transform)Root).SetAsFirstSibling();
 		Cursors = Kit.Rect("cursors", (Transform)(object)Root);
@@ -67,23 +67,23 @@ internal static class Overlay
 		ChatArea = Kit.Rect("chat_area", (Transform)(object)Root);
 		Kit.Pin(ChatArea, new Vector2(0f, 0f), new Vector2(16f, 16f));
 		ChatArea.sizeDelta = new Vector2(540f, 360f);
-		RectTransform val2 = Kit.Rect("humangenome_accomplice_presence_ready", (Transform)(object)layerRoot);
+		RectTransform val2 = Kit.Rect("bellun_probably_together_presence_ready", (Transform)(object)layerRoot);
 		Kit.Stretch(val2);
 		((Transform)val2).SetSiblingIndex(1);
 		ReadyArea = Kit.Rect("ready_area", (Transform)(object)val2);
 		Kit.Pin(ReadyArea, new Vector2(0.5f, 1f), new Vector2(0f, -16f));
 		ReadyArea.sizeDelta = new Vector2(10f, 10f);
-		RectTransform val3 = Kit.Rect("humangenome_accomplice_presence_newrun", (Transform)(object)layerRoot);
+		RectTransform val3 = Kit.Rect("bellun_probably_together_presence_newrun", (Transform)(object)layerRoot);
 		Kit.Stretch(val3);
 		((Transform)val3).SetSiblingIndex(2);
 		NewRunArea = Kit.Rect("newrun_area", (Transform)(object)val3);
 		Kit.Pin(NewRunArea, new Vector2(1f, 0f), new Vector2(-16f, 16f));
 		NewRunArea.sizeDelta = new Vector2(10f, 10f);
-		InputRoot = Kit.Rect("humangenome_accomplice_presence_chatinput", (Transform)(object)layerRoot);
+		InputRoot = Kit.Rect("bellun_probably_together_presence_chatinput", (Transform)(object)layerRoot);
 		Kit.Pin(InputRoot, new Vector2(0f, 0f), new Vector2(16f, 16f));
 		InputRoot.sizeDelta = new Vector2(540f, 44f);
 		((Transform)InputRoot).SetSiblingIndex(3);
-		LoadingRoot = Kit.Rect("humangenome_accomplice_presence_loading", (Transform)(object)layerRoot);
+		LoadingRoot = Kit.Rect("bellun_probably_together_presence_loading", (Transform)(object)layerRoot);
 		Kit.Stretch(LoadingRoot);
 		((Transform)LoadingRoot).SetAsLastSibling();
 		((Component)LoadingRoot).gameObject.SetActive(false);

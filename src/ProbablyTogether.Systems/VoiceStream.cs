@@ -427,7 +427,7 @@ internal sealed class VoiceStream
 		{
 			if ((Object)(object)go == (Object)null)
 			{
-				go = new GameObject("humangenome_accomplice_voice_" + Player);
+				go = new GameObject("bellun_probably_together_voice_" + Player);
 				Object.DontDestroyOnLoad((Object)(object)go);
 				src = go.AddComponent<AudioSource>();
 				src.playOnAwake = false;
@@ -435,7 +435,7 @@ internal sealed class VoiceStream
 				src.spatialBlend = 0f;
 				src.volume = 1f;
 				src.priority = 16;
-				clip = AudioClip.Create("humangenome_accomplice_voice_" + Player, 32000, 1, 16000, false);
+				clip = AudioClip.Create("bellun_probably_together_voice_" + Player, 32000, 1, 16000, false);
 				src.clip = clip;
 			}
 			virtualClock = VoiceAudioState.NoAudioOutput;

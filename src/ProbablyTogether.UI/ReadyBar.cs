@@ -141,7 +141,7 @@ public static class ReadyBar
 		{
 			Press(!(current?.LocalReady ?? false));
 		}, out buttonLabel);
-		((Object)((Component)button).gameObject).name = "humangenome_accomplice_ready_button";
+		((Object)((Component)button).gameObject).name = "bellun_probably_together_ready_button";
 	}
 
 	internal static void Tick()

@@ -18,11 +18,11 @@ public sealed class UiNotice : BotScript
 		Do("waiting", () => "in the shop; stop the server now");
 		WaitFor("dropped", 300f, () => Net.Role == ProbablyTogether.Role.Off, () => "role " + Net.Role);
 		WaitFor("at-menu", 60f, () => Ui.AtMenu && (Object)(object)MainMenuUIController.Instance != (Object)null, () => "scene " + BotProbes.Scene);
-		WaitFor("notice", 20f, () => (Object)(object)CustomUIManager.Instance != (Object)null && CustomUIManager.Instance.IsOpen("humangenome_accomplice.notice"), () => "last message '" + JoinMenu.LastMessage + "', reason '" + Net.LastDisconnectReason + "'");
+		WaitFor("notice", 20f, () => (Object)(object)CustomUIManager.Instance != (Object)null && CustomUIManager.Instance.IsOpen("bellun_probably_together.notice"), () => "last message '" + JoinMenu.LastMessage + "', reason '" + Net.LastDisconnectReason + "'");
 		Check("plain", () => JoinMenu.LastMessage.Length > 0 && !JoinMenu.LastMessage.Contains("refused ("), delegate
 		{
 			string[] obj = new string[5] { "notice '", null, null, null, null };
-			CustomUIWindow window = CustomUIManager.Instance.GetWindow("humangenome_accomplice.notice");
+			CustomUIWindow window = CustomUIManager.Instance.GetWindow("bellun_probably_together.notice");
 			object obj2;
 			if (window == null)
 			{

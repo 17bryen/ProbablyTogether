@@ -145,7 +145,7 @@ public sealed class PicsLead : PicsBase
 	private static void Click()
 	{
 		RectTransform newRunArea = Overlay.NewRunArea;
-		Button? obj = ((newRunArea != null) ? ((IEnumerable<Button>)((Component)newRunArea).GetComponentsInChildren<Button>(true)).FirstOrDefault((Func<Button, bool>)((Button x) => ((Object)((Component)x).gameObject).name == "humangenome_accomplice_newrun_button")) : null);
+		Button? obj = ((newRunArea != null) ? ((IEnumerable<Button>)((Component)newRunArea).GetComponentsInChildren<Button>(true)).FirstOrDefault((Func<Button, bool>)((Button x) => ((Object)((Component)x).gameObject).name == "bellun_probably_together_newrun_button")) : null);
 		if ((Object)(object)obj == (Object)null)
 		{
 			throw new Exception("no plate button");

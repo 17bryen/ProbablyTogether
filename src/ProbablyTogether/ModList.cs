@@ -78,7 +78,10 @@ internal static class ModList
 		}
 	}
 
-	internal static Info Own => Find(mods, "humangenome_accomplice");
+	internal static Info Own => Find(mods, "bellun_probably_together");
+
+	/// The upstream mod is also enabled; both would patch the same game code.
+	internal static bool UpstreamAlsoOn => Find(mods, Mod.UpstreamId) != null;
 
 	internal static void Enable()
 	{
@@ -149,7 +152,7 @@ internal static class ModList
 
 	private static bool IsOurs(string id)
 	{
-		return string.Equals(id, "humangenome_accomplice", StringComparison.Ordinal);
+		return string.Equals(id, "bellun_probably_together", StringComparison.Ordinal);
 	}
 
 	internal static string FolderHash(string folder)

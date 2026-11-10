@@ -36,7 +36,7 @@ public sealed class EscMenu : EscBase
 		Check("invite-above-main", delegate
 		{
 			List<(string, Rect, string)> list = EscBase.Rows();
-			int num = list.FindIndex(((string name, Rect r, string label) x) => x.name == "humangenome_accomplice_invite");
+			int num = list.FindIndex(((string name, Rect r, string label) x) => x.name == "bellun_probably_together_invite");
 			if (num >= 0 && num + 1 < list.Count && list[num + 1].Item3 == EscapeMenu.MainMenuLabel)
 			{
 				(string, Rect, string) tuple = list[num + 1];
@@ -58,7 +58,7 @@ public sealed class EscMenu : EscBase
 		{
 			copies0 = EscapeMenu.Copies;
 			lines0 = Chat.Lines.Count;
-			((UnityEvent)EscBase.Esc.menuPanel.GetComponentsInChildren<Button>(true).First((Button x) => ((Object)((Component)x).gameObject).name == "humangenome_accomplice_invite").onClick).Invoke();
+			((UnityEvent)EscBase.Esc.menuPanel.GetComponentsInChildren<Button>(true).First((Button x) => ((Object)((Component)x).gameObject).name == "bellun_probably_together_invite").onClick).Invoke();
 			return "clicked Copy invite";
 		});
 		Check("copied", () => EscapeMenu.Copies == copies0 + 1 && EscapeMenu.LastCopied == Net.ServerAddress && Net.ServerAddress.Length > 0, () => "copies " + EscapeMenu.Copies + ", copied " + EscapeMenu.LastCopied.Length + " chars, address " + Net.ServerAddress.Length + " chars");

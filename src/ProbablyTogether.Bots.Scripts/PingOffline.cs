@@ -24,7 +24,7 @@ public sealed class PingOffline : PingBotBase
 	{
 		Check("offline", () => !Net.IsOnline && Net.Role == ProbablyTogether.Role.Off, () => "role " + Net.Role);
 		WaitFor("menu", 180f, () => BotProbes.Scene == "EmporiumMenu" && (Object)(object)NewGameData.Instance != (Object)null, () => "scene " + BotProbes.Scene);
-		WaitFor("key-row", 30f, () => GameOptionRegistry.Find(ModHelper.GameOptionId("humangenome_accomplice", "ping")) != null, () => "Options > Key binds row '" + ModHelper.GameOptionId("humangenome_accomplice", "ping") + "', key " + ((object)Pointing.PointKey).ToString() + ", chat key " + ((object)Chat.ChatKey).ToString());
+		WaitFor("key-row", 30f, () => GameOptionRegistry.Find(ModHelper.GameOptionId("bellun_probably_together", "ping")) != null, () => "Options > Key binds row '" + ModHelper.GameOptionId("bellun_probably_together", "ping") + "', key " + ((object)Pointing.PointKey).ToString() + ", chat key " + ((object)Chat.ChatKey).ToString());
 		Delay("menu-settle", 3f);
 		Do("new-run", delegate
 		{

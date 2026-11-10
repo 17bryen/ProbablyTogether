@@ -383,7 +383,7 @@ internal static class Server
 		string text = ((Args.Bot != null) ? Args.Get("--br-hello-mod") : null);
 		if (string.IsNullOrEmpty(text) || text.Length > 12)
 		{
-			return "0.2.8";
+			return Mod.Version;
 		}
 		return text;
 	}
@@ -400,7 +400,7 @@ internal static class Server
 		}
 		else if (h.protocol != 2)
 		{
-			Refuse(p, "protocol", "Version mismatch: the server runs ProbablyTogether protocol " + 2 + " (mod 0.2.8), you have protocol " + h.protocol + " (mod " + Text.Clip(h.mod ?? "?", 40) + "). Update the mod to match the server.");
+			Refuse(p, "protocol", "Version mismatch: the server runs " + Mod.Name + " protocol " + Protocol.Version + " (mod " + Mod.Version + "), you have protocol " + h.protocol + " (mod " + Text.Clip(h.mod ?? "?", 40) + "). Update the mod to match the server.");
 		}
 		else if (!string.Equals(h.game, Application.version, StringComparison.Ordinal))
 		{
@@ -541,7 +541,7 @@ internal static class Server
 			{
 				return true;
 			}
-			Refuse(p, "mods", "This server runs mods (" + ModList.Names(list) + "). Update ProbablyTogether on the Steam Workshop (restart Steam), then join again.");
+			Refuse(p, "mods", "This server runs mods (" + ModList.Names(list) + "). Get the same copy of " + Mod.Name + " as the host, then join again.");
 			return false;
 		}
 		ModList.Diff diff = ModList.Compare(list, list2);
@@ -628,7 +628,8 @@ internal static class Server
 			Conn = new Conn("host (this PC)"),
 			State = PeerState.Ready,
 			OpenedMs = Clock.Ms,
-			ReadyMs = Clock.Ms
+			ReadyMs = Clock.Ms,
+			ModVersion = Mod.Version
 		};
 		string text = Text.Clip((name ?? "").Trim(), 24);
 		if (text.Length == 0)

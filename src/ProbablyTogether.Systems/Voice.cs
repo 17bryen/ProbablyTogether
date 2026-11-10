@@ -38,11 +38,11 @@ public static class Voice
 
 	internal const float MicIdleSeconds = 30f;
 
-	private const string KeySave = "humangenome_accomplice.voiceKey";
+	private const string KeySave = "bellun_probably_together.voiceKey";
 
-	private const string OnSave = "humangenome_accomplice.voiceOn";
+	private const string OnSave = "bellun_probably_together.voiceOn";
 
-	private const string VolumeSave = "humangenome_accomplice.voiceVolume";
+	private const string VolumeSave = "bellun_probably_together.voiceVolume";
 
 	public const string KeyBindOption = "voice_key";
 
@@ -200,7 +200,7 @@ public static class Voice
 			prefsLoaded = true;
 			Save(delegate
 			{
-				ES3.Save<float>("humangenome_accomplice.voiceVolume", volume);
+				ES3.Save<float>("bellun_probably_together.voiceVolume", volume);
 			});
 		}
 	}
@@ -218,7 +218,7 @@ public static class Voice
 			prefsLoaded = true;
 			Save(delegate
 			{
-				ES3.Save<int>("humangenome_accomplice.voiceKey", (int)talkKey);
+				ES3.Save<int>("bellun_probably_together.voiceKey", (int)talkKey);
 			});
 		}
 	}
@@ -660,17 +660,17 @@ public static class Voice
 		prefsLoaded = true;
 		try
 		{
-			if (ES3.KeyExists("humangenome_accomplice.voiceOn"))
+			if (ES3.KeyExists("bellun_probably_together.voiceOn"))
 			{
-				enabled = ES3.Load<bool>("humangenome_accomplice.voiceOn");
+				enabled = ES3.Load<bool>("bellun_probably_together.voiceOn");
 			}
-			if (ES3.KeyExists("humangenome_accomplice.voiceVolume"))
+			if (ES3.KeyExists("bellun_probably_together.voiceVolume"))
 			{
-				volume = Mathf.Clamp01(ES3.Load<float>("humangenome_accomplice.voiceVolume"));
+				volume = Mathf.Clamp01(ES3.Load<float>("bellun_probably_together.voiceVolume"));
 			}
-			if (ES3.KeyExists("humangenome_accomplice.voiceKey"))
+			if (ES3.KeyExists("bellun_probably_together.voiceKey"))
 			{
-				talkKey = (KeyCode)ES3.Load<int>("humangenome_accomplice.voiceKey");
+				talkKey = (KeyCode)ES3.Load<int>("bellun_probably_together.voiceKey");
 			}
 		}
 		catch (Exception ex)
@@ -705,7 +705,7 @@ public static class Voice
 		enabled = on;
 		Save(delegate
 		{
-			ES3.Save<bool>("humangenome_accomplice.voiceOn", enabled);
+			ES3.Save<bool>("bellun_probably_together.voiceOn", enabled);
 		});
 		Log.Info("voice: turned " + (on ? "on" : "off") + " in Options");
 		if (!on)
@@ -1069,16 +1069,16 @@ public static class Voice
 		try
 		{
 			GameOptionRegistry.EnsureVanilla();
-			ModHelper.AddGameOptionSection("humangenome_accomplice", "voice", (Func<string>)(() => Lang.Tr("Co-op voice")));
-			ModHelper.AddGameOptionToggle("humangenome_accomplice", "voice", "voice_on", (Func<string>)(() => Lang.Tr("Voice chat")), (Func<bool>)(() => Enabled), (Action<bool>)delegate(bool v)
+			ModHelper.AddGameOptionSection("bellun_probably_together", "voice", (Func<string>)(() => Lang.Tr("Co-op voice")));
+			ModHelper.AddGameOptionToggle("bellun_probably_together", "voice", "voice_on", (Func<string>)(() => Lang.Tr("Voice chat")), (Func<bool>)(() => Enabled), (Action<bool>)delegate(bool v)
 			{
 				Enabled = v;
 			}, (Func<string>)(() => Lang.Tr("Hear the other players and talk to them (hold the talk key) on a co-op server.")));
-			ModHelper.AddGameOptionSlider("humangenome_accomplice", "voice", "voice_volume", (Func<string>)(() => Lang.Tr("Voice volume")), (Func<float>)(() => Volume), (Action<float>)delegate(float v)
+			ModHelper.AddGameOptionSlider("bellun_probably_together", "voice", "voice_volume", (Func<string>)(() => Lang.Tr("Voice volume")), (Func<float>)(() => Volume), (Action<float>)delegate(float v)
 			{
 				Volume = v;
 			}, 0f, 1f, false, (Func<string>)null, (Func<float, string>)null);
-			ModHelper.AddGameOptionKeyBind("humangenome_accomplice", "keybind", "voice_key", (Func<string>)(() => Lang.Tr("Co-op push to talk")), (Func<KeyCode>)(() => TalkKey), (Action<KeyCode>)delegate(KeyCode k)
+			ModHelper.AddGameOptionKeyBind("bellun_probably_together", "keybind", "voice_key", (Func<string>)(() => Lang.Tr("Co-op push to talk")), (Func<KeyCode>)(() => TalkKey), (Action<KeyCode>)delegate(KeyCode k)
 			{
 				TalkKey = k;
 			}, (Func<string>)(() => Lang.Tr("Hold it to talk to everyone in the shop on a co-op server.")));
@@ -1112,7 +1112,7 @@ public static class Voice
 			string name = player.Value.Name;
 			try
 			{
-				ModHelper.AddGameOptionToggle("humangenome_accomplice", "voice", "voice_mute_" + id, (Func<string>)(() => Lang.Trf("Mute {0}", Kit.Name(Net.Players.TryGetValue(id, out var value) ? value.Name : name))), (Func<bool>)(() => IsMuted(id)), (Action<bool>)delegate(bool v)
+				ModHelper.AddGameOptionToggle("bellun_probably_together", "voice", "voice_mute_" + id, (Func<string>)(() => Lang.Trf("Mute {0}", Kit.Name(Net.Players.TryGetValue(id, out var value) ? value.Name : name))), (Func<bool>)(() => IsMuted(id)), (Action<bool>)delegate(bool v)
 				{
 					SetMuted(id, v);
 				}, (Func<string>)(() => Lang.Tr("Only you stop hearing them, while they stay connected.")));
@@ -1136,7 +1136,7 @@ public static class Voice
 		}
 		try
 		{
-			ModHelper.RemoveGameOption("humangenome_accomplice", "voice_mute_" + id);
+			ModHelper.RemoveGameOption("bellun_probably_together", "voice_mute_" + id);
 		}
 		catch
 		{

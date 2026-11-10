@@ -7,7 +7,7 @@ namespace ProbablyTogether.Systems;
 /// A key that releases the counter lock so another player can take the customer.
 internal static class StepAway
 {
-	private const string SaveKey = "humangenome_accomplice.stepAwayKey";
+	private const string SaveKey = "bellun_probably_together.stepAwayKey";
 
 	private static KeyCode key = KeyCode.C;
 
@@ -80,7 +80,7 @@ internal static class StepAway
 		try
 		{
 			GameOptionRegistry.EnsureVanilla();
-			ModHelper.AddGameOptionKeyBind("humangenome_accomplice", "keybind", "stepaway", (Func<string>)(() => Lang.Tr("Co-op step away")), (Func<KeyCode>)(() => Key), (Action<KeyCode>)delegate(KeyCode k)
+			ModHelper.AddGameOptionKeyBind("bellun_probably_together", "keybind", "stepaway", (Func<string>)(() => Lang.Tr("Co-op step away")), (Func<KeyCode>)(() => Key), (Action<KeyCode>)delegate(KeyCode k)
 			{
 				Key = k;
 			}, (Func<string>)(() => Lang.Tr("On a co-op server: leave the counter so another player can take the customer.")));

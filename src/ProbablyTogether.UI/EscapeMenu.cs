@@ -11,7 +11,7 @@ namespace ProbablyTogether.UI;
 
 internal static class EscapeMenu
 {
-	internal const string InviteName = "humangenome_accomplice_invite";
+	internal const string InviteName = "bellun_probably_together_invite";
 
 	internal const string InviteText = "Copy invite";
 
@@ -156,7 +156,7 @@ internal static class EscapeMenu
 		Button[] componentsInChildren = ((Component)transform).GetComponentsInChildren<Button>(true);
 		foreach (Button val in componentsInChildren)
 		{
-			if (!((Object)(object)val == (Object)null) && !(((Object)((Component)val).gameObject).name == "humangenome_accomplice_invite") && Calls(val, "OnMainMenu") && (Object)(object)mainLabel == (Object)null)
+			if (!((Object)(object)val == (Object)null) && !(((Object)((Component)val).gameObject).name == "bellun_probably_together_invite") && Calls(val, "OnMainMenu") && (Object)(object)mainLabel == (Object)null)
 			{
 				mainLabel = ((Component)val).GetComponentInChildren<TextMeshProUGUI>(true);
 				TextMeshProUGUI obj = mainLabel;
@@ -328,7 +328,7 @@ internal static class EscapeMenu
 		Button[] componentsInChildren = ((Component)transform).GetComponentsInChildren<Button>(true);
 		foreach (Button val3 in componentsInChildren)
 		{
-			if (!((Object)(object)val3 == (Object)null) && !(((Object)((Component)val3).gameObject).name == "humangenome_accomplice_invite"))
+			if (!((Object)(object)val3 == (Object)null) && !(((Object)((Component)val3).gameObject).name == "bellun_probably_together_invite"))
 			{
 				if (Calls(val3, "OnOption"))
 				{
@@ -353,7 +353,7 @@ internal static class EscapeMenu
 			return null;
 		}
 		GameObject val6 = Object.Instantiate<GameObject>(((Component)val4).gameObject, val4.parent);
-		((Object)val6).name = "humangenome_accomplice_invite";
+		((Object)val6).name = "bellun_probably_together_invite";
 		MonoBehaviour[] componentsInChildren2 = val6.GetComponentsInChildren<MonoBehaviour>(true);
 		foreach (MonoBehaviour val7 in componentsInChildren2)
 		{

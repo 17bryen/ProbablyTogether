@@ -130,7 +130,7 @@ public abstract class VoiceBotBase : BotScript
 
 	protected static GameOptionRegistry.Entry Option(string id)
 	{
-		return GameOptionRegistry.Find(ModHelper.GameOptionId("humangenome_accomplice", id));
+		return GameOptionRegistry.Find(ModHelper.GameOptionId("bellun_probably_together", id));
 	}
 
 	protected void Prelude(string me, string other)

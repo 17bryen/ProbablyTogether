@@ -417,7 +417,7 @@ public sealed class UiCoop : UiCoopBase
 		{
 			return null;
 		}
-		Button val = ((IEnumerable<Button>)((Component)Overlay.NewRunArea).GetComponentsInChildren<Button>(true)).FirstOrDefault((Func<Button, bool>)((Button b) => ((Object)((Component)b).gameObject).name == "humangenome_accomplice_newrun_button"));
+		Button val = ((IEnumerable<Button>)((Component)Overlay.NewRunArea).GetComponentsInChildren<Button>(true)).FirstOrDefault((Func<Button, bool>)((Button b) => ((Object)((Component)b).gameObject).name == "bellun_probably_together_newrun_button"));
 		if (!((Object)(object)val != (Object)null))
 		{
 			return null;

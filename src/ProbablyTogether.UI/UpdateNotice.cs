@@ -13,7 +13,7 @@ namespace ProbablyTogether.UI;
 
 public static class UpdateNotice
 {
-	public const string WindowId = "humangenome_accomplice.update";
+	public const string WindowId = "bellun_probably_together.update";
 
 	private const float PollSeconds = 5f;
 
@@ -47,7 +47,7 @@ public static class UpdateNotice
 		{
 			if ((Object)(object)CustomUIManager.Instance != (Object)null)
 			{
-				return CustomUIManager.Instance.IsOpen("humangenome_accomplice.update");
+				return CustomUIManager.Instance.IsOpen("bellun_probably_together.update");
 			}
 			return false;
 		}
@@ -71,7 +71,7 @@ public static class UpdateNotice
 		if (show && !JoinMenu.DialogOpen && Net.ClientState == ClientState.Idle)
 		{
 			CustomUIManager instance = CustomUIManager.Instance;
-			if (instance != null && !instance.IsOpen("humangenome_accomplice.notice"))
+			if (instance != null && !instance.IsOpen("bellun_probably_together.notice"))
 			{
 				Show();
 			}
@@ -188,7 +188,7 @@ public static class UpdateNotice
 	private static bool Ready()
 	{
 		string text = DiskVersion();
-		if (text.Length == 0 || text == "0.2.8")
+		if (text.Length == 0 || text == Mod.Version)
 		{
 			return false;
 		}
@@ -198,7 +198,7 @@ public static class UpdateNotice
 		}
 		State = "ready";
 		Say("ProbablyTogether " + text + " is downloaded. Restart the game to use it.");
-		Log.Info("update: ProbablyTogether " + text + " is on disk, 0.2.8 is running: restart needed");
+		Log.Info("update: " + Mod.Name + " " + text + " is on disk, " + Mod.Version + " is running: restart needed");
 		return true;
 	}
 
@@ -260,9 +260,9 @@ public static class UpdateNotice
 		}
 		if (IsOpen)
 		{
-			instance.CloseWindow("humangenome_accomplice.update");
+			instance.CloseWindow("bellun_probably_together.update");
 		}
-		CustomUIBuilder val = instance.CreateWindow("humangenome_accomplice.update", Lang.Tr("ProbablyTogether update"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 260f);
+		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.update", Lang.Tr("ProbablyTogether update"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 260f);
 		val.AddLabel(Lang.Tr(Line), "line");
 		HorizontalLayoutGroup val2 = Kit.Row((Transform)(object)val.CurrentContainer, "row", 8f);
 		new CustomUIBuilder(instance, val.Handle, (RectTransform)((Component)val2).transform).AddFlexibleSpace().AddButton(Lang.Tr("OK"), (Action)delegate
@@ -270,7 +270,7 @@ public static class UpdateNotice
 			CustomUIManager instance2 = CustomUIManager.Instance;
 			if (instance2 != null)
 			{
-				instance2.CloseWindow("humangenome_accomplice.update");
+				instance2.CloseWindow("bellun_probably_together.update");
 			}
 		}, "ok");
 		CustomUIWindow obj = val.Center().Show();

@@ -41,7 +41,7 @@ internal static class Boot
 		if (!Started)
 		{
 			Started = true;
-			Log.Info("the upstream mod 0.2.8 (protocol " + 2 + ") on game " + Application.version + "; switches: " + Args.Describe());
+			Log.Info(Mod.Name + " " + Mod.Version + " (protocol " + Protocol.Version + ", based on the upstream mod 0.2.8) on game " + Application.version + "; switches: " + Args.Describe());
 			if (Paths.Redirecting)
 			{
 				Log.Info("data folder: " + Paths.Root + " (saves, save index and settings; the account folder " + Paths.Original + " keeps only the mod list and the studio's trust records)");

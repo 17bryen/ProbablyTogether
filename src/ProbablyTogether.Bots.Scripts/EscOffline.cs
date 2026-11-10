@@ -132,15 +132,15 @@ public sealed class EscOffline : EscBase
 		});
 		WaitFor("zh-join-window", 10f, () => JoinMenu.DialogOpen, () => "open " + JoinMenu.DialogOpen);
 		Delay("pic-zh-join", ((Args.Get("--br-esc-hold") ?? "") == "1") ? 6f : 0.1f);
-		Check("zh-join-texts", () => WinText("humangenome_accomplice.join", "find") == "服务器列表" && WinText("humangenome_accomplice.join", "join") == "加入", () => "Server list '" + WinText("humangenome_accomplice.join", "find") + "', Join '" + WinText("humangenome_accomplice.join", "join") + "'");
+		Check("zh-join-texts", () => WinText("bellun_probably_together.join", "find") == "服务器列表" && WinText("bellun_probably_together.join", "join") == "加入", () => "Server list '" + WinText("bellun_probably_together.join", "find") + "', Join '" + WinText("bellun_probably_together.join", "join") + "'");
 		Check("zh-join-font", delegate
 		{
-			CustomUIWindow obj = Win("humangenome_accomplice.join");
+			CustomUIWindow obj = Win("bellun_probably_together.join");
 			TextMeshProUGUI t = ((obj == null) ? null : obj.Get("find")?.text);
 			return (Object)(object)t != (Object)null && (Object)(object)((TMP_Text)t).font != (Object)null && ((TMP_Text)t).text.All((char ch) => ch < '\u0080' || ((TMP_Text)t).font.HasCharacter(ch, true, true));
 		}, delegate
 		{
-			CustomUIWindow obj = Win("humangenome_accomplice.join");
+			CustomUIWindow obj = Win("bellun_probably_together.join");
 			object obj2;
 			if (obj == null)
 			{

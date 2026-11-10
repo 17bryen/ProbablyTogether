@@ -11,7 +11,7 @@ namespace ProbablyTogether.UI;
 
 public static class NewRun
 {
-	public const string ButtonName = "humangenome_accomplice_newrun_button";
+	public const string ButtonName = "bellun_probably_together_newrun_button";
 
 	private static RectTransform plate;
 
@@ -142,7 +142,7 @@ public static class NewRun
 		names = Kit.Label((Transform)(object)content, "names", 15f, Kit.Dim, 460f, (TextAlignmentOptions)4097);
 		note = Kit.Label((Transform)(object)content, "note", 14f, Kit.Warn, 460f, (TextAlignmentOptions)4097);
 		button = Kit.TextButton((Transform)(object)content, "button", Lang.Tr("Start a new run"), 18f, Press, out buttonLabel);
-		((Object)((Component)button).gameObject).name = "humangenome_accomplice_newrun_button";
+		((Object)((Component)button).gameObject).name = "bellun_probably_together_newrun_button";
 	}
 
 	private static bool ShouldShow()

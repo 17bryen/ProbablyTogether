@@ -145,6 +145,11 @@ internal static class Core
 			{
 				Net.Connect(Args.Join, Args.Password ?? "", Args.Name);
 			}
+			if (ModList.UpstreamAlsoOn)
+			{
+				Log.Error("mods: the upstream mod is ALSO turned on. " + Mod.Name + " replaces it: turn it off in Mods (and unsubscribe it on the Workshop), then restart.");
+				ProbablyTogether.UI.JoinMenu.UpstreamWarning = true;
+			}
 			ProbablyTogether.UI.HostMenu.TestHook();
 			if (!string.IsNullOrEmpty(Args.BotArg))
 			{

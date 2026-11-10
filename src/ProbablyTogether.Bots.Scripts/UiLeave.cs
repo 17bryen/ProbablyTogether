@@ -44,6 +44,6 @@ public sealed class UiLeave : BotScript
 		WaitFor("at-menu", 60f, () => Net.Role == ProbablyTogether.Role.Off && Ui.AtMenu && (Object)(object)MainMenuUIController.Instance != (Object)null, () => "role " + Net.Role.ToString() + ", scene " + BotProbes.Scene);
 		WaitFor("join-button", 20f, () => (Object)(object)JoinMenu.Button != (Object)null, () => "fallback " + JoinMenu.UsingFallbackButton);
 		Delay("settle", 2f);
-		Check("no-notice", () => (Object)(object)CustomUIManager.Instance != (Object)null && !CustomUIManager.Instance.IsOpen("humangenome_accomplice.notice"), () => "last message '" + JoinMenu.LastMessage + "'");
+		Check("no-notice", () => (Object)(object)CustomUIManager.Instance != (Object)null && !CustomUIManager.Instance.IsOpen("bellun_probably_together.notice"), () => "last message '" + JoinMenu.LastMessage + "'");
 	}
 }

@@ -454,7 +454,7 @@ public sealed class FullDayB : FullDayBot
 		Do("rejoin", delegate
 		{
 			JoinMenu.OpenDialog();
-			CustomUIWindow window = CustomUIManager.Instance.GetWindow("humangenome_accomplice.join");
+			CustomUIWindow window = CustomUIManager.Instance.GetWindow("bellun_probably_together.join");
 			if (window == null)
 			{
 				Net.Connect(address, pw, name);

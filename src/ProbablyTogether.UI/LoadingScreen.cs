@@ -48,7 +48,7 @@ public static class LoadingScreen
 		{
 			Log.Info("ui: join cancelled on the loading screen");
 			Net.Disconnect();
-		}, out var _)).gameObject).name = "humangenome_accomplice_loading_cancel";
+		}, out var _)).gameObject).name = "bellun_probably_together_loading_cancel";
 		((Component)Kit.Rect("right", ((Component)val).transform)).gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 	}
 

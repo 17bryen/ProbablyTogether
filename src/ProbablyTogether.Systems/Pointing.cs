@@ -27,7 +27,7 @@ public static class Pointing
 
 	public const string KeyBindOption = "ping";
 
-	private const string KeySave = "humangenome_accomplice.pointKey";
+	private const string KeySave = "bellun_probably_together.pointKey";
 
 	public const int Burst = 3;
 
@@ -118,7 +118,7 @@ public static class Pointing
 			keyLoaded = true;
 			try
 			{
-				ES3.Save<int>("humangenome_accomplice.pointKey", (int)value);
+				ES3.Save<int>("bellun_probably_together.pointKey", (int)value);
 			}
 			catch (Exception ex)
 			{
@@ -396,9 +396,9 @@ public static class Pointing
 		keyLoaded = true;
 		try
 		{
-			if (ES3.KeyExists("humangenome_accomplice.pointKey"))
+			if (ES3.KeyExists("bellun_probably_together.pointKey"))
 			{
-				pointKey = (KeyCode)ES3.Load<int>("humangenome_accomplice.pointKey");
+				pointKey = (KeyCode)ES3.Load<int>("bellun_probably_together.pointKey");
 			}
 		}
 		catch
@@ -421,7 +421,7 @@ public static class Pointing
 		try
 		{
 			GameOptionRegistry.EnsureVanilla();
-			ModHelper.AddGameOptionKeyBind("humangenome_accomplice", "keybind", "ping", (Func<string>)(() => Lang.Tr("Co-op point")), (Func<KeyCode>)(() => PointKey), (Action<KeyCode>)delegate(KeyCode k)
+			ModHelper.AddGameOptionKeyBind("bellun_probably_together", "keybind", "ping", (Func<string>)(() => Lang.Tr("Co-op point")), (Func<KeyCode>)(() => PointKey), (Action<KeyCode>)delegate(KeyCode k)
 			{
 				PointKey = k;
 			}, (Func<string>)(() => Lang.Tr("On a co-op server: points at the item or spot under your mouse for everyone.")));

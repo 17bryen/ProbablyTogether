@@ -151,7 +151,7 @@ internal static class PanelLink
 		{
 			val3["lastSave"] = (JToken)(LastSaveUnix);
 		}
-		val3["version"] = (JToken)("0.2.8");
+		val3["version"] = (JToken)(Mod.Version);
 		val3["protocol"] = (JToken)(2);
 		val3["gameVersion"] = (JToken)(Application.version);
 		val3["passworded"] = (JToken)(flag);

@@ -76,7 +76,7 @@ public sealed class ModSyncJoin : BotScript
 			WaitFor("window", 10f, () => JoinMenu.DialogOpen);
 			Do("fill", delegate
 			{
-				CustomUIWindow window = CustomUIManager.Instance.GetWindow("humangenome_accomplice.join");
+				CustomUIWindow window = CustomUIManager.Instance.GetWindow("bellun_probably_together.join");
 				window.Get("address").SetString(address, true);
 				window.Get("name").SetString("botm", true);
 				window.Get("password").SetString(Args.Get("--br-ms-pw") ?? "", true);
@@ -173,7 +173,7 @@ public sealed class ModSyncJoin : BotScript
 			return StepStatus.Fail;
 		}
 		CustomUIManager instance = CustomUIManager.Instance;
-		CustomUIWindow val = ((instance != null) ? instance.GetWindow("humangenome_accomplice.mods") : null);
+		CustomUIWindow val = ((instance != null) ? instance.GetWindow("bellun_probably_together.mods") : null);
 		List<string> list = new List<string>();
 		if (val != null)
 		{

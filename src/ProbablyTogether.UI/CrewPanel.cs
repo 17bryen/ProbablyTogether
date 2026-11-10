@@ -13,7 +13,7 @@ namespace ProbablyTogether.UI;
 
 public static class CrewPanel
 {
-	internal const string RootName = "humangenome_accomplice_crew";
+	internal const string RootName = "bellun_probably_together_crew";
 
 	private const float Gap = 24f;
 
@@ -165,12 +165,12 @@ public static class CrewPanel
 		{
 			return false;
 		}
-		Transform val2 = ((Transform)val).Find("humangenome_accomplice_crew");
+		Transform val2 = ((Transform)val).Find("bellun_probably_together_crew");
 		if ((Object)(object)val2 != (Object)null)
 		{
 			Object.Destroy((Object)(object)((Component)val2).gameObject);
 		}
-		root = Kit.Rect("humangenome_accomplice_crew", (Transform)(object)val);
+		root = Kit.Rect("bellun_probably_together_crew", (Transform)(object)val);
 		Kit.Stretch(root);
 		((Transform)root).SetSiblingIndex(Math.Min(1, ((Transform)val).childCount - 1));
 		builtKey = "";
