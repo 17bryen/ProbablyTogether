@@ -25,7 +25,7 @@ internal static class EconRedeemStampsPatch
 		{
 			return true;
 		}
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			Economy.ServerCommissary("stamps", null, 0);
 			return false;

@@ -25,10 +25,13 @@ internal static class EconCommissaryOpenPatch
 		{
 			return true;
 		}
-		if (Net.IsDedicated)
+		if (Net.IsServer)
 		{
 			Economy.ServerWindowOpened("commissary");
-			return false;
+			if (Net.IsDedicated)
+			{
+				return false;
+			}
 		}
 		if (Net.Applying)
 		{

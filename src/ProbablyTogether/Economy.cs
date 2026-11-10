@@ -239,6 +239,7 @@ public static class Economy
 			p = Parts()
 		};
 		Net.ToAll("econ.network.bought", msg);
+		HostRefresh("network", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " bought " + id + " for " + cost + " (favor " + favor + ", cash " + cash + "); state " + up.state + ", cash now " + store.playerCash + ", favor " + store.wildFavor);
 		return null;
 	}
@@ -365,6 +366,58 @@ public static class Economy
 		return null;
 	}
 
+	/// Host mode: the host never receives its own broadcasts, so refresh its UI here after its own actions.
+	private static void HostRefresh(string what, int by)
+	{
+		if (!Net.IsHost || by != Net.LocalPlayer || DayLog.Replaying)
+		{
+			return;
+		}
+		try
+		{
+			switch (what)
+			{
+			case "network":
+				RefreshNetworkUi();
+				if ((Object)(object)EmporiumAudioPlayer.Instance != (Object)null)
+				{
+					EmporiumAudioPlayer.Instance.PlayRegister();
+				}
+				break;
+			case "service":
+				ShowServiceOnTablet(null);
+				break;
+			case "commissary":
+			{
+				CommissaryUIManager instance = CommissaryUIManager.Instance;
+				if (instance != null)
+				{
+					instance.RefreshUI();
+				}
+				break;
+			}
+			case "fill":
+			{
+				PCUIManager instance2 = PCUIManager.Instance;
+				if (instance2 != null)
+				{
+					instance2.OnChange();
+					StorePC storePC = instance2.storePC;
+					if (storePC != null)
+					{
+						storePC.RefreshState();
+					}
+				}
+				break;
+			}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("economy: host refresh (" + what + "): " + ex.Message);
+		}
+	}
+
 	private static void RefreshNetworkUi()
 	{
 		try
@@ -392,7 +445,7 @@ public static class Economy
 	{
 		if (Net.IsServer)
 		{
-			int num = ((Net.Actor > 0) ? Net.Actor : 0);
+			int num = ((Net.Actor > 0) ? Net.Actor : (Net.IsHost ? Net.LocalPlayer : 0));
 			if (which == "network")
 			{
 				networkOpenBy = num;
@@ -673,6 +726,7 @@ public static class Economy
 			by = by,
 			p = Parts()
 		});
+		HostRefresh("service", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " turned " + id + (on ? " on" : " off"));
 		return null;
 	}
@@ -853,6 +907,7 @@ public static class Economy
 			d = Replay.Digest(),
 			p = Parts()
 		});
+		HostRefresh("commissary", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " commissary " + op + ((item != null) ? (" " + item) : "") + ": credit now " + store.commissaryData.redeemedCredit + ", cash " + store.playerCash);
 		return null;
 	}
@@ -1187,6 +1242,7 @@ public static class Economy
 			d = Replay.Digest(),
 			p = Parts()
 		});
+		HostRefresh("fill", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " filled request " + id + " (" + array.Length + " item(s) handed over); cash now " + store.playerCash);
 		return null;
 	}

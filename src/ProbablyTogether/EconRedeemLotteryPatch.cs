@@ -25,7 +25,7 @@ internal static class EconRedeemLotteryPatch
 		{
 			return true;
 		}
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			Economy.ServerCommissary("lottery", null, 0);
 			return false;

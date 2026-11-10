@@ -26,7 +26,7 @@ internal static class EconUseClickedPatch
 			return true;
 		}
 		string text = Economy.SelectedUpgrade();
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			if (text != null)
 			{

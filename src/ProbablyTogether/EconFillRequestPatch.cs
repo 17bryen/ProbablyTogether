@@ -25,7 +25,7 @@ internal static class EconFillRequestPatch
 		{
 			return true;
 		}
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			Economy.ServerFill((Game.Store?.storeRequests)?.IndexOf(__instance) ?? (-1), __instance.id, 0);
 			return false;

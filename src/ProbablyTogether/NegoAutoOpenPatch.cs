@@ -13,6 +13,10 @@ internal static class NegoAutoOpenPatch
 		}
 		if (Net.IsHost)
 		{
+			if (!Net.Applying)
+			{
+				return true;
+			}
 			string hostWhy;
 			bool forHost = Negotiation.TabletForMe(out hostWhy);
 			Negotiation.LastTabletGate = (forHost ? "opened (host): " : "skipped (host): ") + hostWhy;

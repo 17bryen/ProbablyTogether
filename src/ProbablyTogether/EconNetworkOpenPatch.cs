@@ -26,18 +26,32 @@ internal static class EconNetworkOpenPatch
 		{
 			return true;
 		}
-		if (Net.IsDedicated)
+		if (Net.IsServer)
 		{
 			if (Net.Applying)
 			{
 				Economy.BrowseState();
 			}
-			else
+			else if (Net.IsDedicated)
 			{
 				Economy.ServerBrowse(0);
 			}
 			Economy.ServerWindowOpened("network");
-			return false;
+			if (Net.IsDedicated)
+			{
+				return false;
+			}
+			if (Net.Applying)
+			{
+				if (!Economy.UiForMe())
+				{
+					Economy.SkippedWindow("network");
+					return false;
+				}
+				return true;
+			}
+			__state = true;
+			return true;
 		}
 		if (Net.Applying && !Economy.UiForMe())
 		{

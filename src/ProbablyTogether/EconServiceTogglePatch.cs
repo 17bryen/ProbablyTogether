@@ -29,7 +29,7 @@ internal static class EconServiceTogglePatch
 		{
 			return true;
 		}
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			Economy.ServerToggle(storeService.id, on, 0);
 			return false;

@@ -26,7 +26,7 @@ internal static class EconLegacyUnlockPatch
 			return true;
 		}
 		string text = Economy.LegacySelected(__instance);
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			if (text != null)
 			{

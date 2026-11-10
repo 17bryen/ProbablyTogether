@@ -25,7 +25,7 @@ internal static class EconCommissaryBuyPatch
 		{
 			return true;
 		}
-		if (Net.IsServer)
+		if (!Net.IsClient)
 		{
 			Economy.ServerCommissary("buy", id, 0);
 			return false;
