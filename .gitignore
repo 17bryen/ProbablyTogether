@@ -1,0 +1,5 @@
+src/bin/
+src/obj/
+build.log
+*.user
+.vs/
