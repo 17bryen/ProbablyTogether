@@ -843,6 +843,11 @@ internal static class ServerMode
 		{
 			return false;
 		}
+		if (Systems.HostTrip.Out)
+		{
+			Log.Info("host: cannot step out while out on a night trip: come back to the shop first");
+			return false;
+		}
 		awayFrameRate = Application.targetFrameRate;
 		awayVsync = QualitySettings.vSyncCount;
 		Net.HostAway = true;

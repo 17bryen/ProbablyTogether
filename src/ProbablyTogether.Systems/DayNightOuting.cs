@@ -39,7 +39,7 @@ public static class DayNightOuting
 	{
 		get
 		{
-			if (!Net.IsClient)
+			if (!Net.IsClient || HostTrip.HomeView)
 			{
 				return mapOpen;
 			}
@@ -146,6 +146,10 @@ public static class DayNightOuting
 			foreach (string item in list)
 			{
 				AfterhourLocationState val = store.afterhourState[item];
+				if (val == null || (val.visits == 0 && val.lastVisitDay == 0))
+				{
+					continue;
+				}
 				Mix(ref h, item);
 				Mix(ref h, val?.visits ?? (-1));
 				Mix(ref h, val?.lastVisitDay ?? (-1));
@@ -180,6 +184,10 @@ public static class DayNightOuting
 				}
 				foreach (GameItem item in GraphUtils.FindAllChildrenType<GameItem>(val, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
 				{
+					if (HostTrip.HomeView)
+					{
+						break;
+					}
 					Mix(ref h, item.uniqueId);
 					Mix(ref h, item.identifier);
 					Mix(ref h, item.unitCount);
@@ -258,8 +266,7 @@ public static class DayNightOuting
 	private static void ServerGoOut(MsgDnGoOut m, int from)
 	{
 		PlayerStore store = Game.Store;
-		bool hostTrip = Net.IsHost && from == Net.LocalPlayer;
-		string text = ((Outings.Individual && !hostTrip) ? "Outings are individual on this server: update the mod to go out." : Common(store));
+		string text = (Outings.Individual ? "Outings are individual on this server: update the mod to go out." : Common(store));
 		if (text == null && Outings.AnyOut)
 		{
 			text = Outings.WhoIsOut() + " is still out.";

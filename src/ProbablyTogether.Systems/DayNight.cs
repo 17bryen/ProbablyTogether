@@ -568,10 +568,18 @@ public static class DayNight
 		{
 			Log.Error("dayNight: closing the shutter threw part way (broadcast anyway): " + ex);
 		}
+		msgDnShutter.visits = Outings.NightBudget();
+		if (msgDnShutter.visits > 0)
+		{
+			using (Net.Apply())
+			{
+				store.visitLeftTonight = msgDnShutter.visits;
+			}
+		}
 		msgDnShutter.rd = Replay.Digest();
 		msgDnShutter.parts = Parts();
 		Net.ToAll("dayNight.closed", msgDnShutter);
-		Log.Info("dayNight: " + Net.PlayerName(from) + " closed the shop (day " + msgDnShutter.day + "); " + Digest.Compute().Describe());
+		Log.Info("dayNight: " + Net.PlayerName(from) + " closed the shop (day " + msgDnShutter.day + "); night trips " + store.visitLeftTonight + "; " + Digest.Compute().Describe());
 		Raise(DayNight.Closed, msgDnShutter.day, from);
 	}
 
@@ -602,6 +610,13 @@ public static class DayNight
 			catch (Exception ex)
 			{
 				Log.Error("dayNight: replaying the shutter closing threw: " + ex);
+			}
+		}
+		if (m.visits > 0)
+		{
+			using (Net.Apply())
+			{
+				store.visitLeftTonight = m.visits;
 			}
 		}
 		CheckAfter("the shutter closing", m.rd, m.parts);

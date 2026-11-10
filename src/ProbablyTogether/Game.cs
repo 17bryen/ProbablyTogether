@@ -73,8 +73,8 @@ internal static class Game
 			return list;
 		}
 		list.Add((GraphNodeStorage)(object)instance.invElement);
-		list.Add((GraphNodeStorage)(object)instance.backInvinvElement);
-		list.Add((GraphNodeStorage)(object)instance.frontInvinvElement);
+		list.Add(Systems.HostTrip.Back(instance));
+		list.Add(Systems.HostTrip.Front(instance));
 		list.Add((GraphNodeStorage)(object)instance.docInvElement);
 		list.Add((GraphNodeStorage)(object)instance.showcaseElement);
 		list.Add((GraphNodeStorage)(object)instance.trashInvElement);

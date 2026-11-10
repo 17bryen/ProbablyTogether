@@ -204,11 +204,12 @@ public static class Ids
 		{
 			yield return item;
 		}
-		yield return (GraphNodeStorage)(object)e.afterhourInventory;
-		yield return (GraphNodeStorage)(object)e.afterhourPocketSlotInvLeft;
-		yield return (GraphNodeStorage)(object)e.afterhourPocketSlotInvBackpack;
-		yield return (GraphNodeStorage)(object)e.afterhourPocketSlotInvRight;
-		yield return (GraphNodeStorage)(object)e.backInvinvElementCounter;
+		yield return Systems.HostTrip.Carried((GraphNodeStorage)(object)e.afterhourInventory);
+		yield return Systems.HostTrip.Carried((GraphNodeStorage)(object)e.afterhourPocketSlotInvLeft);
+		yield return Systems.HostTrip.Carried((GraphNodeStorage)(object)e.afterhourPocketSlotInvBackpack);
+		yield return Systems.HostTrip.Carried((GraphNodeStorage)(object)e.afterhourPocketSlotInvRight);
+		yield return Systems.HostTrip.FrontClone();
+		yield return Systems.HostTrip.Holding(e);
 		yield return (GraphNodeStorage)(object)e.bazarLeftinvElement;
 		yield return (GraphNodeStorage)(object)e.swapBufferElement;
 		yield return (GraphNodeStorage)(object)e.responseInventory;

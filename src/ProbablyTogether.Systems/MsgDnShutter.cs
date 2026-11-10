@@ -17,4 +17,7 @@ public sealed class MsgDnShutter
 	public Dictionary<string, long> parts;
 
 	public int xc;
+
+	/// Night trips available after this closing (0 = the game's own single trip).
+	public int visits;
 }

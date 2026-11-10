@@ -315,7 +315,7 @@ internal static class HostMenu
 			.AddInput("", Str(existing, "port", "27700"), (Action<string>)null, "port", (Action<string>)null)
 			.AddLabel(Lang.Tr("Players (1 to 4)"), (string)null)
 			.AddInput("", Str(existing, "maxPlayers", "4"), (Action<string>)null, "max", (Action<string>)null)
-			.AddToggle(Lang.Tr("Players go out at night one by one (the host still takes everyone along)"), individual, (Action<bool>)delegate(bool v)
+			.AddToggle(Lang.Tr("Everyone goes out at night on their own (one trip per player each night)"), individual, (Action<bool>)delegate(bool v)
 			{
 				individual = v;
 			}, "individual")

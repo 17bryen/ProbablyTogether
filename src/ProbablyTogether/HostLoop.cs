@@ -22,7 +22,8 @@ internal static class HostLoop
 		"chat.line", "chat.notice", "presence.cursor", "presence.state", "ping.show", "ping.no",
 		"voice.frame", "voice.config", "crew.tally", "help.checked",
 		"customers.refused", "dayNight.refused", "dayNight.readyChanged", "dayNight.newRunVotes",
-		"dialogue.refused", "econ.refused", "production.refused", "sec.refused", "items.reject", "items.use.refused", "machine.reject"
+		"dialogue.refused", "econ.refused", "production.refused", "sec.refused", "items.reject", "items.use.refused", "machine.reject",
+		"outing.go"
 	};
 
 	internal static int Delivered;
@@ -33,7 +34,7 @@ internal static class HostLoop
 
 	internal static bool Wants(string kind)
 	{
-		return kind != null && wanted.Contains(kind);
+		return kind != null && (wanted.Contains(kind) || kind.StartsWith("bot.", StringComparison.Ordinal));
 	}
 
 	/// A request from the host's own player: served on this frame by the server dispatch.

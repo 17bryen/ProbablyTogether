@@ -22,18 +22,26 @@ internal static class Core
 
 	internal static void Tick()
 	{
-		DrainInbox();
+		using (Net.IsServer ? Systems.HostTrip.AtHome() : null)
+		{
+			DrainInbox();
+		}
 		if (Net.IsHost)
 		{
 			HostLoop.Drain();
 		}
 		if (Net.IsServer)
 		{
-			ServerMode.Tick();
-			Server.Tick();
-			Snapshot.ServerTick();
-			Locks.Tick();
-			Digest.ServerTick();
+			// On a copy whose player is on a private trip, messages are about the shop at home.
+			// Decided per message: the one before may have started the trip.
+			using (Systems.HostTrip.AtHome())
+			{
+				ServerMode.Tick();
+				Server.Tick();
+				Snapshot.ServerTick();
+				Locks.Tick();
+				Digest.ServerTick();
+			}
 		}
 		else
 		{

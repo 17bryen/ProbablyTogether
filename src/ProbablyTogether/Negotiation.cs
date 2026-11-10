@@ -1309,6 +1309,60 @@ public static class Negotiation
 		return new Guid(array).ToString();
 	}
 
+	internal static string Explain()
+	{
+		if (!ShopUp)
+		{
+			return "";
+		}
+		PlayerStore instance = PlayerStore.Instance;
+		StoreClient val = CurrentCustomer();
+		List<string> list = new List<string>();
+		EmporiumEntry instance2 = EmporiumEntry.Instance;
+		GraphNodeStorage[] array = new GraphNodeStorage[2] { Systems.HostTrip.Back(instance2), Systems.HostTrip.Front(instance2) };
+		foreach (GraphNodeStorage val2 in array)
+		{
+			if (val2 == null)
+			{
+				continue;
+			}
+			foreach (GameItem item in GraphUtils.FindAllChildrenType<GameItem>(val2, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+			{
+				if (item?.itemFeatures == null)
+				{
+					continue;
+				}
+				foreach (ItemFeature itemFeature in item.itemFeatures)
+				{
+					if (itemFeature != null)
+					{
+						list.Add(item.uniqueId + ":" + itemFeature.identifier + ":" + itemFeature.category + ":" + (itemFeature.IsExposed() ? 1 : 0) + ":" + itemFeature.fakeCondition?.identifier);
+					}
+				}
+			}
+		}
+		list.Sort(StringComparer.Ordinal);
+		string text = "-";
+		BargainUIManager instance3 = BargainUIManager.Instance;
+		if ((Object)(object)instance3 != (Object)null && bargainTracked != null)
+		{
+			if (bargainInfo == null)
+			{
+				bargainInfo = Array.ConvertAll(bargainFields, (string n) => AccessTools.Field(typeof(BargainUIManager), n));
+			}
+			object value = bargainTracked.GetValue(instance3);
+			text = ((value == null) ? "none" : ((value == val) ? "current" : "other")) + ":" + string.Join(",", Array.ConvertAll(bargainInfo, (FieldInfo f) => (f == null) ? "?" : Convert.ToString(f.GetValue(instance3))));
+		}
+		ulong h = 14695981039346656037uL;
+		foreach (string item2 in list)
+		{
+			MixS(ref h, item2);
+		}
+		ulong h2 = 14695981039346656037uL;
+		MixS(ref h2, Signature(Career()));
+		return "career=" + (h2 & 0xFFFFFFFFu).ToString("x8") + " cust=" + (val?.identifier ?? "-") + " deal=" + (instance.dealMakerActivatedThisCustomer ? 1 : 0) + "/" + instance.dealMakerBargainBonus + " bargain=" + text + " feats=" + list.Count + ":" + ((list.Count <= 8) ? string.Join(" ", list) : (h & 0xFFFFFFFFu).ToString("x8"));
+	}
+
 	internal static ulong Hash()
 	{
 		ulong h = 14695981039346656037uL;
@@ -1338,7 +1392,8 @@ public static class Negotiation
 			{
 				bargainInfo = Array.ConvertAll(bargainFields, (string n) => AccessTools.Field(typeof(BargainUIManager), n));
 			}
-			bool flag = bargainTracked.GetValue(instance2) != val;
+			// No customer at the counter: the bargain panel's last state is not shop state.
+			bool flag = val == null || bargainTracked.GetValue(instance2) != val;
 			FieldInfo[] array = bargainInfo;
 			foreach (FieldInfo fieldInfo in array)
 			{
@@ -1350,8 +1405,8 @@ public static class Negotiation
 		List<string> list = new List<string>();
 		GraphNodeStorage[] array2 = (GraphNodeStorage[])(object)new GraphNodeStorage[2]
 		{
-			(GraphNodeStorage)instance3.backInvinvElement,
-			(GraphNodeStorage)instance3.frontInvinvElement
+			Systems.HostTrip.Back(instance3),
+			Systems.HostTrip.Front(instance3)
 		};
 		foreach (GraphNodeStorage val2 in array2)
 		{
@@ -1415,8 +1470,8 @@ public static class Negotiation
 		}
 		GraphNodeStorage[] array = (GraphNodeStorage[])(object)new GraphNodeStorage[2]
 		{
-			(GraphNodeStorage)instance.backInvinvElement,
-			(GraphNodeStorage)instance.frontInvinvElement
+			Systems.HostTrip.Back(instance),
+			Systems.HostTrip.Front(instance)
 		};
 		foreach (GraphNodeStorage val in array)
 		{
@@ -1544,8 +1599,8 @@ public static class Negotiation
 		GameItem val = null;
 		GraphNodeStorage[] array = (GraphNodeStorage[])(object)new GraphNodeStorage[2]
 		{
-			(GraphNodeStorage)instance.backInvinvElement,
-			(GraphNodeStorage)instance.frontInvinvElement
+			Systems.HostTrip.Back(instance),
+			Systems.HostTrip.Front(instance)
 		};
 		foreach (GraphNodeStorage val2 in array)
 		{

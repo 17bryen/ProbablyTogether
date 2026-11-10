@@ -1304,6 +1304,10 @@ public static class ItemsMove
 		{
 			return "target";
 		}
+		if (Systems.HostTrip.CountersBorrowed)
+		{
+			return "The host is at Dr. Jackson's with the counters: clear them by hand until the host is back.";
+		}
 		string text = Counter(from, (GraphNodeStorage)e.frontInvinvElement, (GraphNodeStorage)e.backInvinvElement);
 		if (text != null)
 		{
