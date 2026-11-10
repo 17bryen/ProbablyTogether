@@ -145,6 +145,7 @@ internal static class Core
 			{
 				Net.Connect(Args.Join, Args.Password ?? "", Args.Name);
 			}
+			ProbablyTogether.UI.HostMenu.TestHook();
 			if (!string.IsNullOrEmpty(Args.BotArg))
 			{
 				Hooks.StartBot(Args.BotArg);

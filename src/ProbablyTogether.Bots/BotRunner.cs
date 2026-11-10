@@ -77,7 +77,18 @@ public static class BotRunner
 			why = null;
 			return true;
 		}
-		why = "--br-data '" + data + "' is not inside C:\\ProgramData\\SSLabs\\";
+		try
+		{
+			if (File.Exists(Path.Combine(text, "probably-together-lab.txt")))
+			{
+				why = null;
+				return true;
+			}
+		}
+		catch
+		{
+		}
+		why = "--br-data '" + data + "' is not a lab folder (no probably-together-lab.txt in it)";
 		return false;
 	}
 

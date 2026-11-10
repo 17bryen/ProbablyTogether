@@ -18,4 +18,6 @@ public sealed class MsgWelcome
 	public JToken modInfo;
 
 	public string build;
+
+	public double takeover = -1.0;
 }

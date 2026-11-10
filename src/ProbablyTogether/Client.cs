@@ -306,6 +306,7 @@ internal static class Client
 			MaxPlayers = msgWelcome.maxPlayers;
 			ServerMods = ModList.ReadServerMods(msgWelcome.mods);
 			ServerBuild = GameBuild.CleanId(msgWelcome.build);
+			Locks.TakeoverSeconds = msgWelcome.takeover;
 			Net.EnterSession(msgWelcome.you, msgWelcome.players);
 			State = ClientState.AwaitSnapshot;
 			Log.Info("client: joined '" + ServerName + "' as player " + msgWelcome.you + "; players: " + Names(msgWelcome.players) + ((ServerMods == null) ? "; the server does not list its mods" : ("; server mods: " + ((ServerMods.Count == 0) ? "-" : Text.Clip(string.Join(", ", ServerMods), 400)))));

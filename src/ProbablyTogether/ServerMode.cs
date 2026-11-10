@@ -335,6 +335,61 @@ internal static class ServerMode
 		return "the scenario " + result.ToString() + " is marked coming soon in the game and cannot start; set newRun.scenario in server.json to a playable one (" + PlayableScenarios() + ")";
 	}
 
+	internal static List<KeyValuePair<string, string>> PlayableScenarioList()
+	{
+		List<KeyValuePair<string, string>> list = new List<KeyValuePair<string, string>>();
+		foreach (StartingScenario item in StartingScenario.GetAll())
+		{
+			if (item == null || item.comingSoon || item.hidden || item.IsMod || (int)item.startType == 0)
+			{
+				continue;
+			}
+			string id = item.startType.ToString();
+			if (Array.IndexOf(ComingSoon, id) >= 0 || list.Exists((KeyValuePair<string, string> x) => x.Key == id))
+			{
+				continue;
+			}
+			string title = id;
+			try
+			{
+				string t = item.GetTitle();
+				if (!string.IsNullOrEmpty(t))
+				{
+					title = t;
+				}
+			}
+			catch
+			{
+			}
+			list.Add(new KeyValuePair<string, string>(id, title));
+		}
+		return list;
+	}
+
+	/// Writes a small card per save slot (name, day, cash, scenario) for the Host window's list.
+	internal static void WriteShopCard()
+	{
+		try
+		{
+			PlayerStore store = Game.Store;
+			if (cfg == null || store == null || !Game.ShopLoaded)
+			{
+				return;
+			}
+			Newtonsoft.Json.Linq.JObject o = new Newtonsoft.Json.Linq.JObject();
+			o["name"] = new Newtonsoft.Json.Linq.JValue(cfg.name);
+			o["day"] = new Newtonsoft.Json.Linq.JValue((long)Game.Day);
+			o["cash"] = new Newtonsoft.Json.Linq.JValue((long)store.playerCash);
+			o["scenario"] = new Newtonsoft.Json.Linq.JValue(store.startType.ToString());
+			o["saved"] = new Newtonsoft.Json.Linq.JValue(DateTime.UtcNow.ToString("o"));
+			File.WriteAllText(Paths.Under("shop_" + cfg.saveSlot + ".json"), o.ToString());
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("server: shop card not written: " + ex.Message);
+		}
+	}
+
 	private static string PlayableScenarios()
 	{
 		List<string> list = new List<string>();
@@ -457,6 +512,7 @@ internal static class ServerMode
 		{
 			Snapshot.SendToAll("new run");
 		}
+		WriteShopCard();
 		PanelLink.MarkDirty(newRun ? "new run" : "shop up");
 	}
 
@@ -657,6 +713,7 @@ internal static class ServerMode
 	internal static void OnSlotSaved(bool quiet)
 	{
 		savesSeen++;
+		WriteShopCard();
 		PanelLink.NoteSaved(quiet ? "quiet" : "save");
 		if (!quiet && phase == Phase.Running)
 		{

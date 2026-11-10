@@ -3,3 +3,4 @@ src/obj/
 build.log
 *.user
 .vs/
+rig/

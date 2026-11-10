@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
@@ -15,13 +17,50 @@ namespace ProbablyTogether.UI;
 /// "Host a shop" on the main menu: this game becomes the server and the host plays in it.
 internal static class HostMenu
 {
+	private sealed class Slot
+	{
+		public int N;
+
+		public string Name;
+
+		public string Label;
+	}
+
+	private static readonly string[] DifficultyIds = new string[4] { "cozy", "normal", "hard", "challenge" };
+
+	private static readonly string[] DifficultyNames = new string[4] { "Price Gouge (cozy)", "Mark Up (normal)", "Thin Margins (hard)", "Red Ink (challenge)" };
+
 	public static GameObject HostButton { get; private set; }
 
 	private static CustomUIWindow window;
 
-	internal static string HostFolder => Paths.Original + "/probably-together-host";
+	private static readonly List<Slot> slots = new List<Slot>();
+
+	private static readonly List<KeyValuePair<string, string>> scenarios = new List<KeyValuePair<string, string>>();
+
+	private static int slotIndex;
+
+	private static int scenarioIndex;
+
+	private static int difficultyIndex = 1;
+
+	private static bool skipIntro = true;
+
+	private static bool endless;
+
+	/// Where hosted shops live; --br-host-folder=<path> overrides it.
+	internal static string HostFolder
+	{
+		get
+		{
+			string text = Args.Get("--br-host-folder");
+			return string.IsNullOrEmpty(text) ? (Paths.Original + "/probably-together-host") : text.Replace('\\', '/').TrimEnd('/');
+		}
+	}
 
 	internal static bool DialogOpen => window != null;
+
+	private static bool NewSelected => slotIndex >= slots.Count;
 
 	internal static void BuildButton(MainMenuUIController menu, GameObject moddingButton, GameObject joinButton, bool parentIsLayout)
 	{
@@ -82,6 +121,154 @@ internal static class HostMenu
 		}
 	}
 
+	private static void LoadSlots(JObject config)
+	{
+		slots.Clear();
+		string folder = HostFolder;
+		int configured = 1;
+		try
+		{
+			JToken t = ((config != null) ? config["saveSlot"] : null);
+			if (t != null)
+			{
+				configured = (int)t;
+			}
+		}
+		catch
+		{
+		}
+		try
+		{
+			if (System.IO.Directory.Exists(folder))
+			{
+				List<int> found = new List<int>();
+				foreach (string file in System.IO.Directory.GetFiles(folder, "save_*.es3"))
+				{
+					Match m = Regex.Match(Path.GetFileName(file), "^save_(\\d+)\\.es3$");
+					if (m.Success && int.TryParse(m.Groups[1].Value, out var n) && n > 0)
+					{
+						found.Add(n);
+					}
+				}
+				found.Sort();
+				foreach (int n2 in found)
+				{
+					slots.Add(Describe(folder, n2, n2 == configured, config));
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: listing shops: " + ex.Message);
+		}
+		slotIndex = slots.Count;
+		for (int i = 0; i < slots.Count; i++)
+		{
+			if (slots[i].N == configured)
+			{
+				slotIndex = i;
+			}
+		}
+		if (slotIndex >= slots.Count && slots.Count > 0)
+		{
+			slotIndex = slots.Count - 1;
+		}
+	}
+
+	private static Slot Describe(string folder, int n, bool isConfigured, JObject config)
+	{
+		Slot slot = new Slot
+		{
+			N = n,
+			Name = null
+		};
+		JObject card = ReadJson(folder + "/shop_" + n.ToString(CultureInfo.InvariantCulture) + ".json");
+		if (card == null && isConfigured)
+		{
+			card = ReadJson(folder + "/status.json");
+		}
+		string detail = "";
+		if (card != null)
+		{
+			slot.Name = Str(card, "name", null);
+			string day = Str(card, "day", "");
+			string cash = Str(card, "cash", "");
+			string scenario = Str(card, "scenario", "");
+			detail = ((day.Length > 0) ? (Lang.Tr("day") + " " + day) : "") + ((cash.Length > 0) ? (", " + cash + " " + Lang.Tr("credits")) : "") + ((scenario.Length > 0) ? (", " + ScenarioTitle(scenario)) : "");
+		}
+		if (slot.Name == null && isConfigured)
+		{
+			slot.Name = Str(config, "name", null);
+		}
+		slot.Label = (slot.Name ?? (Lang.Tr("Shop") + " " + n.ToString(CultureInfo.InvariantCulture))) + ((detail.Length > 0) ? ("  (" + detail.TrimStart(',', ' ') + ")") : "");
+		return slot;
+	}
+
+	private static void LoadScenarios(JObject config)
+	{
+		scenarios.Clear();
+		try
+		{
+			foreach (KeyValuePair<string, string> item in ServerMode.PlayableScenarioList())
+			{
+				scenarios.Add(item);
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: listing scenarios: " + ex.Message);
+		}
+		if (scenarios.Count == 0)
+		{
+			scenarios.Add(new KeyValuePair<string, string>("WATER_MERCHANT", "Water Merchant"));
+		}
+		string wanted = "WATER_MERCHANT";
+		string wantedDifficulty = "normal";
+		try
+		{
+			JObject nr = ((config != null) ? (config["newRun"] as JObject) : null);
+			if (nr != null)
+			{
+				wanted = Str(nr, "scenario", wanted);
+				wantedDifficulty = Str(nr, "difficulty", wantedDifficulty);
+				JToken si = nr["skipIntro"];
+				if (si != null)
+				{
+					skipIntro = (bool)si;
+				}
+			}
+			JToken en = ((config != null) ? config["endless"] : null);
+			if (en != null)
+			{
+				endless = (bool)en;
+			}
+		}
+		catch
+		{
+		}
+		scenarioIndex = 0;
+		for (int i = 0; i < scenarios.Count; i++)
+		{
+			if (string.Equals(scenarios[i].Key, wanted, StringComparison.OrdinalIgnoreCase))
+			{
+				scenarioIndex = i;
+			}
+		}
+		difficultyIndex = Math.Max(0, Array.IndexOf(DifficultyIds, wantedDifficulty.ToLowerInvariant()));
+	}
+
+	private static string ScenarioTitle(string id)
+	{
+		foreach (KeyValuePair<string, string> scenario in scenarios)
+		{
+			if (string.Equals(scenario.Key, id, StringComparison.OrdinalIgnoreCase))
+			{
+				return scenario.Value;
+			}
+		}
+		return id;
+	}
+
 	public static void OpenDialog()
 	{
 		CustomUIManager instance = CustomUIManager.Instance;
@@ -94,18 +281,51 @@ internal static class HostMenu
 			Log.Info("ui: Host window not opened: already online as " + Net.Role);
 			return;
 		}
-		JObject existing = ReadConfig();
+		JObject existing = ReadJson(HostFolder + "/server.json");
+		LoadScenarios(existing);
+		LoadSlots(existing);
 		string defaultName = (SteamName(out var persona) ? (persona + "'s shop") : "My shop");
-		CustomUIBuilder b = instance.CreateWindow("humangenome_accomplice.host", Lang.Tr("Host a shop"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 640f);
-		b.AddLabel(Lang.Tr("Your game runs the shop and you play in it. Friends join with your address and the password. Forward the port on your router."), (string)null)
+		List<string> slotLabels = new List<string>();
+		foreach (Slot slot in slots)
+		{
+			slotLabels.Add(slot.Label);
+		}
+		slotLabels.Add(Lang.Tr("New shop"));
+		List<string> scenarioLabels = new List<string>();
+		foreach (KeyValuePair<string, string> scenario in scenarios)
+		{
+			scenarioLabels.Add(scenario.Value);
+		}
+		string initialName = (NewSelected ? ((slots.Count == 0) ? Str(existing, "name", defaultName) : defaultName) : (slots[slotIndex].Name ?? Str(existing, "name", defaultName)));
+		CustomUIBuilder b = instance.CreateWindow("humangenome_accomplice.host", Lang.Tr("Host a shop"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 900f);
+		b.AddLabel(Lang.Tr("Shop to open"), (string)null)
+			.AddDropdown((IList<string>)slotLabels, slotIndex, (Action<int>)OnSlotChanged, "slot")
 			.AddLabel(Lang.Tr("Shop name"), (string)null)
-			.AddInput("", Str(existing, "name", defaultName), (Action<string>)null, "name", (Action<string>)null)
+			.AddInput("", initialName, (Action<string>)null, "name", (Action<string>)null)
 			.AddLabel(Lang.Tr("Password (empty: anyone with the address can join)"), (string)null)
 			.AddInput("", Str(existing, "password", ""), (Action<string>)null, "password", (Action<string>)null)
-			.AddLabel(Lang.Tr("Port"), (string)null)
+			.AddLabel(Lang.Tr("Port (forward it on your router)"), (string)null)
 			.AddInput("", Str(existing, "port", "27700"), (Action<string>)null, "port", (Action<string>)null)
 			.AddLabel(Lang.Tr("Players (1 to 4)"), (string)null)
-			.AddInput("", Str(existing, "maxPlayers", "4"), (Action<string>)null, "max", (Action<string>)null);
+			.AddInput("", Str(existing, "maxPlayers", "4"), (Action<string>)null, "max", (Action<string>)null)
+			.AddSeparator((string)null, 4)
+			.AddLabel(Lang.Tr("New shop: scenario and difficulty"), "newlabel")
+			.AddDropdown((IList<string>)scenarioLabels, scenarioIndex, (Action<int>)delegate(int i)
+			{
+				scenarioIndex = i;
+			}, "scenario")
+			.AddDropdown((IList<string>)DifficultyNames, difficultyIndex, (Action<int>)delegate(int i)
+			{
+				difficultyIndex = i;
+			}, "difficulty")
+			.AddToggle(Lang.Tr("Skip the intro"), skipIntro, (Action<bool>)delegate(bool v)
+			{
+				skipIntro = v;
+			}, "skipintro")
+			.AddToggle(Lang.Tr("Endless mode"), endless, (Action<bool>)delegate(bool v)
+			{
+				endless = v;
+			}, "endless");
 		b.AddWarning("", "status");
 		CustomUIBuilder row = JoinMenu.Row(b, 8f);
 		RectTransform rowRect = row.CurrentContainer;
@@ -116,7 +336,7 @@ internal static class HostMenu
 		}).Center();
 		window = b.Show();
 		JoinMenu.FitButtonRow(window, rowRect, new string[2] { "back", "host" }, new string[0]);
-		JoinMenu.FitHeight(window, 300f, 640f, 44f);
+		JoinMenu.FitHeight(window, 300f, 900f, 44f);
 		CustomUIElement pw = window.Get("password");
 		if ((Object)(object)pw?.input != (Object)null)
 		{
@@ -133,9 +353,48 @@ internal static class HostMenu
 				input.characterLimit = ((id == "name") ? 64 : ((id == "password") ? 128 : 5));
 			}
 		}
-		string folderNote = (File.Exists(HostFolder + "/save_1.es3") ? Lang.Tr("A hosted shop exists: it continues.") : Lang.Tr("No hosted shop yet: a new run starts."));
-		SetStatus(folderNote);
-		Log.Info("ui: Host window opened (" + HostFolder + ")");
+		ApplySlot(setName: false);
+		Log.Info("ui: Host window opened (" + HostFolder + "; " + slots.Count + " shop(s), " + scenarios.Count + " scenario(s))");
+	}
+
+	private static void OnSlotChanged(int index)
+	{
+		slotIndex = index;
+		ApplySlot(setName: true);
+	}
+
+	private static void ApplySlot(bool setName)
+	{
+		if (window == null)
+		{
+			return;
+		}
+		bool isNew = NewSelected;
+		try
+		{
+			string[] ids = new string[4] { "scenario", "difficulty", "skipintro", "endless" };
+			foreach (string id in ids)
+			{
+				CustomUIElement el = window.Get(id);
+				if (el != null)
+				{
+					el.SetInteractable(isNew);
+				}
+			}
+			if (setName && !isNew && slots[slotIndex].Name != null)
+			{
+				TMP_InputField input = window.Get("name")?.input;
+				if ((Object)(object)input != (Object)null)
+				{
+					input.text = slots[slotIndex].Name;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: window update: " + ex.Message);
+		}
+		SetStatus(isNew ? Lang.Tr("A new shop starts on day 1.") : Lang.Tr("This shop continues from its last saved morning."));
 	}
 
 	public static void CloseDialog()
@@ -175,19 +434,46 @@ internal static class HostMenu
 			SetStatus(Lang.Tr("Port {0} is already in use on this PC.").Replace("{0}", port.ToString(CultureInfo.InvariantCulture)));
 			return;
 		}
-		if (!Paths.SetOverride(HostFolder))
+		bool isNew = NewSelected;
+		int slotNumber;
+		if (isNew)
+		{
+			slotNumber = 1;
+			foreach (Slot slot in slots)
+			{
+				slotNumber = Math.Max(slotNumber, slot.N + 1);
+			}
+		}
+		else
+		{
+			slotNumber = slots[slotIndex].N;
+		}
+		string folder = HostFolder;
+		if (!Paths.SetOverride(folder))
 		{
 			SetStatus(Lang.Tr("The hosted shop folder could not be created."));
 			return;
 		}
+		string scenario = scenarios[Mathf.Clamp(scenarioIndex, 0, scenarios.Count - 1)].Key;
+		string difficulty = DifficultyIds[Mathf.Clamp(difficultyIndex, 0, DifficultyIds.Length - 1)];
 		try
 		{
-			JObject cfg = ReadConfig() ?? new JObject();
+			JObject cfg = ReadJson(folder + "/server.json") ?? new JObject();
 			cfg["port"] = (JToken)new JValue(port);
 			cfg["name"] = (JToken)new JValue(name);
 			cfg["password"] = (JToken)new JValue(password);
 			cfg["maxPlayers"] = (JToken)new JValue(max);
-			File.WriteAllText(HostFolder + "/server.json", ((JToken)cfg).ToString((Newtonsoft.Json.Formatting)1, Array.Empty<Newtonsoft.Json.JsonConverter>()));
+			cfg["saveSlot"] = (JToken)new JValue(slotNumber);
+			if (isNew)
+			{
+				JObject nr = new JObject();
+				nr["scenario"] = (JToken)new JValue(scenario);
+				nr["difficulty"] = (JToken)new JValue(difficulty);
+				nr["skipIntro"] = (JToken)new JValue(skipIntro);
+				cfg["newRun"] = (JToken)nr;
+				cfg["endless"] = (JToken)new JValue(endless);
+			}
+			File.WriteAllText(folder + "/server.json", ((JToken)cfg).ToString((Newtonsoft.Json.Formatting)1, Array.Empty<Newtonsoft.Json.JsonConverter>()));
 		}
 		catch (Exception ex)
 		{
@@ -196,11 +482,85 @@ internal static class HostMenu
 		}
 		Paths.KeepSettings = true;
 		Net.Role = Role.Host;
-		Log.Info("host: starting from the menu: '" + name + "' on port " + port + ", " + max + " player(s), folder " + HostFolder);
+		Log.Info("host: starting from the menu: '" + name + "' on port " + port + ", " + max + " player(s), slot " + slotNumber + (isNew ? (" (new: " + scenario + ", " + difficulty + ")") : " (continue)") + ", folder " + folder);
 		LoadingScreen.HostStarting = true;
 		ServerMode.Start();
 		ServerMode.SkipMenuWait();
 		CloseDialog();
+	}
+
+	/// Headless test: --br-ui-host opens the window, --br-ui-host-slot=new|<n> and --br-ui-host-scenario=<ID> choose,
+	/// --br-ui-host-go presses Host.
+	internal static void TestHook()
+	{
+		if (!Args.Has("--br-ui-host"))
+		{
+			return;
+		}
+		try
+		{
+			OpenDialog();
+			if (window == null)
+			{
+				Log.Error("ui: host test: the window did not open");
+				return;
+			}
+			string wantSlot = Args.Get("--br-ui-host-slot");
+			if (!string.IsNullOrEmpty(wantSlot))
+			{
+				int index = slots.Count;
+				if (wantSlot != "new" && int.TryParse(wantSlot, out var n))
+				{
+					index = slots.FindIndex((Slot s) => s.N == n);
+					if (index < 0)
+					{
+						Log.Error("ui: host test: no shop in slot " + n);
+						return;
+					}
+				}
+				SetDropdown("slot", index);
+			}
+			string wantScenario = Args.Get("--br-ui-host-scenario");
+			if (!string.IsNullOrEmpty(wantScenario))
+			{
+				int index2 = scenarios.FindIndex((KeyValuePair<string, string> s) => string.Equals(s.Key, wantScenario, StringComparison.OrdinalIgnoreCase));
+				if (index2 >= 0)
+				{
+					SetDropdown("scenario", index2);
+				}
+			}
+			List<string> labels = new List<string>();
+			foreach (Slot slot in slots)
+			{
+				labels.Add(slot.N + "=" + slot.Label);
+			}
+			Log.Info("ui: host test: window open; shops [" + string.Join(" | ", labels) + "]; selected " + (NewSelected ? "new" : slots[slotIndex].N.ToString()) + "; scenario " + scenarios[scenarioIndex].Key + " of " + scenarios.Count + "; difficulty " + DifficultyIds[difficultyIndex] + "; scenario control enabled " + (window.Get("scenario")?.dropdown != null && ((Selectable)window.Get("scenario").dropdown).interactable));
+			if (Args.Has("--br-ui-host-go"))
+			{
+				Start();
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Error("ui: host test threw: " + ex);
+		}
+	}
+
+	private static void SetDropdown(string id, int index)
+	{
+		TMP_Dropdown dd = window?.Get(id)?.dropdown;
+		if ((Object)(object)dd != (Object)null)
+		{
+			dd.value = index;
+		}
+		if (id == "slot" && slotIndex != index)
+		{
+			OnSlotChanged(index);
+		}
+		if (id == "scenario")
+		{
+			scenarioIndex = index;
+		}
 	}
 
 	private static bool PortFree(int port)
@@ -218,11 +578,10 @@ internal static class HostMenu
 		}
 	}
 
-	private static JObject ReadConfig()
+	private static JObject ReadJson(string path)
 	{
 		try
 		{
-			string path = HostFolder + "/server.json";
 			if (File.Exists(path))
 			{
 				return JObject.Parse(File.ReadAllText(path));
@@ -230,7 +589,7 @@ internal static class HostMenu
 		}
 		catch (Exception ex)
 		{
-			Log.Warn("host: server.json unreadable, starting from defaults: " + ex.Message);
+			Log.Warn("host: " + Path.GetFileName(path) + " unreadable: " + ex.Message);
 		}
 		return null;
 	}

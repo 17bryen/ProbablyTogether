@@ -32,7 +32,9 @@ public static class Locks
 
 	public static event Action<string, int> Changed;
 
-	public static double TakeoverSeconds = 1.0;
+	/// Counter takeover: another player may take a held counter once its holder has been idle this long.
+	/// Negative = strict (wait for the idle timeout or a release).
+	public static double TakeoverSeconds = -1.0;
 
 	public static bool CanTakeOver(string name, int player)
 	{
