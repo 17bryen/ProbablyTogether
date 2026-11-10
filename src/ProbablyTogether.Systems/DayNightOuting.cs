@@ -258,7 +258,12 @@ public static class DayNightOuting
 	private static void ServerGoOut(MsgDnGoOut m, int from)
 	{
 		PlayerStore store = Game.Store;
-		string text = (Outings.Individual ? "Outings are individual on this server: update the mod to go out." : Common(store));
+		bool hostTrip = Net.IsHost && from == Net.LocalPlayer;
+		string text = ((Outings.Individual && !hostTrip) ? "Outings are individual on this server: update the mod to go out." : Common(store));
+		if (text == null && Outings.AnyOut)
+		{
+			text = Outings.WhoIsOut() + " is still out.";
+		}
 		if (text == null)
 		{
 			if (mapOpen)

@@ -177,8 +177,12 @@ public static class Outings
 		}
 		if (Net.IsHost)
 		{
-			Notices.Show(Lang.Tr("The host cannot go out alone yet: another player has to make the trip."), "outing");
-			return true;
+			if (AnyOut)
+			{
+				Notices.Show(Lang.Trf("{0} is still out: the host's trip takes everyone along, so wait until they are back.", Kit.Name(WhoIsOut())), "outing");
+				return true;
+			}
+			return false;
 		}
 		if (Private || !Net.IsLive)
 		{
@@ -528,6 +532,10 @@ public static class Outings
 		if (text == null && away.ContainsKey(from))
 		{
 			text = "You are already out.";
+		}
+		if (text == null && (DayNightOuting.MapOpen || DayNightOuting.IsOut))
+		{
+			text = "The group is out with the host.";
 		}
 		if (text == null)
 		{

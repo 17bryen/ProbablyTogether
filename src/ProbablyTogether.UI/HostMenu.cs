@@ -48,6 +48,8 @@ internal static class HostMenu
 
 	private static bool endless;
 
+	private static bool individual;
+
 	/// Where hosted shops live; --br-host-folder=<path> overrides it.
 	internal static string HostFolder
 	{
@@ -237,6 +239,11 @@ internal static class HostMenu
 					skipIntro = (bool)si;
 				}
 			}
+			JToken io = ((config != null) ? config["individualOutings"] : null);
+			if (io != null)
+			{
+				individual = (bool)io;
+			}
 			JToken en = ((config != null) ? config["endless"] : null);
 			if (en != null)
 			{
@@ -308,6 +315,10 @@ internal static class HostMenu
 			.AddInput("", Str(existing, "port", "27700"), (Action<string>)null, "port", (Action<string>)null)
 			.AddLabel(Lang.Tr("Players (1 to 4)"), (string)null)
 			.AddInput("", Str(existing, "maxPlayers", "4"), (Action<string>)null, "max", (Action<string>)null)
+			.AddToggle(Lang.Tr("Players go out at night one by one (the host still takes everyone along)"), individual, (Action<bool>)delegate(bool v)
+			{
+				individual = v;
+			}, "individual")
 			.AddSeparator((string)null, 4)
 			.AddLabel(Lang.Tr("New shop: scenario and difficulty"), "newlabel")
 			.AddDropdown((IList<string>)scenarioLabels, scenarioIndex, (Action<int>)delegate(int i)
@@ -464,6 +475,7 @@ internal static class HostMenu
 			cfg["password"] = (JToken)new JValue(password);
 			cfg["maxPlayers"] = (JToken)new JValue(max);
 			cfg["saveSlot"] = (JToken)new JValue(slotNumber);
+			cfg["individualOutings"] = (JToken)new JValue(individual);
 			if (isNew)
 			{
 				JObject nr = new JObject();
