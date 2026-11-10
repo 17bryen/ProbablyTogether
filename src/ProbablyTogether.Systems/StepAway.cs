@@ -9,7 +9,7 @@ internal static class StepAway
 {
 	private const string SaveKey = "humangenome_accomplice.stepAwayKey";
 
-	private static KeyCode key = KeyCode.F;
+	private static KeyCode key = KeyCode.C;
 
 	private static bool keyLoaded;
 
@@ -62,11 +62,11 @@ internal static class StepAway
 		}
 		catch
 		{
-			key = KeyCode.F;
+			key = KeyCode.C;
 		}
 		if (!Pointing.KeyboardKey(key))
 		{
-			key = KeyCode.F;
+			key = KeyCode.C;
 		}
 	}
 
