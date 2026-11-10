@@ -32,6 +32,53 @@ public static class Locks
 
 	public static event Action<string, int> Changed;
 
+	public static double TakeoverSeconds = 1.0;
+
+	public static bool CanTakeOver(string name, int player)
+	{
+		if (TakeoverSeconds < 0.0)
+		{
+			return false;
+		}
+		if (!Net.IsServer)
+		{
+			return true;
+		}
+		if (name == null || player <= 0)
+		{
+			return false;
+		}
+		if (!held.TryGetValue(name, out var value) || value.Player == player)
+		{
+			return true;
+		}
+		return (double)(Clock.Ms - value.TouchedMs) >= TakeoverSeconds * 1000.0;
+	}
+
+	/// Server: hand a held lock to another player (see CanTakeOver).
+	public static bool TakeOver(string name, int player)
+	{
+		if (!Net.IsServer || !CanTakeOver(name, player))
+		{
+			return false;
+		}
+		int num = (held.TryGetValue(name, out var value) ? value.Player : (-1));
+		if (num == player)
+		{
+			value.TouchedMs = Clock.Ms;
+			return true;
+		}
+		held[name] = new Entry
+		{
+			Player = player,
+			TouchedMs = Clock.Ms,
+			Name = Net.PlayerName(player)
+		};
+		Broadcast(name, player);
+		Log.Info("server: lock '" + name + "' taken over by " + Net.PlayerName(player) + ((num >= 0) ? (" from " + Net.PlayerName(num)) : ""));
+		return true;
+	}
+
 	public static bool TryTake(string name, int player)
 	{
 		if (!Net.IsOnline)

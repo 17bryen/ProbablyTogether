@@ -381,7 +381,7 @@ public static class CounterHelp
 	{
 		if (it != null && GeneralHelper.IsItemOwned(it) && ItemsUse.InCounter(it))
 		{
-			return Customers.CounterHeldByOther(Net.LocalPlayer) != null;
+			return Customers.CounterHolderOther(Net.LocalPlayer) != null;
 		}
 		return false;
 	}

@@ -337,6 +337,10 @@ internal static class DialogueSystem
 		}
 		if (num >= 0)
 		{
+			if (ch is CounterChannel && Locks.TakeOver(ch.LockName, player))
+			{
+				return true;
+			}
 			why = HolderText(ch, num);
 			if (ch is CounterChannel)
 			{

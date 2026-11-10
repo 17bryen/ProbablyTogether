@@ -111,6 +111,7 @@ internal static class ServerMode
 		cfg = ServerConfig.Load();
 		Log.Info("server mode: " + cfg.Describe());
 		LogIgnoredAdmins(cfg);
+		Locks.TakeoverSeconds = cfg.counterTakeoverSeconds;
 		Net.LocalPlayer = 0;
 		if (!Server.Start(cfg))
 		{

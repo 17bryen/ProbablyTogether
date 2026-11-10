@@ -220,6 +220,11 @@ public static class Customers
 		}
 		if (num >= 0)
 		{
+			if (Locks.TakeOver(counterLockNow, player))
+			{
+				took = true;
+				return true;
+			}
 			refusal = HeldText(num, counterLockNow);
 			Locks.Wanted(counterLockNow, player);
 			return false;
@@ -260,6 +265,21 @@ public static class Customers
 			return null;
 		}
 		int num = Locks.HeldBy(CounterLockNow);
+		if (num < 0 || num == player || Locks.CanTakeOver(CounterLockNow, player))
+		{
+			return null;
+		}
+		return Net.PlayerName(num);
+	}
+
+	/// Who else holds the counter right now, takeover or not (for the helper check on the customer's item).
+	public static string CounterHolderOther(int player)
+	{
+		if (!Net.IsOnline || !SomeoneAtCounter)
+		{
+			return null;
+		}
+		int num = Locks.HeldBy(CounterLockNow);
 		if (num < 0 || num == player)
 		{
 			return null;
@@ -275,7 +295,7 @@ public static class Customers
 		}
 		string counterLockNow = CounterLockNow;
 		int num = Locks.HeldBy(counterLockNow);
-		if (num < 0 || num == Net.LocalPlayer)
+		if (num < 0 || num == Net.LocalPlayer || Locks.CanTakeOver(counterLockNow, Net.LocalPlayer))
 		{
 			return null;
 		}
@@ -616,6 +636,10 @@ public static class Customers
 		}
 		string counterLockNow = CounterLockNow;
 		int num = Locks.Holder(counterLockNow);
+		if (num >= 0 && num != from && Locks.TakeOver(counterLockNow, from))
+		{
+			return;
+		}
 		if (num >= 0 && num != from)
 		{
 			Locks.Wanted(counterLockNow, from);

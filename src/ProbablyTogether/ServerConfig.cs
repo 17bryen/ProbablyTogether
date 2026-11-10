@@ -52,6 +52,8 @@ public sealed class ServerConfig
 
 	public double extraCustomersPerPlayer = 0.5;
 
+	public double counterTakeoverSeconds = 1.0;
+
 	[JsonIgnore]
 	public string LoadedFrom;
 
