@@ -29,12 +29,12 @@ public abstract class ItemsBotBase : BotScript
 		return true;
 	}
 
-	protected static List<GameItem> Movables(GameInventory inv, Func<GameItem, bool> more = null)
+	protected internal static List<GameItem> Movables(GameInventory inv, Func<GameItem, bool> more = null)
 	{
 		return inv.childItems.Where((GameItem i) => !Items.IsGone(i) && !IsTest(i) && GeneralHelper.IsItemOwned(i) && i.MayRemove() && i.MaxNumRemove() >= 1 && i.contentWindow == null && !ItemPinHelper.IsPinned(i) && (more == null || more(i))).ToList();
 	}
 
-	protected static bool Spot(GameInventory inv, GameItem item, int n, int rot, out int x, out int y)
+	protected internal static bool Spot(GameInventory inv, GameItem item, int n, int rot, out int x, out int y)
 	{
 		x = (y = 0);
 		int num = 30;
