@@ -772,12 +772,57 @@ internal static class ServerMode
 		menuSince = Time.realtimeSinceStartup - 10f;
 	}
 
+	private static int awayFrameRate = -1;
+
+	private static int awayVsync;
+
+	/// Host mode: the host stops playing and the game stays a plain server for the others until HostRejoin.
+	internal static bool HostStepOut()
+	{
+		if (!Net.IsHost || phase != Phase.Running)
+		{
+			return false;
+		}
+		awayFrameRate = Application.targetFrameRate;
+		awayVsync = QualitySettings.vSyncCount;
+		Net.HostAway = true;
+		Net.Role = Role.Server;
+		Net.LocalPlayer = 0;
+		Server.RemoveHost("stepped out");
+		Log.Info("host: stepped out; serving " + Server.PlayerCount + " player(s) without a local player");
+		return true;
+	}
+
+	internal static bool HostRejoin()
+	{
+		if (!Net.HostAway)
+		{
+			return false;
+		}
+		Net.HostAway = false;
+		Net.Role = Role.Host;
+		Application.targetFrameRate = awayFrameRate;
+		QualitySettings.vSyncCount = awayVsync;
+		Server.AddHost(HostName(), HostSteamId());
+		ProbablyTogether.UI.Presence.ResyncLocks(Locks.Table());
+		Log.Info("host: rejoined as player " + Net.LocalPlayer + "; " + Server.PlayerCount + " player(s)");
+		return true;
+	}
+
 	internal static void HostLeave()
 	{
+		if (Net.HostAway)
+		{
+			Net.HostAway = false;
+			Net.Role = Role.Host;
+			Application.targetFrameRate = awayFrameRate;
+			QualitySettings.vSyncCount = awayVsync;
+		}
 		if (!Net.IsHost)
 		{
 			return;
 		}
+		ProbablyTogether.UI.HostAwayUi.Reset();
 		Log.Info("host: leaving: the server stops (" + Server.PlayerCount + " player(s) incl. the host)");
 		try
 		{

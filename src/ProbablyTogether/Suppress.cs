@@ -49,7 +49,7 @@ internal static class Suppress
 
 	internal static void Tick()
 	{
-		if (!Net.IsDedicated)
+		if (!Net.IsDedicated || Net.HostAway)
 		{
 			return;
 		}

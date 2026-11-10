@@ -46,6 +46,9 @@ public static class Net
 
 	public static bool IsHost => Role == Role.Host;
 
+	/// The host stepped out: the game keeps serving the shop with nobody playing in it until the host rejoins.
+	public static bool HostAway { get; internal set; }
+
 	/// This copy has a player looking at it (a remote client or a host), for presentation.
 	public static bool HasLocalPlayer => Role == Role.Client || Role == Role.Host;
 

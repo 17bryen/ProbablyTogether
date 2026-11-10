@@ -564,7 +564,7 @@ internal static class DialogueSystem
 			return;
 		}
 		EmporiumOption instance = EmporiumOption.Instance;
-		if (Net.IsDedicated && (Object)(object)instance != (Object)null && (!optionsSet || optionsFor != instance))
+		if (Net.IsDedicated && !Net.HostAway && (Object)(object)instance != (Object)null && (!optionsSet || optionsFor != instance))
 		{
 			instance.enableTypewriterEffect = false;
 			instance.autoNextDialog = false;

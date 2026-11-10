@@ -643,8 +643,41 @@ internal static class Server
 		Net.Players[peer.Info.Id] = peer.Info;
 		Net.LocalPlayer = peer.Info.Id;
 		Log.Info("host: " + text + " is player " + peer.Info.Id + " on this server (loopback)");
+		if (ByPlayer.Count > 1)
+		{
+			BroadcastRoster(peer.Info.Id, -1, null);
+		}
 		Net.RaisePlayerJoined(peer.Info);
+		PanelLink.MarkDirty("join");
 		return peer;
+	}
+
+	/// The host leaves its seat; the server keeps running.
+	internal static bool RemoveHost(string why)
+	{
+		Peer peer = null;
+		foreach (Peer value in ByPlayer.Values)
+		{
+			if (value.Conn != null && value.Conn.IsLoopback)
+			{
+				peer = value;
+				break;
+			}
+		}
+		if (peer == null || peer.Info == null)
+		{
+			return false;
+		}
+		ByPlayer.Remove(peer.Info.Id);
+		Dispatch.Forget(peer.Info.Id);
+		Log.ForgetPrefix("s" + peer.Info.Id + "|");
+		Net.Players.Remove(peer.Info.Id);
+		Log.Info("server: " + peer.Info.Name + " (player " + peer.Info.Id + ", the host) left: " + why + "; " + PlayerCount + "/" + Config.maxPlayers + " players; the server keeps running");
+		Locks.ReleaseAll(peer.Info.Id);
+		BroadcastRoster(-1, peer.Info.Id, "left");
+		Net.RaisePlayerLeft(peer.Info);
+		PanelLink.MarkDirty("leave");
+		return true;
 	}
 
 	internal static void SendToJoined(byte[] frame, int except)

@@ -499,6 +499,19 @@ public static class Presence
 		rosterDirty = true;
 	}
 
+	internal static void ResyncLocks(Dictionary<string, int> table)
+	{
+		heldLocks.Clear();
+		if (table != null)
+		{
+			foreach (KeyValuePair<string, int> item in table)
+			{
+				heldLocks[item.Key] = item.Value;
+			}
+		}
+		rosterDirty = true;
+	}
+
 	internal static void OnLockChanged(string name, int holder)
 	{
 		if (holder < 0)

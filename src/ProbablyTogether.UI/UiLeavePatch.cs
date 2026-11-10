@@ -26,6 +26,18 @@ internal static class UiLeavePatch
 
 	private static bool Prefix(EscapeUIManager __instance)
 	{
+		if (Net.HostAway)
+		{
+			try
+			{
+				__instance.CloseEscapeMenu();
+			}
+			catch
+			{
+			}
+			HostAwayUi.Show();
+			return false;
+		}
 		if (!Net.HasLocalPlayer)
 		{
 			return true;
@@ -39,7 +51,12 @@ internal static class UiLeavePatch
 				Leave();
 				return false;
 			}
-			val.OpenPanel(Net.IsHost ? Lang.Tr("Stop hosting? The shop is saved as of this morning and the other players are disconnected.") : Lang.Trf("Leave {0}? The others keep playing, and you can join again from the main menu.", Kit.Name(Net.ServerName)), (Action)Leave, (Action)null, false);
+			if (Net.IsHost)
+			{
+				HostAwayUi.AskLeave(val);
+				return false;
+			}
+			val.OpenPanel(Lang.Trf("Leave {0}? The others keep playing, and you can join again from the main menu.", Kit.Name(Net.ServerName)), (Action)Leave, (Action)null, false);
 		}
 		catch (Exception ex)
 		{
