@@ -209,7 +209,11 @@ public static class Net
 
 	public static void Disconnect()
 	{
-		if (!IsServer)
+		if (IsHost)
+		{
+			ServerMode.HostLeave();
+		}
+		else if (!IsServer)
 		{
 			Client.Disconnect("left");
 		}

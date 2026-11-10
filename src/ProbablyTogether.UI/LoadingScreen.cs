@@ -52,6 +52,9 @@ public static class LoadingScreen
 		((Component)Kit.Rect("right", ((Component)val).transform)).gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 	}
 
+	/// Host mode: set when "Host" is pressed, cleared when the shop is up or hosting stops.
+	internal static bool HostStarting;
+
 	internal static void Tick()
 	{
 		if ((Object)(object)Overlay.LoadingRoot == (Object)null)
@@ -82,7 +85,8 @@ public static class LoadingScreen
 			num = 1;
 			break;
 		}
-		bool flag = (byte)num != 0;
+		bool hosting = Net.IsHost && HostStarting;
+		bool flag = hosting || (byte)num != 0;
 		if (flag != Visible)
 		{
 			Visible = flag;
@@ -103,7 +107,7 @@ public static class LoadingScreen
 			since = Time.realtimeSinceStartup;
 		}
 		string n = (string.IsNullOrEmpty(Net.ServerName) ? Net.ServerAddress : Net.ServerName);
-		Kit.SetText(text: clientState switch
+		Kit.SetText(text: hosting ? Lang.Trf("Starting {0}...", Kit.Name(n)) : clientState switch
 		{
 			ClientState.Connecting => Lang.Trf("Connecting to {0}...", Kit.Name(Net.ServerAddress)), 
 			ClientState.Handshake => Lang.Trf("Joining {0}...", Kit.Name(n)), 

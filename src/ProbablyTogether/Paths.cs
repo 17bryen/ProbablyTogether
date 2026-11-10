@@ -16,6 +16,9 @@ public static class Paths
 
 	internal static int RewrittenSites;
 
+	/// Host mode: the game options file stays in the account folder (the host is a normal player).
+	internal static bool KeepSettings;
+
 	private static readonly HashSet<string> SkippedTypes = new HashSet<string>(StringComparer.Ordinal);
 
 	public static string Original
@@ -58,6 +61,32 @@ public static class Paths
 
 	public static bool Redirecting => Override != null;
 
+	internal static void ClearOverride()
+	{
+		over = null;
+		overDone = true;
+		Log.Info("data folder: back to the account folder");
+	}
+
+	/// Host mode from the menu: point the shop's saves at a folder before the shop loads.
+	internal static bool SetOverride(string folder)
+	{
+		try
+		{
+			string text = Norm(Path.GetFullPath(folder));
+			System.IO.Directory.CreateDirectory(text);
+			over = text;
+			overDone = true;
+			Log.Info("data folder: now " + text);
+			return true;
+		}
+		catch (Exception ex)
+		{
+			Log.Error("data folder " + folder + " is not usable: " + ex.Message);
+			return false;
+		}
+	}
+
 	public static string Root => Override ?? Original;
 
 	public static string GameDataPath()
@@ -83,6 +112,10 @@ public static class Paths
 			return full;
 		}
 		string text2 = Original;
+		if (KeepSettings && (full.EndsWith("/SaveFile.es3", StringComparison.OrdinalIgnoreCase) || full.EndsWith("\\SaveFile.es3", StringComparison.OrdinalIgnoreCase)))
+		{
+			return full;
+		}
 		if (full.Length > text2.Length && (full[text2.Length] == '/' || full[text2.Length] == '\\') && string.Compare(full, 0, text2, 0, text2.Length, StringComparison.OrdinalIgnoreCase) == 0)
 		{
 			return text + full.Substring(text2.Length);

@@ -234,6 +234,7 @@ public static class JoinMenu
 			val.SetActive(true);
 			Button = val;
 			UsingFallbackButton = false;
+			HostMenu.BuildButton(menu, moddingButton, val, flag);
 			Log.Info("ui: \"Join server\" button added next to Mods (" + (flag ? ("parent layout " + ((object)((Component)parent).GetComponent<LayoutGroup>()).GetType().Name) : "placed under it") + ")");
 		}
 		catch (Exception ex)
@@ -421,9 +422,6 @@ public static class JoinMenu
 			.AddLabel(Lang.Tr("Password (leave empty if the server has none)"), (string)null)
 			.AddInput("", savedServer?.password ?? "", (Action<string>)null, "password", (Action<string>)null)
 			.AddToggle(Lang.Tr("Remember password"), !string.IsNullOrEmpty(savedServer?.password), (Action<bool>)null, "remember");
-		CustomUIBuilder obj2 = Row(obj, 8f);
-		RectTransform currentContainer = obj2.CurrentContainer;
-		obj2.AddButton(Lang.Tr("Server list"), (Action)ServerList.OpenWindow, "find").AddButton(Lang.Tr("Rent a server"), (Action)OpenRentPage, "rent").AddFlexibleSpace();
 		obj.AddWarning("", "status");
 		CustomUIBuilder obj3 = Row(obj, 8f);
 		RectTransform currentContainer2 = obj3.CurrentContainer;
@@ -431,7 +429,6 @@ public static class JoinMenu
 			.AddButton(Lang.Tr("Join"), (Action)Join, "join");
 		obj.OnClose((Action)OnDialogClosed).Center();
 		window = obj.Show();
-		FitButtonRow(window, currentContainer, new string[2] { "find", "rent" }, new string[0]);
 		FitButtonRow(window, currentContainer2, new string[3] { "about", "cancel", "join" }, new string[0]);
 		FitHeight(window, 300f, 720f, 44f);
 		CustomUIElement val = window.Get("password");
@@ -469,7 +466,6 @@ public static class JoinMenu
 	public static void CloseDialog()
 	{
 		CloseAbout();
-		ServerList.Close();
 		CustomUIManager instance = CustomUIManager.Instance;
 		if (instance != null)
 		{
@@ -660,7 +656,7 @@ public static class JoinMenu
 		{
 			instance.CloseWindow("humangenome_accomplice.about");
 		}
-		string[] array = Brand.AboutParagraphs(Chat.ChatKeyName);
+		string[] array = AboutParagraphs(Chat.ChatKeyName);
 		CustomUIBuilder val = instance.CreateWindow("humangenome_accomplice.about", "ProbablyTogether".ToUpperInvariant(), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(620f, 560f);
 		for (int i = 0; i < array.Length; i++)
 		{
@@ -672,11 +668,6 @@ public static class JoinMenu
 		}
 		val.AddSpace(10f);
 		CustomUIBuilder val2 = Row(val, 8f);
-		if (Brand.HasWorkshopPage)
-		{
-			val2.AddButton(Lang.Tr("Workshop page"), (Action)OpenWorkshopPage, "workshop");
-		}
-		val2.AddButton(Lang.Tr("Rent a server"), (Action)OpenRentPage, "rent");
 		val2.AddFlexibleSpace().AddButton(Lang.Tr("Back"), (Action)CloseAbout, "back");
 		CustomUIWindow val3 = val.Center().Show();
 		for (int j = 0; j < array.Length; j++)
@@ -694,7 +685,17 @@ public static class JoinMenu
 			}
 		}
 		FitHeight(val3, 240f, 560f, 0f);
-		Log.Info("ui: About window opened (ProbablyTogether, Workshop page " + (Brand.HasWorkshopPage ? "3832445441" : "hidden: no item yet") + ")");
+		Log.Info("ui: About window opened");
+	}
+
+	private static string[] AboutParagraphs(string chatKey)
+	{
+		return new string[3]
+		{
+			Lang.Tr("Online co-op for Probably Stolen: 2 to 4 players run one shop together. One player hosts from the main menu (Host a shop) or runs a dedicated server; the others join by address and password."),
+			Lang.Tr("One player serves the counter at a time while the others work the back room. The night starts when everyone is ready. Press {0} to chat.").Replace("{0}", chatKey ?? "Enter"),
+			Lang.Tr("A free, unofficial mod based on the upstream mod 0.2.8 by HumanGenome (MIT). Not made by or affiliated with Questing Goose Studio or tinyBuild.")
+		};
 	}
 
 	internal static void FitHeight(CustomUIWindow w, float min, float max, float slack)
@@ -734,74 +735,12 @@ public static class JoinMenu
 		}
 	}
 
-	private static void OpenWorkshopPage()
-	{
-		if (!Brand.HasWorkshopPage)
-		{
-			return;
-		}
-		Log.Info("ui: opening the Workshop page 3832445441");
-		try
-		{
-			if (SteamManager.Initialized)
-			{
-				SteamFriends.ActivateGameOverlayToWebPage(Brand.WorkshopUrl, (EActivateGameOverlayToWebPageMode)0);
-			}
-			else
-			{
-				Log.Warn("ui: Steam is not running: the Workshop page cannot open");
-			}
-		}
-		catch (Exception ex)
-		{
-			Log.Warn("ui: Steam overlay not available (" + ex.Message + ")");
-		}
-	}
-
-	private static void OpenRentPage()
-	{
-		OpenRentPage(fromList: false, delegate(string s)
-		{
-			if (DialogOpen)
-			{
-				SetStatus(s);
-			}
-		});
-	}
-
-	internal static void OpenRentPage(bool fromList, Action<string> say)
-	{
-		Log.Info("ui: Rent a server pressed" + (fromList ? " (server list)" : ""));
-		try
-		{
-			if (SteamManager.Initialized && SteamUtils.IsOverlayEnabled())
-			{
-				if (fromList)
-				{
-					SteamFriends.ActivateGameOverlayToWebPage("https://www.survivalservers.com/services/game_servers/probably_stolen/", (EActivateGameOverlayToWebPageMode)0);
-				}
-				else
-				{
-					SteamFriends.ActivateGameOverlayToWebPage("https://www.survivalservers.com/services/game_servers/probably_stolen/", (EActivateGameOverlayToWebPageMode)0);
-				}
-				return;
-			}
-			Log.Warn("ui: Steam overlay is off: the rent page cannot open in the game");
-		}
-		catch (Exception ex)
-		{
-			Log.Warn("ui: Steam overlay not available (" + ex.Message + ")");
-		}
-		say?.Invoke(Lang.Tr("Turn on the Steam overlay to open it here, or visit survivalservers.com in your browser."));
-	}
-
 	private static void OnDialogClosed()
 	{
 		window = null;
-		ServerList.Close();
 	}
 
-	private static CustomUIBuilder Row(CustomUIBuilder b, float spacing)
+	internal static CustomUIBuilder Row(CustomUIBuilder b, float spacing)
 	{
 		HorizontalLayoutGroup val = Kit.Row((Transform)(object)b.CurrentContainer, "row", spacing);
 		return new CustomUIBuilder(CustomUIManager.Instance, b.Handle, (RectTransform)((Component)val).transform);

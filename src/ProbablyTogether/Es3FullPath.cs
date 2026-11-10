@@ -7,7 +7,7 @@ internal static class Es3FullPath
 {
 	private static bool Prepare()
 	{
-		return Paths.Redirecting;
+		return true;
 	}
 
 	private static void Postfix(ref string __result)

@@ -248,7 +248,14 @@ internal static class ServerMode
 			{
 				phase = Phase.Done;
 				Log.Info("server: quitting");
-				Application.Quit();
+				if (Net.IsHost)
+				{
+					Log.Info("host: the server stopped; the game stays open");
+				}
+				else
+				{
+					Application.Quit();
+				}
 			}
 			break;
 		}
@@ -406,6 +413,7 @@ internal static class ServerMode
 	private static void ShopUp()
 	{
 		phase = Phase.Running;
+		ProbablyTogether.UI.LoadingScreen.HostStarting = false;
 		bool flag = inPlace;
 		inPlace = false;
 		if (flag)
@@ -756,6 +764,55 @@ internal static class ServerMode
 	internal static void Stop(string why)
 	{
 		BeginStop(why);
+	}
+
+	/// Host mode from the menu: start the shop on the next tick instead of after the usual 2 s.
+	internal static void SkipMenuWait()
+	{
+		menuSince = Time.realtimeSinceStartup - 10f;
+	}
+
+	internal static void HostLeave()
+	{
+		if (!Net.IsHost)
+		{
+			return;
+		}
+		Log.Info("host: leaving: the server stops (" + Server.PlayerCount + " player(s) incl. the host)");
+		try
+		{
+			Server.Stopping = true;
+			Server.Goodbye("the host left");
+			if (phase == Phase.Running)
+			{
+				SaveForStop();
+			}
+			Server.StopListening();
+			PanelLink.WriteNow("stopping");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: stopping threw: " + ex.Message);
+		}
+		ProbablyTogether.UI.LoadingScreen.HostStarting = false;
+		Server.ResetAfterHost();
+		phase = Phase.WaitMenu;
+		menuSince = -1f;
+		cfg = null;
+		quitAtMs = 0L;
+		nightSnapshotAtMs = -1L;
+		newRun = false;
+		inPlace = false;
+		saveQueued = false;
+		RunEnded = false;
+		Ending = "";
+		Net.Role = Role.Off;
+		Net.LocalPlayer = 0;
+		Net.Players.Clear();
+		Locks.ServerClear();
+		Paths.ClearOverride();
+		Paths.KeepSettings = false;
+		Game.ToMainMenu("the host left");
 	}
 
 	internal static void LoadFailed(Exception e)

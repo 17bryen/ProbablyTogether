@@ -181,6 +181,28 @@ internal static class Server
 		}
 	}
 
+	/// Forgets every peer so the same game can host again.
+	internal static void ResetAfterHost()
+	{
+		foreach (Peer value in new List<Peer>(ByConn.Values))
+		{
+			try
+			{
+				value.Conn.Close("the host left");
+			}
+			catch
+			{
+			}
+		}
+		ByConn.Clear();
+		ByPlayer.Clear();
+		nextPlayerId = 1;
+		ShopReady = false;
+		Stopping = false;
+		listener = null;
+		Config = null;
+	}
+
 	internal static void StopListening()
 	{
 		listening = false;

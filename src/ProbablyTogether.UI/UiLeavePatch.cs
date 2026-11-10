@@ -39,7 +39,7 @@ internal static class UiLeavePatch
 				Leave();
 				return false;
 			}
-			val.OpenPanel(Lang.Trf("Leave {0}? The others keep playing, and you can join again from the main menu.", Kit.Name(Net.ServerName)), (Action)Leave, (Action)null, false);
+			val.OpenPanel(Net.IsHost ? Lang.Tr("Stop hosting? The shop is saved as of this morning and the other players are disconnected.") : Lang.Trf("Leave {0}? The others keep playing, and you can join again from the main menu.", Kit.Name(Net.ServerName)), (Action)Leave, (Action)null, false);
 		}
 		catch (Exception ex)
 		{

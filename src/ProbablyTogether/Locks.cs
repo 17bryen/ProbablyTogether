@@ -256,6 +256,12 @@ public static class Locks
 		}
 	}
 
+	internal static void ServerClear()
+	{
+		held.Clear();
+		view.Clear();
+	}
+
 	internal static void ClientClear()
 	{
 		ClientReset(null);

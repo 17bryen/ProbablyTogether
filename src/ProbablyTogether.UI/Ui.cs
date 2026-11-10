@@ -210,7 +210,6 @@ public static class Ui
 		Kit.Tick();
 		JoinMenu.Tick();
 		UpdateNotice.Tick();
-		ServerList.Tick();
 		LoadingScreen.Tick();
 		Overlay.Tick();
 		Presence.Tick();

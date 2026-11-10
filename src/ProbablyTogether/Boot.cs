@@ -56,6 +56,7 @@ internal static class Boot
 			else if (Args.Host)
 			{
 				Net.Role = Role.Host;
+				Paths.KeepSettings = true;
 			}
 			ModList.Enable();
 			SystemHooks.Init();

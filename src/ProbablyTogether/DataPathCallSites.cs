@@ -13,7 +13,7 @@ internal static class DataPathCallSites
 
 	private static bool Prepare()
 	{
-		return Paths.Redirecting;
+		return true;
 	}
 
 	private static IEnumerable<MethodBase> TargetMethods()
