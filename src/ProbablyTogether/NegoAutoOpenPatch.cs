@@ -7,6 +7,10 @@ internal static class NegoAutoOpenPatch
 {
 	private static bool Prefix()
 	{
+		if (Systems.Outings.Private)
+		{
+			return true;
+		}
 		if (Net.IsDedicated)
 		{
 			return false;

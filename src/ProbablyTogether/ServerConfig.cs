@@ -52,7 +52,11 @@ public sealed class ServerConfig
 
 	public double extraCustomersPerPlayer = 0.5;
 
+	/// Seconds a counter holder must be idle before another player's action takes the counter over. -1 = strict (stock).
 	public double counterTakeoverSeconds = 1.0;
+
+	/// Players go out one by one while the others stay in. False: the stock group trip.
+	public bool individualOutings;
 
 	[JsonIgnore]
 	public string LoadedFrom;

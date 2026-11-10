@@ -751,6 +751,10 @@ public static class DayNight
 			}
 			return "Close the shop first.";
 		}
+		if (Outings.AnyOut)
+		{
+			return Outings.WhoIsOut() + " is still out.";
+		}
 		if (DayNightOuting.IsOut)
 		{
 			return "Come back from tonight's trip first.";
@@ -1034,6 +1038,10 @@ public static class DayNight
 
 	private static string LocalReadyBlock(PlayerStore ps)
 	{
+		if (Outings.AnyOut)
+		{
+			return Outings.WhoIsOut() + " is still out.";
+		}
 		if (DayNightOuting.IsOut)
 		{
 			return "Come back from tonight's trip first.";

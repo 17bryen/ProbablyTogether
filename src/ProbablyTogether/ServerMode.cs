@@ -112,6 +112,8 @@ internal static class ServerMode
 		Log.Info("server mode: " + cfg.Describe());
 		LogIgnoredAdmins(cfg);
 		Locks.TakeoverSeconds = cfg.counterTakeoverSeconds;
+		Systems.Outings.ServerReset();
+		Systems.Outings.Individual = cfg.individualOutings;
 		Net.LocalPlayer = 0;
 		if (!Server.Start(cfg))
 		{

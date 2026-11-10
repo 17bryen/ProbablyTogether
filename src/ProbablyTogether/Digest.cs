@@ -300,6 +300,10 @@ internal static class Digest
 
 	internal static void Compare(MsgDigest server)
 	{
+		if (Systems.Outings.Private)
+		{
+			return;
+		}
 		if (server == null)
 		{
 			return;

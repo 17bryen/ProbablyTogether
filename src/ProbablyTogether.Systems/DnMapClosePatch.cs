@@ -21,6 +21,10 @@ internal static class DnMapClosePatch
 
 	private static bool Prefix()
 	{
+		if (Outings.Private)
+		{
+			return Outings.OnLocalCloseMap();
+		}
 		if (!DayNightGate.LocalCommit)
 		{
 			return true;

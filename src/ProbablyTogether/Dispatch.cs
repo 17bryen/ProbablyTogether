@@ -327,6 +327,10 @@ internal static class Dispatch
 
 	internal static void OnClientFrame(string kind, JToken d)
 	{
+		if (Systems.Outings.DropsWhilePrivate(kind))
+		{
+			return;
+		}
 		if (!Handlers.TryGetValue(kind, out var value) || value.OnClient == null)
 		{
 			WarnOnce("cli?" + kind, "client: no handler for " + kind);

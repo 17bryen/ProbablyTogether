@@ -60,7 +60,8 @@ public static class Net
 
 	public static int LocalPlayer { get; internal set; }
 
-	public static bool Applying => applyDepth > 0;
+	/// True while a replicated change is applied here, and for a whole private outing (Systems.Outings).
+	public static bool Applying => applyDepth > 0 || Systems.Outings.Private;
 
 	public static int Actor => actorPlus1 - 1;
 

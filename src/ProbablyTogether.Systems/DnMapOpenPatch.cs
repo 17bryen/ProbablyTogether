@@ -27,6 +27,10 @@ internal static class DnMapOpenPatch
 		{
 			return true;
 		}
+		if (Outings.RequestGo())
+		{
+			return false;
+		}
 		EmporiumEntry instance = EmporiumEntry.Instance;
 		GameItem val = ((instance != null) ? instance.selectedBackpack : null);
 		long backpackId = ((val != null) ? Ids.Of(val) : 0);

@@ -19,5 +19,8 @@ public sealed class MsgWelcome
 
 	public string build;
 
+	/// The server's counter takeover setting (seconds; negative or missing = strict lock).
 	public double takeover = -1.0;
+
+	public bool outings;
 }

@@ -86,7 +86,7 @@ public static class DayNightOuting
 
 	public static event Action<string, string, int> OutingStep;
 
-	private static bool InTransit()
+	internal static bool InTransit()
 	{
 		try
 		{
@@ -230,7 +230,7 @@ public static class DayNightOuting
 		return null;
 	}
 
-	private static string Common(PlayerStore ps)
+	internal static string Common(PlayerStore ps)
 	{
 		if (DayNightRun.RunOver)
 		{
@@ -258,7 +258,7 @@ public static class DayNightOuting
 	private static void ServerGoOut(MsgDnGoOut m, int from)
 	{
 		PlayerStore store = Game.Store;
-		string text = Common(store);
+		string text = (Outings.Individual ? "Outings are individual on this server: update the mod to go out." : Common(store));
 		if (text == null)
 		{
 			if (mapOpen)

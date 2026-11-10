@@ -21,6 +21,10 @@ internal static class DnReturnPatch
 
 	private static bool Prefix()
 	{
+		if (Outings.Private)
+		{
+			return Outings.OnLocalReturn();
+		}
 		if (!DayNightGate.LocalCommit)
 		{
 			return true;
