@@ -30,19 +30,35 @@ public static class Carry
 
 	private sealed class Icon
 	{
-		public RectTransform Root;
-
-		public Image Border;
-
-		public Image Img;
-
-		public TextMeshProUGUI Count;
-
 		public long Item;
 
 		public Sprite Sprite;
 
 		public string CountText = "";
+
+		public RectTransform Ghost;
+
+		public Image GhostImg;
+
+		public CanvasGroup Faded;
+
+		public GameItemElement FadedEl;
+
+		public GameInventory HiInv;
+
+		public int HiX = int.MinValue;
+
+		public int HiY;
+
+		public bool HiOk;
+
+		public string HiRef = "";
+
+		public Vector2 GhostPos;
+
+		public bool GhostHas;
+
+		public string GhostKey = "";
 
 		public long CachedId;
 
@@ -64,6 +80,10 @@ public static class Carry
 	private static readonly FieldInfo fRemove = AccessTools.Field(typeof(ItemMouseDragHandler), "currentRemove");
 
 	private static readonly FieldInfo fSelected = AccessTools.Field(typeof(ItemMultiSelectHandler), "selectedItems");
+
+	private static readonly FieldInfo fLastSlot = AccessTools.Field(typeof(ItemMouseDragHandler), "lastSlot");
+
+	private static readonly FieldInfo fLastInventory = AccessTools.Field(typeof(ItemMouseDragHandler), "lastInventory");
 
 	private static readonly Dictionary<int, Srv> srv = new Dictionary<int, Srv>();
 
@@ -239,6 +259,71 @@ public static class Carry
 		m.c = serial;
 		try
 		{
+			ItemMouseDragHandler held = ItemMouseDragHandler.current;
+			GameItemElement heldEl = (((Object)(object)held != (Object)null) ? (held.GetCurrentItem() as GameItemElement) : null);
+			if (heldEl != null && heldEl.tempShape != null)
+			{
+				m.o = heldEl.tempShape.orientation & 3;
+				m.f = heldEl.tempShape.flipped;
+			}
+			m.t = null;
+			Vector2 centreWorld = Vector2.zero;
+			bool haveCentre = false;
+			if (heldEl != null)
+			{
+				TreeNodeRender rot = heldEl.fakeRotator ?? heldEl.rotator;
+				if (rot != null && (Object)(object)rot.rectTransform != (Object)null)
+				{
+					centreWorld = heldEl.GetFakeRotatorCenteredPosition();
+					Vector2 area = Kit.ToGameArea(RectTransformUtility.WorldToScreenPoint(CanvasCamera(rot.rectTransform), (Vector3)centreWorld));
+					m.cx = area.x;
+					m.cy = area.y;
+					haveCentre = true;
+				}
+			}
+			if (heldEl != null && haveCentre && fLastSlot != null && fLastInventory != null)
+			{
+				GameInventory hoverInv = fLastInventory.GetValue(held) as GameInventory;
+				SlotMarker hoverSlot = fLastSlot.GetValue(held) as SlotMarker;
+				GameGridInventory hoverGrid = hoverInv as GameGridInventory;
+				if (hoverGrid == null)
+				{
+					try
+					{
+						hoverGrid = RenderHandler.RaycastFindParentElement<GameInventory>((Vector2)Input.mousePosition, heldEl.fakeBackground) as GameGridInventory;
+					}
+					catch
+					{
+						hoverGrid = null;
+					}
+					hoverSlot = null;
+				}
+				if (hoverGrid != null && (Object)(object)hoverGrid.rectTransform != (Object)null)
+				{
+					Vector3 loc = ((Transform)hoverGrid.rectTransform).InverseTransformPoint((Vector3)centreWorld);
+					m.lx = loc.x;
+					m.ly = loc.y;
+					m.t = Items.RefOf((GraphNodeStorage)(object)hoverGrid);
+					if (hoverSlot != null && hoverSlot.inventory == hoverGrid && hoverSlot.itemGridShape != null)
+					{
+						m.tx = hoverSlot.itemGridShape.minX;
+						m.ty = hoverSlot.itemGridShape.minY;
+						m.ok = hoverSlot.numTransfer > 0;
+					}
+					else
+					{
+						m.tx = int.MinValue;
+						m.ty = 0;
+						m.ok = false;
+					}
+				}
+			}
+		}
+		catch
+		{
+		}
+		try
+		{
 			if (localGroup)
 			{
 				ItemMultiSelectHandler current = ItemMultiSelectHandler.current;
@@ -319,6 +404,16 @@ public static class Carry
 			o.c = c;
 			o.n = Mathf.Clamp(m.n, 0, Math.Max(1, val.unitCount));
 			o.g = Mathf.Clamp(m.g, 0, 20);
+			o.o = m.o & 3;
+			o.f = m.f;
+			o.t = m.t;
+			o.tx = m.tx;
+			o.ty = m.ty;
+			o.ok = m.ok;
+			o.cx = m.cx;
+			o.cy = m.cy;
+			o.lx = m.lx;
+			o.ly = m.ly;
 		}
 		srv.Last = Copy(o);
 	}
@@ -403,7 +498,17 @@ public static class Carry
 			d = a.d,
 			n = a.n,
 			g = a.g,
-			c = a.c
+			c = a.c,
+			o = a.o,
+			f = a.f,
+			t = a.t,
+			tx = a.tx,
+			ty = a.ty,
+			ok = a.ok,
+			cx = a.cx,
+			cy = a.cy,
+			lx = a.lx,
+			ly = a.ly
 		};
 	}
 
@@ -436,9 +541,9 @@ public static class Carry
 
 	public static bool IconOnScreen(int player)
 	{
-		if (icons.TryGetValue(player, out var value) && (Object)(object)value.Root != (Object)null && ((Component)value.Root).gameObject.activeInHierarchy && (Object)(object)value.Img != (Object)null)
+		if (icons.TryGetValue(player, out var value) && (Object)(object)value.Ghost != (Object)null && ((Component)value.Ghost).gameObject.activeInHierarchy)
 		{
-			return (Object)(object)value.Img.sprite != (Object)null;
+			return (Object)(object)value.GhostImg.sprite != (Object)null;
 		}
 		return false;
 	}
@@ -484,48 +589,360 @@ public static class Carry
 		{
 			value = (icons[r.Id] = new Icon());
 		}
+		GameItem resolved = null;
 		Sprite val = null;
 		if (r.Visible && r.Drag > 0 && (Object)(object)r.Widget != (Object)null)
 		{
-			val = SpriteOf(Resolve(value, r.Drag));
+			resolved = Resolve(value, r.Drag);
+			val = SpriteOf(resolved);
 		}
-		if ((Object)(object)val == (Object)null)
+		GameItemElement el = resolved as GameItemElement;
+		if ((Object)(object)val == (Object)null || el == null || el.IsDestroyed())
 		{
-			if ((Object)(object)value.Root != (Object)null && ((Component)value.Root).gameObject.activeSelf)
-			{
-				((Component)value.Root).gameObject.SetActive(false);
-			}
 			value.Item = 0L;
 			value.Sprite = null;
+			value.CountText = "";
+			EndGhost(value);
 			return;
 		}
-		if ((Object)(object)value.Root == (Object)null || (Object)(object)((Transform)value.Root).parent != (Object)(object)r.Widget)
+		value.CountText = ((r.Group > 0) ? ("+" + Math.Min(r.Group, 20)) : ((r.Units > 1) ? ("x" + r.Units) : ""));
+		if (r.Target != null && !TargetVisible(r.Target))
 		{
-			Build(value, r);
-		}
-		if ((Object)(object)value.Img.sprite != (Object)(object)val)
-		{
-			value.Img.sprite = val;
-		}
-		string text = ((r.Group > 0) ? ("+" + Math.Min(r.Group, 20)) : ((r.Units > 1) ? ("x" + r.Units) : ""));
-		if (text != value.CountText)
-		{
-			value.CountText = text;
-			Kit.SetText(value.Count, text);
-			((Component)value.Count).gameObject.SetActive(text.Length > 0);
-		}
-		Color val2 = Kit.PlayerColor(r.Id);
-		val2.a = (r.Afk ? 0.5f : 0.95f);
-		if (((Graphic)value.Border).color != val2)
-		{
-			((Graphic)value.Border).color = val2;
-		}
-		if (!((Component)value.Root).gameObject.activeSelf)
-		{
-			((Component)value.Root).gameObject.SetActive(true);
+			value.Item = 0L;
+			value.Sprite = null;
+			HideGhost(value);
+			ClearHi(value);
+			Fade(value, el, on: true);
+			return;
 		}
 		value.Item = r.Drag;
 		value.Sprite = val;
+		DrawGhost(value, r, el, val);
+	}
+
+	// Spectator ghost: anchored to the hovered inventory on this screen (hidden if it is not open here), else it follows the remote cursor.
+
+	internal static int GhostDrawn;
+
+	internal static string LastGhostNote = "";
+
+	private static void DrawGhost(Icon ic, Presence.Remote r, GameItemElement el, Sprite sprite)
+	{
+		try
+		{
+			if ((Object)(object)ic.Ghost == (Object)null)
+			{
+				BuildGhost(ic);
+			}
+			GridShape ms = ((GameItem)el).modifiedShape;
+			int w = ((ms != null) ? Math.Max(1, ms.width) : 1);
+			int h = ((ms != null) ? Math.Max(1, ms.height) : 1);
+			Fade(ic, el, on: true);
+			Vector2 area;
+			float cell;
+			string key;
+			if (r.Target != null)
+			{
+				GameGridInventory grid = Items.Resolve(r.Target) as GameGridInventory;
+				if (grid == null || !GridVisible(grid))
+				{
+					LastGhostNote = "target not open here";
+					HideGhost(ic);
+					ClearHi(ic);
+					return;
+				}
+				if (r.TX != int.MinValue)
+				{
+					GridShape shape = new GridShapeBuilder(ms).SetOrientation(r.Orient & 3).SetFlipped(r.Flip).SetPosition(r.TX, r.TY).Build();
+					Highlight(ic, r, el, grid, shape);
+				}
+				else
+				{
+					ClearHi(ic);
+				}
+				float gs = GridSize();
+				Vector3 local = new Vector3(r.LX, r.LY, 0f);
+				Camera cam = CanvasCamera(grid.rectTransform);
+				Vector2 center = RectTransformUtility.WorldToScreenPoint(cam, ((Transform)grid.rectTransform).TransformPoint(local));
+				Vector2 right = RectTransformUtility.WorldToScreenPoint(cam, ((Transform)grid.rectTransform).TransformPoint(local + new Vector3(gs, 0f, 0f)));
+				cell = Mathf.Max(1f, Mathf.Abs(right.x - center.x));
+				area = Kit.ToGameArea(center);
+				key = r.Target.ToString();
+			}
+			else
+			{
+				ClearHi(ic);
+				cell = CellPixels(el, ms);
+				area = new Vector2(r.CX, r.CY);
+				key = "cursor";
+			}
+			if (!ic.GhostHas)
+			{
+				ic.GhostPos = area;
+				ic.GhostHas = true;
+				ic.GhostKey = key;
+			}
+			else
+			{
+				ic.GhostPos = Vector2.Lerp(ic.GhostPos, area, Mathf.Clamp01(Time.unscaledDeltaTime * 18f));
+			}
+			float scale = OverlayScale();
+			ic.Ghost.anchorMin = ic.GhostPos;
+			ic.Ghost.anchorMax = ic.GhostPos;
+			ic.Ghost.anchoredPosition = Vector2.zero;
+			ic.Ghost.sizeDelta = new Vector2((float)w * cell / scale, (float)h * cell / scale);
+			((Transform)ic.Ghost).localEulerAngles = new Vector3(0f, 0f, 90f * (float)(r.Orient & 3));
+			((Transform)ic.Ghost).localScale = new Vector3(r.Flip ? (-1f) : 1f, 1f, 1f);
+			if ((Object)(object)ic.GhostImg.sprite != (Object)(object)sprite)
+			{
+				ic.GhostImg.sprite = sprite;
+			}
+			Color c = Color.white;
+			c.a = DragAlpha();
+			((Graphic)ic.GhostImg).color = c;
+			if (!((Component)ic.Ghost).gameObject.activeSelf)
+			{
+				((Component)ic.Ghost).gameObject.SetActive(true);
+			}
+			GhostDrawn++;
+		}
+		catch (Exception ex)
+		{
+			if (Log.Allow("carry|ghost", 10000L, out var skipped))
+			{
+				Log.Warn("carry: ghost for " + Net.PlayerName(r.Id) + " threw: " + ex + Log.More(skipped));
+			}
+			EndGhost(ic);
+		}
+	}
+
+	private static void HideGhost(Icon ic)
+	{
+		ic.GhostHas = false;
+		if ((Object)(object)ic.Ghost != (Object)null && ((Component)ic.Ghost).gameObject.activeSelf)
+		{
+			((Component)ic.Ghost).gameObject.SetActive(false);
+		}
+	}
+
+	private static void EndGhost(Icon ic)
+	{
+		HideGhost(ic);
+		Fade(ic, null, on: false);
+		ClearHi(ic);
+	}
+
+	private static void BuildGhost(Icon ic)
+	{
+		if ((Object)(object)ic.Ghost != (Object)null)
+		{
+			Object.Destroy((Object)(object)((Component)ic.Ghost).gameObject);
+		}
+		Image img = Kit.Box((Transform)(object)Overlay.Root, "ghost", Color.white);
+		RectTransform rt = ((Graphic)img).rectTransform;
+		rt.pivot = new Vector2(0.5f, 0.5f);
+		rt.anchoredPosition = Vector2.zero;
+		rt.sizeDelta = new Vector2(32f, 32f);
+		img.preserveAspect = false;
+		((Graphic)img).raycastTarget = false;
+		((Transform)rt).SetAsFirstSibling();
+		ic.Ghost = rt;
+		ic.GhostImg = img;
+	}
+
+	private static bool TargetVisible(ItemRef t)
+	{
+		try
+		{
+			GameGridInventory grid = Items.Resolve(t) as GameGridInventory;
+			return grid != null && GridVisible(grid);
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	private static bool GridVisible(GameGridInventory grid)
+	{
+		try
+		{
+			TreeNodeRender handler = grid.handler;
+			if (handler == null || (Object)(object)handler.rectTransform == (Object)null)
+			{
+				return false;
+			}
+			if (!((Component)handler).gameObject.activeInHierarchy)
+			{
+				return false;
+			}
+			Canvas cv = ((Component)handler).GetComponentInParent<Canvas>();
+			if ((Object)(object)cv != (Object)null && !((Behaviour)cv).enabled)
+			{
+				return false;
+			}
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	private static float GridSize()
+	{
+		try
+		{
+			UISettings current = UISettings.current;
+			if ((Object)(object)current != (Object)null && current.gridSize > 0)
+			{
+				return current.gridSize;
+			}
+		}
+		catch
+		{
+		}
+		return 16f;
+	}
+
+	private static float CellPixels(GameItemElement el, GridShape ms)
+	{
+		TreeNodeRender bg = el.background ?? el.handler;
+		if (bg == null || (Object)(object)bg.rectTransform == (Object)null)
+		{
+			return 16f;
+		}
+		Vector3[] corners = new Vector3[4];
+		bg.rectTransform.GetWorldCorners(corners);
+		Camera cam = CanvasCamera(bg.rectTransform);
+		Vector2 a = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+		Vector2 b = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+		float px = Mathf.Abs(b.x - a.x);
+		int gw = ((ms != null) ? Math.Max(1, ms.maxX - ms.minX + 1) : 1);
+		float cell = px / (float)gw;
+		return (cell > 1f) ? cell : 16f;
+	}
+
+	private static float OverlayScale()
+	{
+		try
+		{
+			Canvas cv = ((Component)Overlay.Root).GetComponentInParent<Canvas>();
+			if ((Object)(object)cv != (Object)null && cv.scaleFactor > 0.01f)
+			{
+				return cv.scaleFactor;
+			}
+		}
+		catch
+		{
+		}
+		return 1f;
+	}
+
+	private static Camera CanvasCamera(RectTransform rt)
+	{
+		Canvas cv = ((Component)rt).GetComponentInParent<Canvas>();
+		if ((Object)(object)cv == (Object)null || (int)cv.renderMode == 0)
+		{
+			return null;
+		}
+		return cv.worldCamera;
+	}
+
+	private static void Fade(Icon ic, GameItemElement el, bool on)
+	{
+		if (!on || el == null)
+		{
+			if ((Object)(object)ic.Faded != (Object)null)
+			{
+				try
+				{
+					ic.Faded.alpha = 1f;
+				}
+				catch
+				{
+				}
+			}
+			ic.Faded = null;
+			ic.FadedEl = null;
+			return;
+		}
+		if (ic.FadedEl != el)
+		{
+			Fade(ic, null, on: false);
+			TreeNodeRender root = el.handler;
+			if (root == null)
+			{
+				return;
+			}
+			GameObject go = ((Component)root).gameObject;
+			CanvasGroup cg = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+			ic.Faded = cg;
+			ic.FadedEl = el;
+		}
+		ItemMouseDragHandler local = ItemMouseDragHandler.current;
+		bool localHolds = (Object)(object)local != (Object)null && local.IsDraggingItem && local.GetCurrentItem() == el;
+		if ((Object)(object)ic.Faded != (Object)null)
+		{
+			ic.Faded.alpha = (localHolds ? 1f : DragAlpha());
+		}
+	}
+
+	private static void ClearHi(Icon ic)
+	{
+		if (ic.HiInv != null)
+		{
+			try
+			{
+				ic.HiInv.ClearHighlight();
+			}
+			catch
+			{
+			}
+		}
+		ic.HiInv = null;
+		ic.HiX = int.MinValue;
+		ic.HiRef = "";
+	}
+
+	private static void Highlight(Icon ic, Presence.Remote r, GameItemElement el, GameGridInventory grid, GridShape shape)
+	{
+		ItemMouseDragHandler local = ItemMouseDragHandler.current;
+		if ((Object)(object)local != (Object)null && local.IsDraggingItem)
+		{
+			ClearHi(ic);
+			return;
+		}
+		bool ok = r.TOk;
+		if (ic.HiInv == grid && ic.HiX == shape.minX && ic.HiY == shape.minY && ic.HiOk == ok)
+		{
+			return;
+		}
+		ClearHi(ic);
+		SlotMarker slot = new SlotMarker
+		{
+			item = el,
+			inventory = grid,
+			itemGridShape = shape,
+			numTransfer = (ok ? 1 : 0)
+		};
+		List<TreeNodeRender> nodes = grid.HighlightSlot(slot, ok ? RenderHandler.BackgroundColor.Green : RenderHandler.BackgroundColor.Red, true);
+		Color c = Kit.PlayerColor(r.Id);
+		c.a = (ok ? 0.6f : 0.35f);
+		if (nodes != null)
+		{
+			foreach (TreeNodeRender n in nodes)
+			{
+				if (n != null && (Object)(object)n.image != (Object)null)
+				{
+					((Graphic)n.image).color = c;
+				}
+			}
+		}
+		ic.HiInv = grid;
+		ic.HiX = shape.minX;
+		ic.HiY = shape.minY;
+		ic.HiOk = ok;
 	}
 
 	private static GameItem Resolve(Icon ic, long id)
@@ -555,34 +972,6 @@ public static class Carry
 			ic.Cached = null;
 		}
 		return ic.Cached;
-	}
-
-	private static void Build(Icon ic, Presence.Remote r)
-	{
-		if ((Object)(object)ic.Root != (Object)null)
-		{
-			Object.Destroy((Object)(object)((Component)ic.Root).gameObject);
-		}
-		Image val = Kit.Box((Transform)(object)r.Widget, "carry", Kit.PlayerColor(r.Id));
-		RectTransform rectTransform = ((Graphic)val).rectTransform;
-		Vector2 anchorMin = (rectTransform.anchorMax = Vector2.zero);
-		rectTransform.anchorMin = anchorMin;
-		rectTransform.pivot = Vector2.zero;
-		rectTransform.sizeDelta = new Vector2(48f, 48f);
-		rectTransform.anchoredPosition = new Vector2(14f, 2f);
-		((Transform)rectTransform).SetAsFirstSibling();
-		Kit.Stretch(((Graphic)Kit.Box((Transform)(object)rectTransform, "plate", new Color(Kit.PlateColor.r, Kit.PlateColor.g, Kit.PlateColor.b, 0.88f))).rectTransform, 2f);
-		Image val2 = Kit.Box((Transform)(object)rectTransform, "item", new Color(1f, 1f, 1f, DragAlpha()));
-		val2.preserveAspect = true;
-		Kit.Stretch(((Graphic)val2).rectTransform, 5f);
-		TextMeshProUGUI val3 = Kit.Label((Transform)(object)rectTransform, "count", 13f, Kit.Text, 0f, (TextAlignmentOptions)1028);
-		Kit.Stretch(((TMP_Text)val3).rectTransform, 4f);
-		((Component)val3).gameObject.SetActive(false);
-		ic.Root = rectTransform;
-		ic.Border = val;
-		ic.Img = val2;
-		ic.Count = val3;
-		ic.CountText = "";
 	}
 
 	private static float DragAlpha()

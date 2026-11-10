@@ -31,6 +31,26 @@ public static class Presence
 
 		public int Group;
 
+		public int Orient;
+
+		public bool Flip;
+
+		public ItemRef Target;
+
+		public int TX;
+
+		public int TY;
+
+		public bool TOk;
+
+		public float CX;
+
+		public float CY;
+
+		public float LX;
+
+		public float LY;
+
 		public bool Afk;
 
 		public float LastCursorAt = -1f;
@@ -367,7 +387,7 @@ public static class Presence
 			{
 				Carry.FillLocal(msgCursor);
 			}
-			if (lastSent == null || !(Mathf.Abs(msgCursor.x - lastSent.x) < 0.0015f) || !(Mathf.Abs(msgCursor.y - lastSent.y) < 0.0015f) || !(msgCursor.v == lastSent.v) || msgCursor.h != lastSent.h || msgCursor.d != lastSent.d || msgCursor.n != lastSent.n || msgCursor.g != lastSent.g || msgCursor.c != lastSent.c || !(realtimeSinceStartup - lastSentAt < 2f))
+			if (lastSent == null || !(Mathf.Abs(msgCursor.x - lastSent.x) < 0.0015f) || !(Mathf.Abs(msgCursor.y - lastSent.y) < 0.0015f) || !(msgCursor.v == lastSent.v) || msgCursor.h != lastSent.h || msgCursor.d != lastSent.d || msgCursor.o != lastSent.o || msgCursor.f != lastSent.f || msgCursor.cx != lastSent.cx || msgCursor.cy != lastSent.cy || msgCursor.lx != lastSent.lx || msgCursor.ly != lastSent.ly || msgCursor.tx != lastSent.tx || msgCursor.ty != lastSent.ty || msgCursor.ok != lastSent.ok || (msgCursor.t == null) != (lastSent.t == null) || (msgCursor.t != null && lastSent.t != null && msgCursor.t.ToString() != lastSent.t.ToString()) || msgCursor.n != lastSent.n || msgCursor.g != lastSent.g || msgCursor.c != lastSent.c || !(realtimeSinceStartup - lastSentAt < 2f))
 			{
 				lastSent = msgCursor;
 				lastSentAt = realtimeSinceStartup;
@@ -420,6 +440,16 @@ public static class Presence
 			remote.Drag = m.d;
 			remote.Units = m.n;
 			remote.Group = m.g;
+			remote.Orient = m.o;
+			remote.Flip = m.f;
+			remote.Target = m.t;
+			remote.TX = m.tx;
+			remote.TY = m.ty;
+			remote.TOk = m.ok;
+			remote.CX = m.cx;
+			remote.CY = m.cy;
+			remote.LX = m.lx;
+			remote.LY = m.ly;
 			remote.LastCursorAt = Time.realtimeSinceStartup;
 			rosterDirty = true;
 		}
@@ -601,11 +631,6 @@ public static class Presence
 		string text = Kit.Name(value.Name);
 		Kit.SetText(r.Name, text);
 		string text2 = "";
-		long num = ((r.Drag != 0L) ? r.Drag : 0);
-		if (num != 0L)
-		{
-			text2 = "holding " + ItemName(num);
-		}
 		if (r.Afk)
 		{
 			text2 = ((text2.Length == 0) ? "away" : (text2 + " (away)"));
