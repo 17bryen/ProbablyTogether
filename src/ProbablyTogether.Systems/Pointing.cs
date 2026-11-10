@@ -454,7 +454,7 @@ public static class Pointing
 		return null;
 	}
 
-	private static bool GameBusy()
+	internal static bool GameBusy()
 	{
 		try
 		{
