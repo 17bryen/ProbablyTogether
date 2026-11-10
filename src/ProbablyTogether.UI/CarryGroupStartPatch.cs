@@ -23,7 +23,7 @@ internal static class CarryGroupStartPatch
 
 	private static void Postfix(ItemMultiSelectHandler __instance)
 	{
-		if (!Net.IsClient || (Object)(object)__instance == (Object)null)
+		if (!Net.HasLocalPlayer || (Object)(object)__instance == (Object)null)
 		{
 			return;
 		}

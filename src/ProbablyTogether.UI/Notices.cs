@@ -28,7 +28,7 @@ public static class Notices
 
 	public static void Show(string text, string source = "")
 	{
-		if (Ui.Headless || !Net.IsClient || string.IsNullOrWhiteSpace(text) || DayLog.Replaying)
+		if (Ui.Headless || !Net.HasLocalPlayer || string.IsNullOrWhiteSpace(text) || DayLog.Replaying)
 		{
 			return;
 		}

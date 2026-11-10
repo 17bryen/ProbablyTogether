@@ -87,7 +87,7 @@ public static class CrewPanel
 	[SystemTick]
 	internal static void Tick()
 	{
-		if (Headless || !Net.IsClient)
+		if (Headless || !Net.HasLocalPlayer)
 		{
 			Hide();
 			return;

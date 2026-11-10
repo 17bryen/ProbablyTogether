@@ -137,7 +137,7 @@ public static class Carry
 
 	internal static void OnLocalDragStart(GameItem item, bool group)
 	{
-		if (Net.IsClient && item != null)
+		if (Net.HasLocalPlayer && item != null)
 		{
 			Begin(item, group);
 			StartsByHook++;
@@ -154,7 +154,7 @@ public static class Carry
 
 	internal static void OnLocalDragEnd(string how)
 	{
-		if (Net.IsClient && localOn && !StillDragging())
+		if (Net.HasLocalPlayer && localOn && !StillDragging())
 		{
 			localOn = false;
 			localItem = 0L;
@@ -288,6 +288,7 @@ public static class Carry
 				GameGridInventory hoverGrid = hoverInv as GameGridInventory;
 				if (hoverGrid == null)
 				{
+					// Over an item inside a grid the game clears its inventory; use the enclosing grid so the ghost stays in that grid's space.
 					try
 					{
 						hoverGrid = RenderHandler.RaycastFindParentElement<GameInventory>((Vector2)Input.mousePosition, heldEl.fakeBackground) as GameGridInventory;

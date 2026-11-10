@@ -26,7 +26,7 @@ internal static class UiLeavePatch
 
 	private static bool Prefix(EscapeUIManager __instance)
 	{
-		if (!Net.IsClient)
+		if (!Net.HasLocalPlayer)
 		{
 			return true;
 		}

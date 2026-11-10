@@ -124,7 +124,7 @@ internal static class EscapeMenu
 			{
 				Find(esc);
 			}
-			if (Net.IsClient && Net.IsOnline)
+			if (Net.HasLocalPlayer && Net.IsOnline)
 			{
 				Apply(esc);
 			}

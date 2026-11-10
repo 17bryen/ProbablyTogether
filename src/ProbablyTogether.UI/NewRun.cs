@@ -100,7 +100,7 @@ public static class NewRun
 
 	public static void Press()
 	{
-		if (!Net.IsClient || !DayNightRun.RunOver)
+		if (!Net.HasLocalPlayer || !DayNightRun.RunOver)
 		{
 			return;
 		}

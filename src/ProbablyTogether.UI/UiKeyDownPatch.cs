@@ -24,7 +24,7 @@ internal static class UiKeyDownPatch
 
 	private static bool Prefix(ref bool __result)
 	{
-		if (!Net.IsClient || !Chat.OwnsKeyboard)
+		if (!Net.HasLocalPlayer || !Chat.OwnsKeyboard)
 		{
 			return true;
 		}

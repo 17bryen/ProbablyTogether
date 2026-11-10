@@ -24,7 +24,7 @@ internal static class UiConsumedEscapePatch
 
 	private static void Postfix(ref bool __result)
 	{
-		if (!__result && Net.IsClient && Chat.OwnsKeyboard)
+		if (!__result && Net.HasLocalPlayer && Chat.OwnsKeyboard)
 		{
 			__result = true;
 		}

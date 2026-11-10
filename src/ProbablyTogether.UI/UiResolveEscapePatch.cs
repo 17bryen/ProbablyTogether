@@ -24,7 +24,7 @@ internal static class UiResolveEscapePatch
 
 	private static bool Prefix()
 	{
-		if (Net.IsClient)
+		if (Net.HasLocalPlayer)
 		{
 			return !Chat.OwnsKeyboard;
 		}

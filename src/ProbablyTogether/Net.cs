@@ -46,6 +46,9 @@ public static class Net
 
 	public static bool IsHost => Role == Role.Host;
 
+	/// This copy has a player looking at it (a remote client or a host), for presentation.
+	public static bool HasLocalPlayer => Role == Role.Client || Role == Role.Host;
+
 	public static bool IsDedicated => Role == Role.Server;
 
 	public static bool IsRemote => Role == Role.Client;

@@ -330,7 +330,7 @@ public static class Chat
 
 	public static bool Send(string text)
 	{
-		if (!Net.IsClient || !Net.IsLive)
+		if (!Net.HasLocalPlayer || !Net.IsLive)
 		{
 			return false;
 		}
@@ -356,7 +356,7 @@ public static class Chat
 
 	public static void Local(string text)
 	{
-		if (!Ui.Headless && Net.IsClient)
+		if (!Ui.Headless && Net.HasLocalPlayer)
 		{
 			Add(new Line
 			{

@@ -23,7 +23,7 @@ internal static class CarryDragStartPatch
 
 	private static void Postfix(ItemMouseDragHandler __instance)
 	{
-		if (!Net.IsClient || (Object)(object)__instance == (Object)null)
+		if (!Net.HasLocalPlayer || (Object)(object)__instance == (Object)null)
 		{
 			return;
 		}

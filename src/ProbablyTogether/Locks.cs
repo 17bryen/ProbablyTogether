@@ -128,6 +128,17 @@ public static class Locks
 
 	public static bool LocalHoldsAny()
 	{
+		if (Net.IsHost)
+		{
+			foreach (Entry value2 in held.Values)
+			{
+				if (value2.Player == Net.LocalPlayer)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
 		if (!Net.IsClient)
 		{
 			return false;

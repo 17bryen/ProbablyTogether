@@ -23,7 +23,7 @@ public static class Ui
 	{
 		get
 		{
-			if (Net.IsClient && Net.IsLive)
+			if (Net.HasLocalPlayer && Net.IsLive)
 			{
 				return InShop;
 			}
@@ -92,7 +92,7 @@ public static class Ui
 
 	private static void OnPlayerJoined(PlayerInfo p)
 	{
-		if (!Headless && Net.IsClient && p != null && p.Id != Net.LocalPlayer)
+		if (!Headless && Net.HasLocalPlayer && p != null && p.Id != Net.LocalPlayer)
 		{
 			Chat.Local(Kit.Name(p.Name) + " joined the shop.");
 		}
@@ -107,7 +107,7 @@ public static class Ui
 				Presence.ServerForget(p.Id);
 				Chat.ServerForget(p.Id);
 			}
-			else if (!Headless && Net.IsClient && p.Id != Net.LocalPlayer)
+			else if (!Headless && Net.HasLocalPlayer && p.Id != Net.LocalPlayer)
 			{
 				Presence.ClientForget(p.Id);
 				Chat.Local(Kit.Name(p.Name) + " left the shop.");
@@ -163,7 +163,7 @@ public static class Ui
 
 	private static void OnLockChanged(string name, int holder)
 	{
-		if (!Headless && Net.IsClient)
+		if (!Headless && Net.HasLocalPlayer)
 		{
 			Presence.OnLockChanged(name, holder);
 		}
