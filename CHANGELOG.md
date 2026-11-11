@@ -2,6 +2,16 @@
 
 All changes to Probably Together.
 
+## 0.4.2 - 2026-11-11
+
+Same protocol (5).
+
+### Fixed
+- Another player's drop no longer knocks the item out of your hand.
+
+### Added
+- An item another player is holding cannot be picked up until they let go.
+
 ## 0.4.1 - 2026-11-10
 
 Same protocol (5).

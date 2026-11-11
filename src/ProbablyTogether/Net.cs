@@ -23,6 +23,10 @@ public static class Net
 				done = true;
 				applyDepth--;
 				actorPlus1 = prevActor;
+				if (applyDepth == 0)
+				{
+					UI.DragKeeper.After();
+				}
 			}
 		}
 	}
@@ -139,6 +143,10 @@ public static class Net
 
 	public static IDisposable Apply()
 	{
+		if (applyDepth == 0)
+		{
+			UI.DragKeeper.Before();
+		}
 		applyDepth++;
 		return new ApplyScope(actorPlus1);
 	}
@@ -146,6 +154,10 @@ public static class Net
 	public static IDisposable Apply(int actor)
 	{
 		ApplyScope result = new ApplyScope(actorPlus1);
+		if (applyDepth == 0)
+		{
+			UI.DragKeeper.Before();
+		}
 		applyDepth++;
 		actorPlus1 = ((actor >= 0) ? (actor + 1) : 0);
 		return result;
