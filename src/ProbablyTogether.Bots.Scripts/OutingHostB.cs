@@ -14,6 +14,8 @@ public sealed class OutingHostB : DayNightBotBase
 
 	private int moveQ;
 
+	private int clearQ;
+
 	private long yId;
 
 	public override string Name => "outing-hb";
@@ -73,13 +75,31 @@ public sealed class OutingHostB : DayNightBotBase
 			return (text == "applied" && val2 != null && (object)val2.parentInventory == E.backInvinvElement) ? StepStatus.Pass : StepStatus.Running;
 		});
 		Agree("same-after-my-move", 30f, Same);
+		Step("clear-the-counter", 25f, delegate(BotStep st)
+		{
+			if (clearQ == 0)
+			{
+				clearQ = ItemsMove.TransferButton(frontVisible: false, "bot");
+				st.Detail = "pressed with " + ((GameInventory)E.backInvinvElement).childItems.Count + " item(s) on the back counter";
+				return StepStatus.Running;
+			}
+			string text = ItemsMove.Outcome(clearQ);
+			if (text.StartsWith("rejected", StringComparison.Ordinal) || text == "applied-mismatch")
+			{
+				st.Detail = st.Detail + "; server " + text;
+				return StepStatus.Fail;
+			}
+			GameItem val = Ids.Find(yId);
+			return (text == "applied" && val != null && (object)val.parentInventory == E.invElement && ((GameInventory)E.backInvinvElement).childItems.Count((GameItem i) => GeneralHelper.IsItemOwned(i)) == 0) ? StepStatus.Pass : StepStatus.Running;
+		});
+		Agree("same-after-clearing", 30f, Same);
 		WaitFor("host-home-2", 240f, () => !Outings.AnyOut, () => Outings.WhoIsOut() + " is still out");
 		Delay("settle-2", 3f);
-		Check("y-still-on-counter", delegate
+		Check("y-still-in-inventory", delegate
 		{
 			GameItem val = Ids.Find(yId);
-			return val != null && (object)val.parentInventory == E.backInvinvElement;
-		}, () => "my item #" + yId + " is where I put it");
+			return val != null && (object)val.parentInventory == E.invElement;
+		}, () => "my item #" + yId + " is in the inventory, where clearing the counter sent it");
 		Agree("nego-after-jackson", 12f, "out.nego").ContinueOnFail = true;
 		Agree("same-after-jackson", 30f, Same);
 		Check("no-reloads", () => DayNight.Mismatches == 0, () => "day/night mismatches " + DayNight.Mismatches);

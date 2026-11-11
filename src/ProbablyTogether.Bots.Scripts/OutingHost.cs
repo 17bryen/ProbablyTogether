@@ -235,6 +235,8 @@ public sealed class OutingHost : DayNightBotBase
 			return num == cloneBefore && num2 == frontBefore && text == "" && text2 == "nobody" && DayNightBotBase.Ps.currentClientInstance != null;
 		}, () => "from home: " + cloneBefore + " item(s) on the back counter, the front counter as it was (" + frontBefore + " item(s), none of the stall's " + Count((GameInventory)(object)E.frontInvinvElement) + "), nobody at the counter; on the trip Dr. Jackson is at the counter");
 		WaitFor("b-used-the-clone", 90f, () => Count((GameInventory)(object)E.backInvinvElementCounter) == cloneBefore + 1, () => "the clone holds " + Count((GameInventory)(object)E.backInvinvElementCounter) + " item(s), " + cloneBefore + " before");
+		WaitFor("b-cleared-the-clone", 90f, () => Count((GameInventory)(object)E.backInvinvElementCounter) == 0, () => "the clone holds " + Count((GameInventory)(object)E.backInvinvElementCounter) + " item(s) after B pressed clear-the-counter at home; the stall still shows " + Count((GameInventory)(object)E.frontInvinvElement) + " ware(s)");
+		Check("stall-untouched", () => Count((GameInventory)(object)E.frontInvinvElement) > 0 && DayNightBotBase.Ps.currentClientInstance != null && DayNightOuting.LocationId == "dr_jackson", () => "still at the stall with " + Count((GameInventory)(object)E.frontInvinvElement) + " ware(s)");
 		Delay("b-compares-at-jackson", 14f);
 		Do("return-2", delegate
 		{
@@ -246,8 +248,8 @@ public sealed class OutingHost : DayNightBotBase
 		{
 			GameItem val = Ids.Find(xId);
 			bool flag = ((GameInventory)E.frontInvinvElement).childItems.All((GameItem i) => GeneralHelper.IsItemOwned(i));
-			return !HostTrip.CountersBorrowed && val != null && (object)val.parentInventory == E.backInvinvElement && Count((GameInventory)(object)E.backInvinvElement) >= cloneBefore + 1 && Count((GameInventory)(object)E.backInvinvElementCounter) == 0 && flag && DayNightBotBase.Ps.currentClientInstance == null;
-		}, () => "back counter " + Count((GameInventory)(object)E.backInvinvElement) + " item(s) (" + cloneBefore + " + the one B put there), clone " + Count((GameInventory)(object)E.backInvinvElementCounter) + ", front counter " + Count((GameInventory)(object)E.frontInvinvElement) + ", customer " + ((DayNightBotBase.Ps.currentClientInstance != null) ? "still there" : "gone"));
+			return !HostTrip.CountersBorrowed && val != null && (object)val.parentInventory == E.invElement && Count((GameInventory)(object)E.backInvinvElementCounter) == 0 && flag && DayNightBotBase.Ps.currentClientInstance == null;
+		}, () => "our item is in the inventory where B's clear-the-counter sent it; back counter " + Count((GameInventory)(object)E.backInvinvElement) + " item(s), clone " + Count((GameInventory)(object)E.backInvinvElementCounter) + ", front counter " + Count((GameInventory)(object)E.frontInvinvElement) + ", customer " + ((DayNightBotBase.Ps.currentClientInstance != null) ? "still there" : "gone"));
 		Check("items-home-2", () => Items.All().Count() == itemsBefore, () => "items now " + Items.All().Count() + ", before " + itemsBefore);
 		Check("trips-used", () => DayNightBotBase.Ps.visitLeftTonight == budget - 2, () => "trips left " + DayNightBotBase.Ps.visitLeftTonight + " of " + budget);
 		Delay("b-compares-after-2", 12f);
