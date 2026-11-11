@@ -97,6 +97,13 @@ public sealed class MembersA : MembersBotBase
 		Check("seat-1", () => Members.LocalSeat == 1 && Members.Count >= 1, () => "my seat " + Members.LocalSeat + "; " + Members.Describe());
 		WaitFor("second-player", 240f, () => Members.Count == 2 && Net.Players.Count == 2, () => Members.Describe());
 		Check("rent-150", () => RentIs(1.5), RentText);
+		Check("calendar-shows-what-is-charged", delegate
+		{
+			int rentValue = DayNightBotBase.Ps.rentValue;
+			AdvCalendarUIManager.Instance.OnCalendarButtonClicked();
+			string text = AdvCalendarUIManager.Instance.landlordTMP.text ?? "";
+			return text.Contains(Members.Rent(BaseRent).ToString()) && DayNightBotBase.Ps.rentValue == rentValue;
+		}, () => "calendar: '" + AdvCalendarUIManager.Instance.landlordTMP.text + "'; charged " + Members.Rent(BaseRent) + ", base in the save still " + DayNightBotBase.Ps.rentValue);
 		Agree("same-with-two", 30f, "core.digest", "mem.count", "mem.rent", "cash");
 		WaitServer("server-saved", 60f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.I(v, "lab.applied") >= 1, "lab.applied");
 		Do("open-click", delegate

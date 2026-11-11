@@ -63,7 +63,13 @@ public sealed class OutingA : DayNightBotBase
 		Do("door", delegate
 		{
 			EmporiumEntry instance = EmporiumEntry.Instance;
-			GameItem val = instance.GetAllOwnedItemsByTag("BACKPACK_TAG").FirstOrDefault();
+			GameItem val = ((IEnumerable<GameItem>)instance.GetAllOwnedItemsByTag("BACKPACK_TAG")).FirstOrDefault((Func<GameItem, bool>)delegate(GameItem b)
+					{
+					// not a bag that sits in another player's storage bay
+					GameItem bay;
+					int num = Bays.OwnerAround((GraphNodeStorage)(object)b.parentInventory, out bay);
+					return num == 0 || num == Members.LocalSeat;
+				});
 			instance.selectedBackpack = val;
 			packId = ((val != null) ? Ids.Of(val) : 0);
 			itemsBefore = Items.All().Count();

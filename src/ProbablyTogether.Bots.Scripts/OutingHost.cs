@@ -90,7 +90,13 @@ public sealed class OutingHost : DayNightBotBase
 		// Trip 1: the dumping ground
 		Do("door", delegate
 		{
-			GameItem val = E.GetAllOwnedItemsByTag("BACKPACK_TAG").FirstOrDefault();
+			GameItem val = ((IEnumerable<GameItem>)E.GetAllOwnedItemsByTag("BACKPACK_TAG")).FirstOrDefault((Func<GameItem, bool>)delegate(GameItem b)
+			{
+				// not a bag that sits in another player's storage bay
+				GameItem bay;
+				int num = Bays.OwnerAround((GraphNodeStorage)(object)b.parentInventory, out bay);
+				return num == 0 || num == Members.LocalSeat;
+			});
 			E.selectedBackpack = val;
 			itemsBefore = Items.All().Count();
 			MapUIManager.Instance.OpenUI();
@@ -193,7 +199,13 @@ public sealed class OutingHost : DayNightBotBase
 		});
 		Do("door-2", delegate
 		{
-			GameItem val = E.GetAllOwnedItemsByTag("BACKPACK_TAG").FirstOrDefault();
+			GameItem val = ((IEnumerable<GameItem>)E.GetAllOwnedItemsByTag("BACKPACK_TAG")).FirstOrDefault((Func<GameItem, bool>)delegate(GameItem b)
+			{
+				// not a bag that sits in another player's storage bay
+				GameItem bay;
+				int num = Bays.OwnerAround((GraphNodeStorage)(object)b.parentInventory, out bay);
+				return num == 0 || num == Members.LocalSeat;
+			});
 			E.selectedBackpack = val;
 			itemsBefore = Items.All().Count();
 			cloneBefore = Count((GameInventory)(object)E.backInvinvElement);

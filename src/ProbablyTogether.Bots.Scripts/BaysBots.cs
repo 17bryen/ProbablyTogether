@@ -137,7 +137,7 @@ public sealed class BaysServer : BaysBotBase
 		WaitFor("shop-loaded", 300f, () => BotProbes.InShop && Game.ShopLoaded && ProbablyTogether.Server.ShopReady, () => "scene " + BotProbes.Scene);
 		WaitFor("two-bays", 240f, () => Bays.Grants == 2 && Bays.BayOf(1) != null && Bays.BayOf(2) != null, () => Bays.Grants + " bay(s) handed out; " + Members.Describe());
 		Check("one-each", () => Items.All().Count((GameItem i) => Bays.TagOwner(i) != 0) == 2 && Members.Fact(1, "bay") != null && Members.Fact(2, "bay") != null, () => "bay of seat 1 #" + Members.Fact(1, "bay") + ", of seat 2 #" + Members.Fact(2, "bay"));
-		WaitFor("b-stocked-and-a-was-refused", 240f, () => CountIn(Bays.BayOf(2)) >= 1 && CountIn(Bays.BayOf(1)) >= 1 && Bays.Refusals >= 6, () => "seat 1's bay holds " + CountIn(Bays.BayOf(1)) + ", seat 2's " + CountIn(Bays.BayOf(2)) + "; refusals " + Bays.Refusals);
+		WaitFor("b-stocked-and-a-was-refused", 240f, () => CountIn(Bays.BayOf(2)) >= 3 && CountIn(Bays.BayOf(1)) >= 1 && Bays.Refusals >= 6, () => "seat 1's bay holds " + CountIn(Bays.BayOf(1)) + ", seat 2's " + CountIn(Bays.BayOf(2)) + "; refusals " + Bays.Refusals);
 		Check("save", delegate
 		{
 			one = CountIn(Bays.BayOf(1));
@@ -204,7 +204,7 @@ public class BaysA : BaysBotBase
 		}
 		else
 		{
-			Check("my-things-kept", () => CountIn(MyBay) >= 1 && CountIn(Theirs) == 2, () => "my bay holds " + CountIn(MyBay) + ", theirs " + CountIn(Theirs) + " after the restart");
+			Check("my-things-kept", () => CountIn(MyBay) >= 1 && CountIn(Theirs) == 3, () => "my bay holds " + CountIn(MyBay) + ", theirs " + CountIn(Theirs) + " after the restart");
 		}
 		bool askedLab = false;
 		Step("something-loose-to-try-with", 25f, delegate(BotStep st)
@@ -269,7 +269,31 @@ public class BaysA : BaysBotBase
 			Agree("same-with-b-here", 30f, "core.digest", "items.digest", "bay.owners", "mem.count");
 			WaitFor("b-left", 240f, () => Net.Players.Count == 1, () => Net.Players.Count + " connected");
 			Check("still-locked-with-b-away", () => Theirs.contentWindow.isLocked && Bays.OwnerOf(Theirs) == 2, () => "seat 2's bay locked " + Theirs.contentWindow.isLocked + " while seat 2 is offline");
-			Ask("into-their-bay-while-away", expectRefusal: true, () => "into seat 2's bay while seat 2 is offline", () => ItemsMove.InsertInto(Ids.Find(zId), Theirs, -1, chain: true, "bot"), () => !GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(zId), (GraphNodeStorage)(object)Theirs));
+			bool askedAgain = false;
+			Step("something-loose-again", 25f, delegate(BotStep st)
+			{
+				if (Loose().Count > 0)
+				{
+					st.Detail = Loose().Count + " loose thing(s) in the shop's storage";
+					return StepStatus.Pass;
+				}
+				if (!askedAgain)
+				{
+					askedAgain = true;
+					LabKit.Do("give", "bottled_water", "1");
+				}
+				return StepStatus.Running;
+			});
+			Ask("into-their-bay-while-away", expectRefusal: true, delegate
+			{
+				GameItem val = Loose().FirstOrDefault();
+				if (val == null)
+				{
+					return "SKIP nothing loose in the shop";
+				}
+				zId = Ids.Of(val);
+				return val.identifier + "#" + zId + " into seat 2's bay while seat 2 is offline";
+			}, () => ItemsMove.InsertInto(Ids.Find(zId), Theirs, -1, chain: true, "bot"), () => !GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(zId), (GraphNodeStorage)(object)Theirs));
 		}
 		Agree("same-at-the-end", 30f, "core.digest", "items.digest", "bay.owners", "mem.count");
 	}
@@ -326,7 +350,7 @@ public sealed class BaysB : BaysBotBase
 		}, () => ItemsMove.InsertInto(Ids.Find(p1), Ids.Find(p2), -1, chain: true, "bot"), () => !GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(p1), (GraphNodeStorage)(object)Ids.Find(p2)));
 		Ask("plain-bay-into-my-bay", expectRefusal: false, () => "ordinary storage bay #" + p1 + " into my own bay (which takes anything)", () => ItemsMove.InsertInto(Ids.Find(p1), MyBay, -1, chain: true, "bot"), () => GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(p1), (GraphNodeStorage)(object)MyBay));
 		WaitServer("a-was-refused", 180f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.I(v, "bay.refused") >= 6, "bay.refused", "bay.owners");
-		Check("my-things-untouched", () => CountIn(MyBay) == 2 && GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(yId), (GraphNodeStorage)(object)MyBay) && GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(p1), (GraphNodeStorage)(object)MyBay), () => "my bay holds " + CountIn(MyBay) + " item(s)");
+		Check("my-things-untouched", () => CountIn(MyBay) == 3 && GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)MyBay, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null).Any((GameItem i) => i.identifier == "fanny_pack") && GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(yId), (GraphNodeStorage)(object)MyBay) && GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(p1), (GraphNodeStorage)(object)MyBay), () => "my bay holds " + CountIn(MyBay) + " item(s)");
 		Agree("same-as-server", 30f, "core.digest", "items.digest", "bay.owners");
 		WaitServer("server-saved", 90f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.I(v, "lab.applied") >= 1, "lab.applied");
 	}
