@@ -988,6 +988,12 @@ public static class Machines
 		{
 			return "gone";
 		}
+		string ownerOnly = Systems.Bays.Refusal(from, (GraphNodeStorage)(object)m);
+		if (ownerOnly != null)
+		{
+			text = ownerOnly;
+			return "owner";
+		}
 		if (!GeneralHelper.IsItemOwned(m) && (long)m.uniqueId != -103)
 		{
 			return "notours";

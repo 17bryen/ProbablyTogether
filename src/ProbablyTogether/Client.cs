@@ -313,6 +313,7 @@ internal static class Client
 			ServerBuild = GameBuild.CleanId(msgWelcome.build);
 			Locks.TakeoverSeconds = msgWelcome.takeover;
 			Systems.Outings.Individual = msgWelcome.outings;
+			Systems.Bays.Enabled = msgWelcome.ownership;
 			Net.EnterSession(msgWelcome.you, msgWelcome.players);
 			State = ClientState.AwaitSnapshot;
 			Log.Info("client: joined '" + ServerName + "' as player " + msgWelcome.you + "; players: " + Names(msgWelcome.players) + ((ServerMods == null) ? "; the server does not list its mods" : ("; server mods: " + ((ServerMods.Count == 0) ? "-" : Text.Clip(string.Join(", ", ServerMods), 400)))));

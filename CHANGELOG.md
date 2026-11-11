@@ -2,6 +2,20 @@
 
 All changes to Probably Together.
 
+## 0.4.0 - 2026-11-10
+
+Protocol 5. Every player needs it. Older saves load.
+
+### Added
+- Players are remembered with a permanent seat, matched by Steam id; `maxPlayers` caps seats, not connections.
+- Rent and customers scale with the shop's players, connected or not (`rentPercentPerPlayer`, `customersPerPlayer`; default +50% rent and +2 customers per extra player).
+- Each player gets a storage bay only they can open.
+- Each player picks one trade; its kit goes into their bay and its machines are theirs alone.
+- The Host window has the two scaling settings and a switch for bays and trades (`playerOwnership`).
+
+### Fixed
+- The protocol number is now checked, so mismatched builds can no longer join each other.
+
 ## 0.3.2 - 2026-11-10
 
 Same protocol (4).

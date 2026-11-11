@@ -183,6 +183,14 @@ public static class Chat
 	private static void ServerOnSay(MsgChatSay m, int from)
 	{
 		string text = Clean(m.text);
+		if (text.StartsWith("/trade", StringComparison.OrdinalIgnoreCase))
+		{
+			Net.ToPlayer(from, "chat.notice", new MsgChatNotice
+			{
+				text = ProbablyTogether.Systems.Specs.ChatCommand(from, text.Substring(6).Trim())
+			});
+			return;
+		}
 		if (text.Length == 0)
 		{
 			Net.ToPlayer(from, "chat.notice", new MsgChatNotice

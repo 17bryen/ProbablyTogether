@@ -56,7 +56,12 @@ public sealed class ServerConfig
 	/// Extra customers a day for every player of the shop after the first, connected or not (Systems.Members).
 	public double customersPerPlayer = 2.0;
 
+	/// Rent goes up by this many percent for every player of the shop after the first.
 	public int rentPercentPerPlayer = 50;
+
+	/// Every player gets a storage bay of their own and picks a trade whose machines are theirs alone (Systems.Bays, Systems.Specs).
+	/// False: nothing is handed out or picked; bays and trades a shop already has keep working.
+	public bool playerOwnership = true;
 
 	/// Seconds a counter holder must be idle before another player's action takes the counter over. -1 = strict (stock).
 	public double counterTakeoverSeconds = 1.0;

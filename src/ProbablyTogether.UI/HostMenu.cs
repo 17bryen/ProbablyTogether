@@ -50,6 +50,8 @@ internal static class HostMenu
 
 	private static bool individual;
 
+	private static bool ownership = true;
+
 	/// Where hosted shops live; --br-host-folder=<path> overrides it.
 	internal static string HostFolder
 	{
@@ -244,6 +246,11 @@ internal static class HostMenu
 			{
 				individual = (bool)io;
 			}
+			JToken po = ((config != null) ? config["playerOwnership"] : null);
+			if (po != null)
+			{
+				ownership = (bool)po;
+			}
 			JToken en = ((config != null) ? config["endless"] : null);
 			if (en != null)
 			{
@@ -319,6 +326,10 @@ internal static class HostMenu
 			{
 				individual = v;
 			}, "individual")
+			.AddToggle(Lang.Tr("Each player has a storage bay and a trade of their own"), ownership, (Action<bool>)delegate(bool v)
+			{
+				ownership = v;
+			}, "ownership")
 			.AddLabel(Lang.Tr("Extra customers a day for each added player"), (string)null)
 			.AddInput("", Str(existing, "customersPerPlayer", "2"), (Action<string>)null, "custper", (Action<string>)null)
 			.AddLabel(Lang.Tr("Rent increase for each added player (%)"), (string)null)
@@ -490,6 +501,7 @@ internal static class HostMenu
 			cfg["maxPlayers"] = (JToken)new JValue(max);
 			cfg["saveSlot"] = (JToken)new JValue(slotNumber);
 			cfg["individualOutings"] = (JToken)new JValue(individual);
+			cfg["playerOwnership"] = (JToken)new JValue(ownership);
 			cfg["customersPerPlayer"] = (JToken)new JValue(custPer);
 			cfg["rentPercentPerPlayer"] = (JToken)new JValue(rentPer);
 			if (isNew)

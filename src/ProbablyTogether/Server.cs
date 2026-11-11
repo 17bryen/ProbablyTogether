@@ -474,7 +474,8 @@ internal static class Server
 				modInfo = (JToken)(object)ModList.Describe(Config.WorkshopIdOf),
 				build = GameBuild.Id,
 				takeover = Locks.TakeoverSeconds,
-				outings = Systems.Outings.Individual
+				outings = Systems.Outings.Individual,
+				ownership = Systems.Bays.Enabled
 			});
 			BroadcastRoster(p.Info.Id, -1, null);
 			Net.RaisePlayerJoined(p.Info);

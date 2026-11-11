@@ -343,6 +343,22 @@ public static class Members
 		return true;
 	}
 
+	internal static bool SetFacts(int seat, Dictionary<string, string> facts)
+	{
+		MembersState membersState = Parse(Read());
+		Member member = membersState.list.Find((Member x) => x.s == seat);
+		if (member == null || facts == null)
+		{
+			return false;
+		}
+		foreach (KeyValuePair<string, string> fact in facts)
+		{
+			member.x[fact.Key] = fact.Value ?? "";
+		}
+		Publish(membersState, 0);
+		return true;
+	}
+
 	public static string Fact(int seat, string key)
 	{
 		Member member = BySeat(seat);

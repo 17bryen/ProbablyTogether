@@ -115,6 +115,7 @@ internal static class ServerMode
 		Systems.Outings.ServerReset();
 		Systems.Members.ServerReset();
 		Systems.Outings.Individual = cfg.individualOutings;
+		Systems.Bays.Enabled = cfg.playerOwnership;
 		Net.LocalPlayer = 0;
 		if (!Server.Start(cfg))
 		{

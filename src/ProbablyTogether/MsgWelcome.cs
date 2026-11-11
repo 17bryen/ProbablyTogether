@@ -23,4 +23,7 @@ public sealed class MsgWelcome
 	public double takeover = -1.0;
 
 	public bool outings;
+
+	/// The server hands out storage bays and trades.
+	public bool ownership;
 }

@@ -21,16 +21,22 @@ public static class Bays
 
 	private const string BayItem = "storage_bay";
 
+	private static readonly HashSet<PixelWindow> lockedByUs = new HashSet<PixelWindow>();
+
+	private static readonly HashSet<GameInventory> opened = new HashSet<GameInventory>();
+
 	private static float nextLook;
 
 	private static float nextGrant;
+
+	/// Bays and trades are handed out (server.json playerOwnership).
+	public static bool Enabled = true;
 
 	internal static int Grants;
 
 	internal static int Refusals;
 
-	/// Who alone may use this item: a bay's owner or the holder of the machine's trade (Specs). 0 = everyone.
-	public static int OwnerOf(GameItem item)
+	public static int TagOwner(GameItem item)
 	{
 		try
 		{
@@ -39,6 +45,28 @@ public static class Bays
 				return 0;
 			}
 			return item.GetTagReadonly("PT_OWNER").GetInt();
+		}
+		catch
+		{
+			return 0;
+		}
+	}
+
+	/// Who alone may use this item: a bay's owner or the holder of the machine's trade (Specs). 0 = everyone.
+	public static int OwnerOf(GameItem item)
+	{
+		int num = TagOwner(item);
+		if (num != 0 || item == null)
+		{
+			return num;
+		}
+		try
+		{
+			if (!GeneralHelper.IsItemOwned(item))
+			{
+				return 0;
+			}
+			return Specs.OwnerOfType(item.identifier);
 		}
 		catch
 		{
@@ -79,7 +107,7 @@ public static class Bays
 		}
 		foreach (GameItem item in Items.All())
 		{
-			if (OwnerOf(item) == seat)
+			if (TagOwner(item) == seat)
 			{
 				return item;
 			}
@@ -87,9 +115,13 @@ public static class Bays
 		return null;
 	}
 
-	private static string OnlyOwner(int owner)
+	private static string OnlyOwner(int owner, GameItem what)
 	{
-		return "Only " + Members.NameOf(owner) + " can use this storage bay.";
+		if (TagOwner(what) != 0)
+		{
+			return "Only " + Members.NameOf(owner) + " can use this storage bay.";
+		}
+		return "Only " + Members.NameOf(owner) + " can use this: it belongs to their trade.";
 	}
 
 	/// Server: null if this player may touch these places.
@@ -112,7 +144,7 @@ public static class Bays
 			if (num2 != 0 && num2 != num)
 			{
 				Refusals++;
-				return OnlyOwner(num2);
+				return OnlyOwner(num2, bay);
 			}
 		}
 		return null;
@@ -135,7 +167,7 @@ public static class Bays
 			return null;
 		}
 		Refusals++;
-		return "This storage bay belongs to " + Members.NameOf(num) + ": it stays in the shop's storage.";
+		return ((TagOwner(item) != 0) ? "This storage bay belongs to " : "This belongs to ") + Members.NameOf(num) + ": it stays in the shop's storage.";
 	}
 
 	private static bool InShopStorage(GraphNodeStorage node)
@@ -178,12 +210,12 @@ public static class Bays
 			return;
 		}
 		float realtimeSinceStartup = Time.realtimeSinceStartup;
-		if (Net.HasLocalPlayer && realtimeSinceStartup >= nextLook && !Snapshot.IsLoading)
+		if (realtimeSinceStartup >= nextLook && !Snapshot.IsLoading)
 		{
 			nextLook = realtimeSinceStartup + 0.5f;
 			try
 			{
-				LockForMe();
+				Look();
 			}
 			catch (Exception ex)
 			{
@@ -193,39 +225,57 @@ public static class Bays
 				}
 			}
 		}
-		if (Net.IsServer && Server.ShopReady && realtimeSinceStartup >= nextGrant && !HostTrip.Out)
+		if (Enabled && Net.IsServer && Server.ShopReady && realtimeSinceStartup >= nextGrant && !HostTrip.Out)
 		{
 			nextGrant = realtimeSinceStartup + 2f;
 			GrantMissing();
 		}
 	}
 
-	private static void LockForMe()
+	/// An owned bay takes anything the shop owns. The rule is not saved, so every copy sets it again after loading.
+	internal static void TakeAnything(GameItem bay)
+	{
+		PixelWindow obj = ((bay != null) ? bay.contentWindow : null);
+		GraphNodeStorage val = ((obj != null) ? obj.child : null);
+		GameInventory val2 = (GameInventory)(object)((val is GameInventory) ? val : null);
+		if (val2 == null || !opened.Add(val2))
+		{
+			return;
+		}
+		GameItem self = bay;
+		val2.mayInventoryAddItemFunc = (GameItem added, GameInventory inv) => added != null && added != self && !GraphUtils.FindParentEquals((GraphNodeStorage)(object)self, (GraphNodeStorage)(object)added);
+	}
+
+	/// Owned bays take anything; on a player's copy, other players' bays are locked.
+	private static void Look()
 	{
 		int localSeat = Members.LocalSeat;
+		bool hasLocalPlayer = Net.HasLocalPlayer;
+		if (opened.Count > 256)
+		{
+			opened.Clear();
+		}
 		foreach (GameItem item in Items.All())
 		{
+			if (TagOwner(item) != 0)
+			{
+				TakeAnything(item);
+			}
 			PixelWindow contentWindow = item.contentWindow;
-			if (contentWindow == null)
+			if (contentWindow == null || !hasLocalPlayer)
 			{
 				continue;
 			}
 			int num = OwnerOf(item);
-			if (num == 0)
+			bool flag = num != 0 && num != localSeat;
+			if (flag && !contentWindow.isLocked)
 			{
-				continue;
+				contentWindow.Lock();
+				lockedByUs.Add(contentWindow);
 			}
-			bool flag = num != localSeat;
-			if (contentWindow.isLocked != flag)
+			else if (!flag && contentWindow.isLocked && lockedByUs.Remove(contentWindow))
 			{
-				if (flag)
-				{
-					contentWindow.Lock();
-				}
-				else
-				{
-					contentWindow.Unlock();
-				}
+				contentWindow.Unlock();
 			}
 		}
 	}
@@ -242,11 +292,11 @@ public static class Bays
 				{
 					if (num == Members.LocalSeat)
 					{
-						builder.AddLine(Lang.Tr("Your storage bay: only you can open it."), true, RenderHandler.ColorPalette.LightGreen);
+						builder.AddLine((TagOwner(item) != 0) ? Lang.Tr("Your storage bay: only you can open it.") : Lang.Tr("Part of your trade: only you can use it."), true, RenderHandler.ColorPalette.LightGreen);
 					}
 					else
 					{
-						builder.AddLine(Lang.Trf("Only {0} can open this.", Members.NameOf(num)), true, RenderHandler.ColorPalette.LightRed);
+						builder.AddLine(Lang.Trf((TagOwner(item) != 0) ? "Only {0} can open this." : "Only {0} can use this.", Members.NameOf(num)), true, RenderHandler.ColorPalette.LightRed);
 					}
 				}
 			}
@@ -299,6 +349,7 @@ public static class Bays
 					return;
 				}
 				GeneralHelper.SetItemOwned(val, true);
+				TakeAnything(val);
 				int seat = m.seat;
 				val.ModifyTag("PT_OWNER", delegate(TagState state)
 				{

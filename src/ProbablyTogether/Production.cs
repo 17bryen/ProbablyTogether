@@ -416,6 +416,10 @@ public static class Production
 		ProdOp op = (ProdOp)r.op;
 		GameItem m = null;
 		string refusal = Validate(r, op, ref m);
+		if (refusal == null)
+		{
+			refusal = Systems.Bays.Refusal(player, (GraphNodeStorage)(object)m);
+		}
 		if (refusal != null)
 		{
 			RefusedCount++;

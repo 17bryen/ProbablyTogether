@@ -400,6 +400,15 @@ public static class ItemsMove
 		Action run;
 		try
 		{
+			GameItem val = ((m.i != 0L) ? Items.Find(m.i) : null);
+			GameItem val2 = ((m.onto != 0L) ? Items.Find(m.onto) : null);
+			string text2 = Systems.Bays.Refusal(from, (GraphNodeStorage)(object)((val != null) ? val.parentInventory : null), (GraphNodeStorage)(object)val2);
+			if (text2 != null && kind != "items.pin" && kind != "items.markOpened")
+			{
+				counterRefusal = text2;
+				Reject(from, m, kind, "counter", counterRefusal);
+				return;
+			}
 			switch (kind)
 			{
 			case "items.move":
