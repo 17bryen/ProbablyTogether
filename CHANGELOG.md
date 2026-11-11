@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.4.7 - 2026-11-11
+
+Protocol 6. Every player needs it.
+
+### Added
+- A trade's scripted customers come for the player who holds it, on a calendar counted from when they picked it (the chemist's cartel, the fence's contact, the gunsmith's first buyers, the junker's introduction).
+- Weekly trade suppliers come when any player holds that trade.
+- A customer who came for a trade is announced with the player's name at the counter.
+
 ## 0.4.6 - 2026-11-11
 
 Same protocol (5).

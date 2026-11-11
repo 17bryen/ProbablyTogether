@@ -400,6 +400,7 @@ public static class DayNight
 		};
 		Exception ex = null;
 		int num = 0;
+		TradeVisits.ServerBeforeOpen();
 		msgDnShutter.picks = SupplierPicks.ForOpening();
 		using (Replay.Server(out msgDnShutter.seed))
 		{

@@ -555,7 +555,8 @@ public static class Specs
 		Members.SetFacts(num, new Dictionary<string, string>
 		{
 			{ "spec", id },
-			{ "mach", machines }
+			{ "mach", machines },
+			{ TradeVisits.DayFact, TradeVisits.DayForPick() }
 		});
 		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") is the shop's " + id + "; kit " + text);
 	}
