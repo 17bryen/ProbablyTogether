@@ -16,6 +16,8 @@ public sealed class OutingHostB : DayNightBotBase
 
 	private int clearQ;
 
+	private bool askedLab;
+
 	private long yId;
 
 	public override string Name => "outing-hb";
@@ -56,8 +58,14 @@ public sealed class OutingHostB : DayNightBotBase
 				GameItem val = ItemsBotBase.Movables((GameInventory)(object)E.invElement).FirstOrDefault((GameItem i) => ItemsBotBase.Spot((GameInventory)(object)E.backInvinvElement, i, i.unitCount, i.modifiedShape.orientation, out x, out y));
 				if (val == null)
 				{
-					st.Detail = "no item fits the back counter";
-					return StepStatus.Fail;
+					// In a shop with storage bays the starting stock sits in seat 1's bay: ask the lab for something loose.
+					if (!askedLab)
+					{
+						askedLab = true;
+						LabKit.Do("give", "bottled_water", "2");
+					}
+					st.Detail = "no item fits the back counter (asked the lab for two bottles)";
+					return StepStatus.Running;
 				}
 				yId = Ids.Of(val);
 				ItemsBotBase.Spot((GameInventory)(object)E.backInvinvElement, val, val.unitCount, val.modifiedShape.orientation, out x, out y);

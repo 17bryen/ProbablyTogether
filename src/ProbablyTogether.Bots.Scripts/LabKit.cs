@@ -37,6 +37,9 @@ public static class LabKit
 
 	public static string Last = "";
 
+	/// Items handed out by "give" on this copy so far.
+	public static int Given;
+
 	internal static void Wire()
 	{
 		if (wired)
@@ -90,6 +93,16 @@ public static class LabKit
 	{
 		if (!Net.IsServer)
 		{
+			return;
+		}
+		if (op == "kits")
+		{
+			foreach (string item in Systems.Specs.ProbeKits())
+			{
+				Log.Info("lab: kit " + item);
+			}
+			Last = "kits listed";
+			Applied++;
 			return;
 		}
 		if (op == "save")
@@ -282,6 +295,7 @@ public static class LabKit
 			if (GraphUtils.TryAccept(val, val2) != -1)
 			{
 				num++;
+				Given++;
 			}
 			else
 			{

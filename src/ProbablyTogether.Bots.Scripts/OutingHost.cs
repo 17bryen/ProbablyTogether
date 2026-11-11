@@ -22,6 +22,8 @@ public sealed class OutingHost : DayNightBotBase
 
 	private int frontBefore;
 
+	private int given0;
+
 	private int moveQ;
 
 	private long xId;
@@ -196,6 +198,7 @@ public sealed class OutingHost : DayNightBotBase
 			itemsBefore = Items.All().Count();
 			cloneBefore = Count((GameInventory)(object)E.backInvinvElement);
 			frontBefore = Count((GameInventory)(object)E.frontInvinvElement);
+			given0 = LabKit.Given;
 			MapUIManager.Instance.OpenUI();
 			return "asked to go out again with backpack " + ((val != null) ? Ids.Of(val) : 0) + "; " + itemsBefore + " items in the shop, " + cloneBefore + " on the back counter";
 		});
@@ -250,7 +253,7 @@ public sealed class OutingHost : DayNightBotBase
 			bool flag = ((GameInventory)E.frontInvinvElement).childItems.All((GameItem i) => GeneralHelper.IsItemOwned(i));
 			return !HostTrip.CountersBorrowed && val != null && (object)val.parentInventory == E.invElement && Count((GameInventory)(object)E.backInvinvElementCounter) == 0 && flag && DayNightBotBase.Ps.currentClientInstance == null;
 		}, () => "our item is in the inventory where B's clear-the-counter sent it; back counter " + Count((GameInventory)(object)E.backInvinvElement) + " item(s), clone " + Count((GameInventory)(object)E.backInvinvElementCounter) + ", front counter " + Count((GameInventory)(object)E.frontInvinvElement) + ", customer " + ((DayNightBotBase.Ps.currentClientInstance != null) ? "still there" : "gone"));
-		Check("items-home-2", () => Items.All().Count() == itemsBefore, () => "items now " + Items.All().Count() + ", before " + itemsBefore);
+		Check("items-home-2", () => Items.All().Count() == itemsBefore + (LabKit.Given - given0), () => "items now " + Items.All().Count() + ", before " + itemsBefore + " plus " + (LabKit.Given - given0) + " the lab handed to the player at home");
 		Check("trips-used", () => DayNightBotBase.Ps.visitLeftTonight == budget - 2, () => "trips left " + DayNightBotBase.Ps.visitLeftTonight + " of " + budget);
 		Delay("b-compares-after-2", 12f);
 		Ready("ready");

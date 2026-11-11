@@ -85,6 +85,9 @@ public sealed class DayNightB : DayNightBotBase
 		});
 		Delay("barrier-holds", 2f);
 		Check("waiting-for-me", () => DayNightBotBase.Day == day0 && DayNight.WaitingPlayers.Contains(Net.LocalPlayer), () => "day " + DayNightBotBase.Day + ", waiting " + string.Join(",", DayNight.WaitingPlayers));
+		// A checks 3 s after its own ready that the night has not started, so wait longer than that.
+		Delay("a-checks-the-barrier", 6f);
+		Check("night-still-waits-for-me", () => DayNightBotBase.Day == day0 && DayNightBotBase.State == "CLOSED" && DayNight.WaitingPlayers.Contains(Net.LocalPlayer), () => "day " + DayNightBotBase.Day + ", " + DayNightBotBase.State + ", waiting " + string.Join(",", DayNight.WaitingPlayers));
 		Do("b-ready", delegate
 		{
 			ReadyBar.View view = DayNight.ReadyView();
