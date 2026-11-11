@@ -50,7 +50,13 @@ public sealed class ServerConfig
 
 	public bool modsMustMatch;
 
+	/// Unused; see customersPerPlayer.
 	public double extraCustomersPerPlayer = 0.5;
+
+	/// Extra customers a day for every player of the shop after the first, connected or not (Systems.Members).
+	public double customersPerPlayer = 2.0;
+
+	public int rentPercentPerPlayer = 50;
 
 	/// Seconds a counter holder must be idle before another player's action takes the counter over. -1 = strict (stock).
 	public double counterTakeoverSeconds = 1.0;
@@ -148,6 +154,22 @@ public sealed class ServerConfig
 		if (maxPlayers > 4)
 		{
 			maxPlayers = 4;
+		}
+		if (customersPerPlayer < 0.0)
+		{
+			customersPerPlayer = 0.0;
+		}
+		if (customersPerPlayer > 6.0)
+		{
+			customersPerPlayer = 6.0;
+		}
+		if (rentPercentPerPlayer < 0)
+		{
+			rentPercentPerPlayer = 0;
+		}
+		if (rentPercentPerPlayer > 500)
+		{
+			rentPercentPerPlayer = 500;
 		}
 		if (saveSlot < 0 || saveSlot > 9999)
 		{

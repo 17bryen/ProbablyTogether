@@ -35,6 +35,9 @@ internal static class Server
 
 		public long LastSnapshotMs = -100000L;
 
+		/// Set once the host's seat is looked up; the host has no join handshake.
+		public bool SeatAsked;
+
 		public long ReadyMs;
 
 		public long ResyncAtMs;
@@ -232,7 +235,7 @@ internal static class Server
 		ByConn[c.Id] = peer;
 		c.Send("sys.server", new MsgServerHello
 		{
-			protocol = 2,
+			protocol = Protocol.Version,
 			mod = GreetingModVersion(),
 			game = Application.version,
 			name = Config.name,
@@ -398,7 +401,7 @@ internal static class Server
 		{
 			Refuse(p, "stopping", "The server is stopping. Try again in a minute.");
 		}
-		else if (h.protocol != 2)
+		else if (h.protocol != Protocol.Version)
 		{
 			Refuse(p, "protocol", "Version mismatch: the server runs " + Mod.Name + " protocol " + Protocol.Version + " (mod " + Mod.Version + "), you have protocol " + h.protocol + " (mod " + Text.Clip(h.mod ?? "?", 40) + "). Update the mod to match the server.");
 		}
@@ -444,11 +447,17 @@ internal static class Server
 				num++;
 			}
 			ulong.TryParse(h.steamId ?? "", out var result);
+			if (!Systems.Members.Admit(result, text, out var seat, out var why2))
+			{
+				Refuse(p, "full", why2);
+				return;
+			}
 			p.Info = new PlayerInfo
 			{
 				Id = nextPlayerId++,
 				Name = text,
-				SteamId = result
+				SteamId = result,
+				Seat = seat
 			};
 			p.State = PeerState.Syncing;
 			p.ModVersion = Text.Clip((h.mod ?? "").Trim(), 24);
@@ -602,6 +611,11 @@ internal static class Server
 		}
 		list.Sort((PlayerInfo a, PlayerInfo b) => a.Id.CompareTo(b.Id));
 		return list;
+	}
+
+	internal static void RosterChanged()
+	{
+		BroadcastRoster(-1, -1, null);
 	}
 
 	private static void BroadcastRoster(int joined, int left, string why)

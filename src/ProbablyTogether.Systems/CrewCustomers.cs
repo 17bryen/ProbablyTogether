@@ -83,8 +83,7 @@ public static class CrewCustomers
 	{
 		today = 0;
 		todayDay = Game.Day;
-		double num = ServerMode.Config?.extraCustomersPerPlayer ?? 0.0;
-		int playerCount = Server.PlayerCount;
+		int num = Members.ExtraCustomers();
 		StoreClientManager obj = Game.Store?.storeClientManager;
 		int valueOrDefault = (obj?.clientStack?.Count).GetValueOrDefault();
 		bool flag = Args.Bot != null && (Args.Get("--br-crew-anyday") ?? "") == "1";
@@ -93,41 +92,20 @@ public static class CrewCustomers
 		{
 			text = "no queue";
 		}
-		else if (num <= 0.0)
+		else if (num <= 0)
 		{
-			text = "extraCustomersPerPlayer is 0";
-		}
-		else if (playerCount < 2)
-		{
-			text = playerCount + " player(s) on";
+			text = ((Members.Extra <= 0) ? "the shop has one player" : "the customers-per-player setting is 0");
 		}
 		else if (!flag && TutorialDay())
 		{
 			text = "a tutorial day (the game queues no regular customers today)";
 		}
-		else
+		else if (valueOrDefault <= 0)
 		{
-			Server.Peer peer = Server.ByPlayer.Values.FirstOrDefault((Server.Peer p) => !AtLeastMin(p.ModVersion));
-			if (peer != null)
-			{
-				text = (peer.Info?.Name ?? "a player") + " runs ProbablyTogether " + ((peer.ModVersion.Length > 0) ? peer.ModVersion : "(unknown)") + ", older than 0.2.8";
-			}
+			text = "the game queued nobody today";
 		}
-		int num2 = 0;
-		if (text == null)
-		{
-			num2 = (int)Math.Round(num * (double)(playerCount - 1) * (double)valueOrDefault, MidpointRounding.AwayFromZero);
-			if (num2 > 6)
-			{
-				num2 = 6;
-			}
-			if (num2 <= 0)
-			{
-				num2 = 0;
-				text = "nobody queued to scale (" + valueOrDefault + ")";
-			}
-		}
-		LastDecision = ((num2 > 0) ? ("+" + num2 + " for " + playerCount + " players (queued " + valueOrDefault + ", extraCustomersPerPlayer " + num.ToString("0.##", CultureInfo.InvariantCulture) + ", cap " + 6 + ")") : ("none: " + text));
+		int num2 = ((text == null) ? Math.Min(num, 12) : 0);
+		LastDecision = ((num2 > 0) ? ("+" + num2 + " for " + Members.Count + " players of the shop (" + Server.PlayerCount + " connected, queued " + valueOrDefault + ")") : ("none: " + text));
 		Log.Info("crew customers: day " + Game.Day + ", " + LastDecision);
 		today = num2;
 		return num2;
@@ -143,7 +121,7 @@ public static class CrewCustomers
 		int count = val.clientStack.Count;
 		try
 		{
-			for (int i = 0; i < n && i < 6; i++)
+			for (int i = 0; i < n && i < 12; i++)
 			{
 				StoreClient val2 = val.PickClient();
 				if (val2 != null)

@@ -200,6 +200,11 @@ internal static class Client
 
 	private static string SteamIdString()
 	{
+		// All copies on one machine share a Steam account; a bot takes its identity from --br-steamid.
+		if (Args.Bot != null && !string.IsNullOrEmpty(Args.Get("--br-steamid")))
+		{
+			return Args.Get("--br-steamid");
+		}
 		try
 		{
 			if (SteamManager.Initialized)
@@ -272,7 +277,7 @@ internal static class Client
 			Log.Info("client: server '" + Text.Clip(ServerName, 64) + "' protocol " + msgServerHello.protocol + " mod " + Text.Clip(msgServerHello.mod, 40) + " game " + Text.Clip(msgServerHello.game, 40) + ", " + msgServerHello.players + "/" + msgServerHello.maxPlayers + " players" + (msgServerHello.passworded ? ", password" : ""));
 			c.Send("sys.hello", new MsgHello
 			{
-				protocol = 2,
+				protocol = Protocol.Version,
 				mod = HelloModVersion(),
 				game = Application.version,
 				name = wantName,

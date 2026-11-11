@@ -319,6 +319,10 @@ internal static class HostMenu
 			{
 				individual = v;
 			}, "individual")
+			.AddLabel(Lang.Tr("Extra customers a day for each added player"), (string)null)
+			.AddInput("", Str(existing, "customersPerPlayer", "2"), (Action<string>)null, "custper", (Action<string>)null)
+			.AddLabel(Lang.Tr("Rent increase for each added player (%)"), (string)null)
+			.AddInput("", Str(existing, "rentPercentPerPlayer", "50"), (Action<string>)null, "rentper", (Action<string>)null)
 			.AddSeparator((string)null, 4)
 			.AddLabel(Lang.Tr("New shop: scenario and difficulty"), "newlabel")
 			.AddDropdown((IList<string>)scenarioLabels, scenarioIndex, (Action<int>)delegate(int i)
@@ -354,7 +358,7 @@ internal static class HostMenu
 			pw.input.contentType = TMP_InputField.ContentType.Password;
 			pw.input.ForceLabelUpdate();
 		}
-		string[] ids = new string[4] { "name", "password", "port", "max" };
+		string[] ids = new string[6] { "name", "password", "port", "max", "custper", "rentper" };
 		foreach (string id in ids)
 		{
 			TMP_InputField input = window.Get(id)?.input;
@@ -436,6 +440,16 @@ internal static class HostMenu
 			SetStatus(Lang.Tr("Players must be 1 to 4."));
 			return;
 		}
+		if (!double.TryParse((Field("custper") ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var custPer) || custPer < 0.0 || custPer > 6.0)
+		{
+			SetStatus(Lang.Tr("Extra customers per player must be a number from 0 to 6."));
+			return;
+		}
+		if (!int.TryParse((Field("rentper") ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var rentPer) || rentPer < 0 || rentPer > 500)
+		{
+			SetStatus(Lang.Tr("The rent increase per player must be a whole number from 0 to 500."));
+			return;
+		}
 		if (name.Length == 0)
 		{
 			name = "My shop";
@@ -476,6 +490,8 @@ internal static class HostMenu
 			cfg["maxPlayers"] = (JToken)new JValue(max);
 			cfg["saveSlot"] = (JToken)new JValue(slotNumber);
 			cfg["individualOutings"] = (JToken)new JValue(individual);
+			cfg["customersPerPlayer"] = (JToken)new JValue(custPer);
+			cfg["rentPercentPerPlayer"] = (JToken)new JValue(rentPer);
 			if (isNew)
 			{
 				JObject nr = new JObject();

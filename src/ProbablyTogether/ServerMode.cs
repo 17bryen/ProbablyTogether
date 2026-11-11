@@ -113,6 +113,7 @@ internal static class ServerMode
 		LogIgnoredAdmins(cfg);
 		Locks.TakeoverSeconds = cfg.counterTakeoverSeconds;
 		Systems.Outings.ServerReset();
+		Systems.Members.ServerReset();
 		Systems.Outings.Individual = cfg.individualOutings;
 		Net.LocalPlayer = 0;
 		if (!Server.Start(cfg))
@@ -146,6 +147,10 @@ internal static class ServerMode
 
 	private static ulong HostSteamId()
 	{
+		if (Args.Bot != null && ulong.TryParse(Args.Get("--br-steamid") ?? "", out var result))
+		{
+			return result;
+		}
 		try
 		{
 			if (SteamManager.Initialized)
