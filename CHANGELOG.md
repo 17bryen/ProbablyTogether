@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.4.5 - 2026-11-11
+
+Same protocol (5).
+
+### Fixed
+- The first player to pick a trade no longer closes the pick window for everyone.
+- A player is asked for a trade again right after rejoining or a reload.
+- A host who picks through the window has it closed once the pick is in.
+
 ## 0.4.4 - 2026-11-11
 
 Same protocol (5).

@@ -60,6 +60,50 @@ public static class Specs
 
 	private static CustomUIWindow window;
 
+	private const string WindowId = "bellun_probably_together.spec";
+
+	private static float holdUntil;
+
+	internal static int Reoffers;
+
+	/// Asks the game, since the cached window reference goes stale when the shop is left or reloaded.
+	private static bool WindowUp
+	{
+		get
+		{
+			try
+			{
+				CustomUIManager instance = CustomUIManager.Instance;
+				return (Object)(object)instance != (Object)null && instance.IsOpen(WindowId);
+			}
+			catch
+			{
+				return false;
+			}
+		}
+	}
+
+	internal static bool WindowShown => WindowUp;
+
+	internal static int OfferedCount => offered.Count;
+
+	internal static bool ChooseOffered(int index)
+	{
+		if (index < 0 || index >= offered.Count)
+		{
+			return false;
+		}
+		Pick(offered[index].Key);
+		return true;
+	}
+
+	private static void AskAgainSoon()
+	{
+		window = null;
+		holdUntil = 0f;
+		nextPrompt = 0f;
+	}
+
 	private static List<KeyValuePair<string, string>> offered = new List<KeyValuePair<string, string>>();
 
 	private static int pickIndex;
@@ -152,6 +196,11 @@ public static class Specs
 		Net.On<MsgSpecPick>("spec.pick", ServerPick, null);
 		Net.On<MsgSpecKit>("spec.kit", null, ClientKit);
 		Net.On<MsgSpecStock>("spec.stock", ServerStock, null);
+		Snapshot.Loaded += AskAgainSoon;
+		Net.Disconnected += delegate
+		{
+			AskAgainSoon();
+		};
 		Net.On<MsgSpecRefused>("spec.refused", null, delegate(MsgSpecRefused m)
 		{
 			LastRefusal = m?.why ?? "";
@@ -421,8 +470,17 @@ public static class Specs
 		{
 			Notices.Show(Lang.Trf("{0} is now the shop's {1}.", Kit.Name(Members.NameOf(m.seat)), Label(m.id)), "spec");
 		}
-		// A host's own pick does not come back as a message.
-		CloseWindow();
+		if (m.seat == Members.LocalSeat)
+		{
+			CloseWindow();
+		}
+		else if (WindowUp)
+		{
+			// Somebody else picked: reopen the window without the trade they took.
+			CloseWindow();
+			AskAgainSoon();
+			Reoffers++;
+		}
 	}
 
 	private static void Refuse(int player, string why)
@@ -669,6 +727,10 @@ public static class Specs
 		}
 		nextPrompt = realtimeSinceStartup + 3f;
 		int localSeat = Members.LocalSeat;
+		if (localSeat > 0 && Of(localSeat) != null && WindowUp)
+		{
+			CloseWindow();
+		}
 		if (localSeat <= 0 || Of(localSeat) != null || Bays.BayOf(localSeat) == null)
 		{
 			return;
@@ -683,9 +745,10 @@ public static class Specs
 			nextPrompt = realtimeSinceStartup + 20f;
 			Pick(text);
 		}
-		else if (Args.Bot == null && window == null)
+		else if ((Args.Bot == null || Args.Has("--br-spec-window")) && !WindowUp && realtimeSinceStartup >= holdUntil)
 		{
-			nextPrompt = realtimeSinceStartup + 90f;
+			// Fallback for when the game's own trade screen cannot be used.
+			window = null;
 			OpenWindow();
 		}
 	}
@@ -694,12 +757,12 @@ public static class Specs
 	{
 		try
 		{
-			if (window != null)
+			if (window != null || WindowUp)
 			{
 				CustomUIManager instance = CustomUIManager.Instance;
 				if (instance != null)
 				{
-					instance.CloseWindow("bellun_probably_together.spec");
+					instance.CloseWindow(WindowId);
 				}
 			}
 		}
@@ -725,20 +788,18 @@ public static class Specs
 			{
 				list.Add(item.Value);
 			}
-			CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.spec", Lang.Tr("Your trade in this shop"), "meta", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 360f);
+			CustomUIBuilder val = instance.CreateWindow(WindowId, Lang.Tr("Your trade in this shop"), "meta", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 360f);
 			val.AddLabel(Lang.Tr("Pick your specialization. Its starting kit goes into your storage bay, and its machines are yours alone. This cannot be changed later. (You can also type /trade in chat.)"), (string)null).AddDropdown((IList<string>)list, 0, (Action<int>)delegate(int i)
 			{
 				pickIndex = i;
 			}, "spec").AddButton(Lang.Tr("Choose"), (Action)delegate
 			{
-				if (pickIndex >= 0 && pickIndex < offered.Count)
-				{
-					Pick(offered[pickIndex].Key);
-				}
+				ChooseOffered(pickIndex);
 			}, "choose");
 			val.OnClose((Action)delegate
 			{
 				window = null;
+				holdUntil = Time.realtimeSinceStartup + 30f;
 			}).Center();
 			window = val.Show();
 			Log.Info("specs: asked the local player to pick (" + offered.Count + " on offer)");
