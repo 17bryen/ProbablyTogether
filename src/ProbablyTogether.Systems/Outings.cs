@@ -175,6 +175,10 @@ public static class Outings
 		Net.On<MsgOutReturn>("outing.return", ServerReturn, null);
 		Net.On<MsgOutReturned>("outing.returned", null, ClientReturned);
 		Net.PlayerLeft += ServerPlayerLeft;
+		Snapshot.ClientReady += delegate
+		{
+			NightLook();
+		};
 		Net.Disconnected += delegate
 		{
 			ResetClient("disconnected");
@@ -189,6 +193,33 @@ public static class Outings
 		}
 		Dropped++;
 		return true;
+	}
+
+	/// A copy reloading at night shows the closed shop the way a loaded save does: morning report on screen, shutter up.
+	private static void NightLook()
+	{
+		try
+		{
+			PlayerStore store = Game.Store;
+			if (store == null || (int)store.storeState != 0 || !Net.HasLocalPlayer)
+			{
+				return;
+			}
+			StartOfDayUIManager instance = StartOfDayUIManager.Instance;
+			if ((Object)(object)instance != (Object)null && (Object)(object)instance.UIPanel != (Object)null && instance.UIPanel.activeSelf)
+			{
+				instance.UIPanel.SetActive(false);
+			}
+			if ((Object)(object)StoreShutterButton.Instance != (Object)null)
+			{
+				StoreShutterButton.Instance.ForceImmediateClose();
+			}
+			Log.Info("outing: reloaded at night: morning report hidden, shutter down");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("outing: tidying up after a reload at night: " + ex.Message);
+		}
 	}
 
 	/// Replaces the group "go out" when outings are individual. True = handled.
@@ -236,6 +267,10 @@ public static class Outings
 			}
 		}
 		Private = true;
+		// A private trip starts from fresh randomness, not the shared state every copy leaves with.
+		int num = unchecked((Environment.TickCount * 397) ^ Guid.NewGuid().GetHashCode() ^ (Net.LocalPlayer * 7919));
+		RNG.random = new System.Random(num);
+		UnityEngine.Random.InitState(num ^ 0x5F3759DF);
 		returning = false;
 		backpackId = m.backpackId;
 		lastCash = store.playerCash;

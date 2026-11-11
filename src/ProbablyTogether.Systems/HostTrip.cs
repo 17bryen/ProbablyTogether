@@ -7,6 +7,26 @@ using Object = UnityEngine.Object;
 
 namespace ProbablyTogether.Systems;
 
+/// While the host is out, the shop's state exists twice: the trip body is live on screen, the home body is what players at home see.
+/// Server-side work runs inside AtHome(), which swaps the home body in for its duration.
+public sealed class MsgHostRep
+{
+	public string f;
+
+	public double v;
+
+	public int s;
+
+	public int i;
+
+	public int c;
+}
+
+public sealed class MsgHostSync
+{
+	public List<MsgHostRep> rep = new List<MsgHostRep>();
+}
+
 internal static class HostTrip
 {
 	private sealed class Body
@@ -135,6 +155,12 @@ internal static class HostTrip
 	private static int homeCash;
 
 	private static int homeFavor;
+
+	private static readonly HashSet<GameItem> soldBefore = new HashSet<GameItem>();
+
+	private static Dictionary<string, string> shopBefore;
+
+	internal static string LastLeak = "";
 
 	private static GameGridInventory frontHold;
 
@@ -359,6 +385,19 @@ internal static class HostTrip
 			return false;
 		}
 		home = Body.Capture(store);
+		soldBefore.Clear();
+		if (instance.soldElement != null)
+		{
+			soldBefore.UnionWith(((GameInventory)instance.soldElement).childItems);
+		}
+		try
+		{
+			shopBefore = Economy.RawParts();
+		}
+		catch
+		{
+			shopBefore = null;
+		}
 		Dictionary<string, AfterhourLocationState> dictionary = new Dictionary<string, AfterhourLocationState>();
 		if (store.afterhourState != null)
 		{
@@ -453,12 +492,109 @@ internal static class HostTrip
 		home = null;
 		trip = null;
 		Outings.HostHome();
+		try
+		{
+			Settle(store);
+		}
+		catch (Exception ex2)
+		{
+			Log.Error("outing: settling the host's trip with the shop threw: " + ex2);
+		}
 		Log.Info("outing: the host's private trip ends (" + Swaps + " look(s) at the shop at home while away)");
 		Swaps = 0;
 		if (pending != null && Net.IsHost)
 		{
 			Net.ToServer("outing.return", pending);
 		}
+	}
+
+	/// Stall deals on the host's trip are shop deals: faction standing and sold items go to everyone once home.
+	private static void Settle(PlayerStore store)
+	{
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		if (store == null || (Object)(object)instance == (Object)null || !Net.IsServer)
+		{
+			return;
+		}
+		List<string> list = new List<string>();
+		if (shopBefore != null)
+		{
+			foreach (KeyValuePair<string, string> item in Economy.RawParts())
+			{
+				if (item.Key != "money" && (!shopBefore.TryGetValue(item.Key, out var value) || value != item.Value))
+				{
+					list.Add(item.Key);
+				}
+			}
+		}
+		shopBefore = null;
+		MsgHostSync msgHostSync = new MsgHostSync();
+		if (store.storeReputations != null)
+		{
+			foreach (StoreReputation storeReputation in store.storeReputations)
+			{
+				if (storeReputation != null)
+				{
+					msgHostSync.rep.Add(new MsgHostRep
+					{
+						f = storeReputation.factionId,
+						v = storeReputation.GetReputationExact(),
+						s = storeReputation.strength,
+						i = storeReputation.influence,
+						c = storeReputation.actionCooldown
+					});
+				}
+			}
+		}
+		Net.ToAll("host.sync", msgHostSync);
+		int num = 0;
+		if (instance.soldElement != null)
+		{
+			foreach (GameItem childItem in ((GameInventory)instance.soldElement).childItems)
+			{
+				if (!soldBefore.Contains(childItem))
+				{
+					ItemsMove.BroadcastSubtree(childItem, "sold on a trip");
+					num++;
+				}
+			}
+		}
+		soldBefore.Clear();
+		LastLeak = string.Join(",", list) + ((num > 0) ? ((list.Count > 0) ? "," : "") + "sold:" + num : "");
+		if (LastLeak.Length > 0)
+		{
+			Log.Info("outing: the host's trip changed the shop itself (" + LastLeak + "); reputation and " + num + " sold item(s) sent to everyone" + ((list.Exists((string x) => x != "reputation")) ? "; other records are not sent yet and wait for the morning" : ""));
+		}
+	}
+
+	[SystemInit]
+	internal static void Init()
+	{
+		Net.On<MsgHostSync>("host.sync", null, delegate(MsgHostSync m)
+		{
+			PlayerStore store = Game.Store;
+			if (m?.rep == null || store?.storeReputations == null)
+			{
+				return;
+			}
+			using (Net.Apply())
+			{
+				foreach (MsgHostRep item in m.rep)
+				{
+					StoreReputation storeReputation = store.storeReputations.Find((StoreReputation r) => r != null && r.factionId == item.f);
+					if (storeReputation != null)
+					{
+						if (storeReputation.GetReputationExact() != item.v)
+						{
+							storeReputation.SetReputation(item.v);
+						}
+						storeReputation.strength = item.s;
+						storeReputation.influence = item.i;
+						storeReputation.actionCooldown = item.c;
+					}
+				}
+			}
+		});
 	}
 
 	internal static void Reset()

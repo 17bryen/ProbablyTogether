@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.4.3 - 2026-11-11
+
+Same protocol (5).
+
+### Fixed
+- The host's sales at Dr. Jackson's no longer cause reload storms. Their effects are sent when the host is home, and copies no longer reload by themselves at night or while someone is out.
+- Coming home at night after a reload no longer shows the morning report and an open shutter.
+- Players at the dump on the same night no longer find the same items.
+
 ## 0.4.2 - 2026-11-11
 
 Same protocol (5).

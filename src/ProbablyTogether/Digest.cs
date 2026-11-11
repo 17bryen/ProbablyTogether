@@ -21,6 +21,11 @@ internal static class Digest
 
 	private static string askedAreas;
 
+	/// Reloads asked because the shop differed, plus differences sat out (night, someone out).
+	internal static int ReloadsAsked;
+
+	internal static int Deferred;
+
 	private static int askedSame;
 
 	public static void AddPart(string name, Func<string> part)
@@ -327,6 +332,25 @@ internal static class Digest
 		{
 			return;
 		}
+		string text3 = null;
+		if (Systems.Outings.AnyOut)
+		{
+			text3 = "somebody is out on a trip (their trip is settled when they are back)";
+		}
+		else if (Game.Store != null && (int)Game.Store.storeState == 0)
+		{
+			text3 = "it is night (the morning brings every copy back in line without replaying the day)";
+		}
+		if (text3 != null)
+		{
+			Deferred++;
+			mismatches = 0;
+			if (Log.Allow("c|digest|deferred", 60000L, out var skipped))
+			{
+				Log.Info("client: no reload asked for (" + AreasOf(text) + "): " + text3 + Log.More(skipped));
+			}
+			return;
+		}
 		if (Locks.LocalHoldsAny())
 		{
 			Log.Info("client: resync waits: this player holds a lock");
@@ -359,6 +383,7 @@ internal static class Digest
 		{
 			lastAskMs = ms;
 			mismatches = 0;
+			ReloadsAsked++;
 			Snapshot.Ask("digest mismatch: " + text);
 		}
 	}
