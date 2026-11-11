@@ -50,7 +50,10 @@ internal static class Core
 		}
 		MenuJobs();
 		SelfTest.Tick();
-		SystemHooks.Tick();
+		using (Net.IsServer ? Systems.HostTrip.AtHome() : null)
+		{
+			SystemHooks.Tick();
+		}
 	}
 
 	private static void DrainInbox()

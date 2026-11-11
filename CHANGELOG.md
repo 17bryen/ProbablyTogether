@@ -2,6 +2,19 @@
 
 All changes to Probably Together.
 
+## 0.4.1 - 2026-11-10
+
+Same protocol (5).
+
+### Fixed
+- "Start a new run" keeps the players' seats; everyone gets a new storage bay and picks a trade again.
+- The calendar and the morning screen show the scaled rent that is actually charged.
+- Joe Wild's menu opens on the caller's screen, not the host's, while the host is at Dr. Jackson's.
+
+### Added
+- Every new storage bay comes with a fanny pack; a bag in another player's bay cannot be taken on a trip.
+- The host's Leave prompt offers "Step away (the shop stays open)", "Close the server" and "Keep playing".
+
 ## 0.4.0 - 2026-11-10
 
 Protocol 5. Every player needs it. Older saves load.

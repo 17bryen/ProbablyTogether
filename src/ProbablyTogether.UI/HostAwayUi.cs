@@ -20,7 +20,49 @@ internal static class HostAwayUi
 	/// The host pressed "Leave server": first offer to keep the shop open.
 	internal static void AskLeave(ConfirmPanelUIManager p)
 	{
+		try
+		{
+			CustomUIManager instance = CustomUIManager.Instance;
+			if ((Object)(object)instance != (Object)null)
+			{
+				CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.leave", Lang.Tr("Leaving your shop"), "meta", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(620f, 330f);
+				val.AddLabel(Lang.Tr("You are hosting this shop. Step away and the others keep playing (you can rejoin at any time), or close the server and everyone is disconnected."), (string)null)
+					.AddButton(Lang.Tr("Step away (the shop stays open)"), (Action)delegate
+					{
+						CloseLeave();
+						StepOut();
+					}, "stepaway")
+					.AddButton(Lang.Tr("Close the server"), (Action)delegate
+					{
+						CloseLeave();
+						AskStop();
+					}, "close")
+					.AddButton(Lang.Tr("Keep playing"), (Action)CloseLeave, "cancel");
+				val.Center();
+				val.Show();
+				return;
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: the leave window did not open (" + ex.Message + "); using the yes/no panel");
+		}
 		p.OpenPanel(Lang.Tr("Step out and keep the shop open? The other players keep playing and you can rejoin at any time. Choose No to stop hosting instead."), (Action)StepOut, (Action)AskStop, false);
+	}
+
+	private static void CloseLeave()
+	{
+		try
+		{
+			CustomUIManager instance = CustomUIManager.Instance;
+			if (instance != null)
+			{
+				instance.CloseWindow("bellun_probably_together.leave");
+			}
+		}
+		catch
+		{
+		}
 	}
 
 	private static void StepOut()

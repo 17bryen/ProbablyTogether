@@ -59,6 +59,9 @@ public static class Members
 
 	private static bool configApplied;
 
+	/// Players of the run that just ended, seated again in the run that replaces it.
+	private static MembersState carry;
+
 	internal static int Refused;
 
 	public static MembersState State
@@ -194,6 +197,19 @@ public static class Members
 	internal static void Init()
 	{
 		Net.On<MsgMembers>("members.set", null, ClientSet);
+		ServerMode.NewRunStarting += delegate
+		{
+			// A new run replaces the save while everyone stays connected, so carry the members across: same seats, nothing owned.
+			MembersState membersState = Parse(Read());
+			foreach (Member item in membersState.list)
+			{
+				item.x.Clear();
+				item.d = 1;
+			}
+			carry = ((membersState.list.Count > 0) ? membersState : null);
+			cachedJson = null;
+			Log.Info("members: a new run is starting; " + membersState.list.Count + " player(s) keep their seats");
+		};
 		Digest.AddPart("members", delegate
 		{
 			string text = Read() ?? "";
@@ -388,6 +404,20 @@ public static class Members
 		{
 			return;
 		}
+		if (carry != null)
+		{
+			// The shop up now is the new run (the old one stopped being "ready" before this was set).
+			{
+				if (Server.Config != null)
+				{
+					carry.rent = Server.Config.rentPercentPerPlayer;
+					carry.cust = Server.Config.customersPerPlayer;
+				}
+				Publish(carry, 0);
+				Log.Info("members: seated again in the new run: " + Describe());
+			}
+			carry = null;
+		}
 		if (!configApplied)
 		{
 			configApplied = true;
@@ -417,6 +447,103 @@ public static class Members
 				Server.RosterChanged();
 				break;
 			}
+		}
+	}
+
+	// Two screens read the base rent straight from the save: they see scaled figures while drawing, then the save is restored.
+
+	private static void ShowScaled(PlayerStore store, out int[] kept)
+	{
+		kept = null;
+		if (store == null || !Net.IsOnline || Extra <= 0)
+		{
+			return;
+		}
+		kept = new int[2] { store.rentValue, store.temporaryRent };
+		store.rentValue = Rent(kept[0]);
+		store.temporaryRent = Rent(kept[1]);
+	}
+
+	private static void ShowBase(PlayerStore store, int[] kept)
+	{
+		if (store != null && kept != null)
+		{
+			store.rentValue = kept[0];
+			store.temporaryRent = kept[1];
+		}
+	}
+
+	[HarmonyPatch]
+	private static class CalendarRentPatch
+	{
+		private static System.Reflection.MethodBase Find()
+		{
+			try
+			{
+				return AccessTools.Method(typeof(AdvCalendarUIManager), "OnCalendarButtonClicked", (Type[])null, (Type[])null);
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
+		private static bool Prepare()
+		{
+			return Find() != null;
+		}
+
+		private static System.Reflection.MethodBase TargetMethod()
+		{
+			return Find();
+		}
+
+		private static void Prefix(out int[] __state)
+		{
+			ShowScaled(Game.Store, out __state);
+		}
+
+		private static Exception Finalizer(Exception __exception, int[] __state)
+		{
+			ShowBase(Game.Store, __state);
+			return __exception;
+		}
+	}
+
+	[HarmonyPatch]
+	private static class MorningRentPatch
+	{
+		private static System.Reflection.MethodBase Find()
+		{
+			try
+			{
+				return AccessTools.Method(typeof(StartOfDayUIManager), "InitPanel", (Type[])null, (Type[])null);
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
+		private static bool Prepare()
+		{
+			return Find() != null;
+		}
+
+		private static System.Reflection.MethodBase TargetMethod()
+		{
+			return Find();
+		}
+
+		private static void Prefix(out int[] __state)
+		{
+			ShowScaled(Game.Store, out __state);
+		}
+
+		private static Exception Finalizer(Exception __exception, int[] __state)
+		{
+			ShowBase(Game.Store, __state);
+			return __exception;
 		}
 	}
 

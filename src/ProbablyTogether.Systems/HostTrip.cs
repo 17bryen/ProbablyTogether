@@ -116,7 +116,17 @@ internal static class HostTrip
 
 	private static readonly FieldInfo currentField = AccessTools.Field(typeof(MapUIManager), "<Current>k__BackingField");
 
+	private sealed class TripScope : IDisposable
+	{
+		public void Dispose()
+		{
+			Enter();
+		}
+	}
+
 	private static readonly Scope scope = new Scope();
+
+	private static readonly TripScope tripScope = new TripScope();
 
 	private static Body home;
 
@@ -155,10 +165,19 @@ internal static class HostTrip
 		{
 			return null;
 		}
+		return Enter() ? scope : null;
+	}
+
+	private static bool Enter()
+	{
+		if (!Out || HomeView)
+		{
+			return false;
+		}
 		PlayerStore store = Game.Store;
 		if (store == null || home == null)
 		{
-			return null;
+			return false;
 		}
 		trip = Body.Capture(store);
 		home.Restore(store);
@@ -166,7 +185,18 @@ internal static class HostTrip
 		homeFavor = store.wildFavor;
 		HomeView = true;
 		Swaps++;
-		return scope;
+		return true;
+	}
+
+	/// Steps back into the trip body for the returned scope; no-op when not out or the trip is already live.
+	internal static IDisposable OnTrip()
+	{
+		if (!Out || !HomeView)
+		{
+			return null;
+		}
+		Leave();
+		return tripScope;
 	}
 
 	private static void Leave()

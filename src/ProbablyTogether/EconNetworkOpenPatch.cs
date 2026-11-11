@@ -41,6 +41,11 @@ internal static class EconNetworkOpenPatch
 			{
 				return false;
 			}
+			if (Systems.HostTrip.Out)
+			{
+				Economy.SkippedWindow("network");
+				return false;
+			}
 			if (Net.Applying)
 			{
 				if (!Economy.UiForMe())

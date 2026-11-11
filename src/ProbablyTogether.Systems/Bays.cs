@@ -380,6 +380,28 @@ public static class Bays
 					return;
 				}
 				Ids.Assign(val);
+				try
+				{
+					GameItem val3 = DirectoryMaster.Item("fanny_pack");
+					PixelWindow contentWindow = val.contentWindow;
+					GraphNodeStorage val4 = ((contentWindow != null) ? contentWindow.child : null);
+					if (val3 != null && val4 != null)
+					{
+						GeneralHelper.SetItemOwned(val3, true);
+						if (GraphUtils.TryAccept(val4, val3) != -1)
+						{
+							Ids.Assign(val3);
+						}
+						else
+						{
+							val3.Destroy();
+						}
+					}
+				}
+				catch (Exception ex2)
+				{
+					Log.Warn("bays: no fanny pack for the new bay: " + ex2.Message);
+				}
 			}
 			ItemsMove.BroadcastSubtree(val, "bay");
 			Members.SetFact(m.seat, "bay", Ids.Of(val).ToString(CultureInfo.InvariantCulture));

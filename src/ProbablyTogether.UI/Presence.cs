@@ -154,7 +154,21 @@ public static class Presence
 
 	private static StorePhoneObject phone;
 
-	public static string LocalView => FakeView ?? ComputeView();
+	public static string LocalView
+	{
+		get
+		{
+			if (FakeView != null)
+			{
+				return FakeView;
+			}
+			// On a host that is out, the local player's place is the trip.
+			using (ProbablyTogether.Systems.HostTrip.OnTrip())
+			{
+				return ComputeView();
+			}
+		}
+	}
 
 	public static IReadOnlyDictionary<int, Remote> Remotes => remotes;
 

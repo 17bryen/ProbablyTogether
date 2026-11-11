@@ -260,6 +260,15 @@ public static class Outings
 	[SystemTick]
 	private static void Tick()
 	{
+		// Treat the host's own trip as the trip, not the shop at home.
+		using (HostTrip.OnTrip())
+		{
+			TripTick();
+		}
+	}
+
+	private static void TripTick()
+	{
 		if (!Private || returning)
 		{
 			return;
@@ -641,6 +650,10 @@ public static class Outings
 			else if (!EmporiumEntry.Instance.GetAllOwnedItemsByTag("BACKPACK_TAG").Contains(val))
 			{
 				text = "That is not one of the shop's backpacks.";
+			}
+			else
+			{
+				text = Bays.Refusal(from, (GraphNodeStorage)(object)val.parentInventory);
 			}
 		}
 		if (text == null && StoreClientData.IsButcherHunting() && (val == null || !GunHelper.HasGunInside(val)))
