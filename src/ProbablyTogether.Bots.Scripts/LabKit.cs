@@ -149,6 +149,19 @@ public static class LabKit
 					Game.Store.OnRentPaid();
 					return "rent paid: cash " + playerCash + " -> " + Game.Store.playerCash;
 				}
+				case "water":
+				{
+					// water <item id> [grade]: fills a liquid container the way the game fills its own stock.
+					long.TryParse(a, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result);
+					GameItem val = Ids.Find(result);
+					if (val == null || !val.IsTag("LIQUID_CONTAINER_TAG"))
+					{
+						return "no liquid container #" + a;
+					}
+					int.TryParse(b ?? "2", NumberStyles.Integer, CultureInfo.InvariantCulture, out var result2);
+					WaterHelper.AddWater(val, result2, -1, false, 0, 1, true);
+					return val.identifier + "#" + a + " holds " + WaterHelper.GetTotalVolume(val);
+				}
 				default:
 					return "unknown op '" + op + "'";
 				}

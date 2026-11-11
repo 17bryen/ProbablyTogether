@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.4.4 - 2026-11-11
+
+Same protocol (5).
+
+### Fixed
+- In a hosted shop, chemistry (heating, cooling, reactions, the fridge) now runs all the time, not only while the host is out.
+- A hosted shop now sends temperatures and liquid contents to players, every second.
+- Hopper runs scheduled by the server are no longer dropped on a host.
+
 ## 0.4.3 - 2026-11-11
 
 Same protocol (5).

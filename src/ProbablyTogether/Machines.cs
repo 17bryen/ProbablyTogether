@@ -92,6 +92,9 @@ public static class Machines
 
 	public const string KTick = "machine.tick";
 
+	/// How often the server sends changed temperatures and liquids; a heated batch changes within seconds.
+	public const float PushSeconds = 1f;
+
 	public const string KCheck = "machine.check";
 
 	private static readonly Dictionary<long, string> lastOpOn = new Dictionary<long, string>();
@@ -202,6 +205,9 @@ public static class Machines
 	public static int TicksSent { get; private set; }
 
 	public static int SuppressedTicks { get; private set; }
+
+	/// Calls of the game's once-a-second functions that ran on this copy.
+	public static int ServerTicks { get; private set; }
 
 	public static int SuppressedAuto { get; private set; }
 
@@ -732,7 +738,7 @@ public static class Machines
 
 	internal static bool OnHopperSchedule()
 	{
-		if (!Net.IsClient)
+		if (Net.IsServer || !Net.IsClient)
 		{
 			return true;
 		}
@@ -771,8 +777,9 @@ public static class Machines
 	/// The game's once-a-second work runs only on the copy that serves the shop (a host too, though Net.IsClient is true).
 	internal static bool OnTickFunction()
 	{
-		if (!Net.IsClient || Net.Applying)
+		if (Net.IsServer || !Net.IsClient || Net.Applying)
 		{
+			ServerTicks++;
 			return true;
 		}
 		SuppressedTicks++;
@@ -1959,10 +1966,10 @@ public static class Machines
 					FlushRepairs();
 				}
 			}
-			else if (Net.IsServer && Net.IsLive && Items.Ready)
+			if (Net.IsServer && Net.IsLive && Items.Ready)
 			{
 				float realtimeSinceStartup = Time.realtimeSinceStartup;
-				if (realtimeSinceStartup - lastPush >= 3f)
+				if (realtimeSinceStartup - lastPush >= PushSeconds)
 				{
 					lastPush = realtimeSinceStartup;
 					PushTicks();
