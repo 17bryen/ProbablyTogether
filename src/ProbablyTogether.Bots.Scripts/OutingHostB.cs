@@ -114,6 +114,30 @@ public sealed class OutingHostB : DayNightBotBase
 		Check("sat-out-the-hosts-deal", () => Digest.Deferred >= 1, () => "differences sat out " + Digest.Deferred + " (the host's deal at the stall was not ours to see until it came home)");
 		Ready("ready");
 		WaitFor("night", 200f, () => DayNightBotBase.Live && DayNightBotBase.Day == day0 + 1 && DayNightBotBase.State == "MORNING", () => "day " + DayNightBotBase.Day + ", " + DayNightBotBase.State);
-		Agree("same-night", 30f, "day", "cash", "dn.state", "dn.digest", "items.digest");
+		Agree("same-night", 30f, "day", "cash", "dn.state", "dn.digest", "items.digest");		WaitFor("opened-next-day", 120f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
+		Delay("the-opening-lands", 2f);
+		string theirs = "";
+		WaitServer("the-hosts-queue", 20f, delegate(IReadOnlyDictionary<string, string> v)
+		{
+			theirs = DayNightBotBase.V(v, "cust.text");
+			return theirs != "";
+		}, "cust.text");
+		Check("same-customers-the-morning-after-the-hosts-trip", () => Customers.DigestText() == theirs, delegate
+		{
+			string[] array = Customers.DigestText().Split(new char[2] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+			string[] array2 = theirs.Split(new char[2] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+			List<string> list = new List<string>();
+			for (int i = 0; i < Math.Max(array.Length, array2.Length); i++)
+			{
+				string text = (i < array.Length) ? array[i] : "(nothing)";
+				string text2 = (i < array2.Length) ? array2[i] : "(nothing)";
+				if (text != text2)
+				{
+					list.Add("[" + i + "] here " + text + " / host " + text2);
+				}
+			}
+			return (list.Count == 0) ? ("same, " + array.Length + " part(s)") : (list.Count + " part(s) differ: " + string.Join("  ", list.Take(10)));
+		});
+		Check("no-reload-at-the-opening", () => DayNight.Mismatches == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked " + Digest.ReloadsAsked);
 	}
 }

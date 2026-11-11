@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.4.6 - 2026-11-11
+
+Same protocol (5).
+
+### Fixed
+- Opening the Clientele panel before opening no longer makes customers differ from the start of the day.
+
 ## 0.4.5 - 2026-11-11
 
 Same protocol (5).

@@ -307,5 +307,15 @@ public sealed class OutingHost : DayNightBotBase
 		Delay("b-compares-after-2", 12f);
 		Ready("ready");
 		WaitFor("night", 200f, () => DayNightBotBase.Live && DayNightBotBase.Day == day0 + 1 && DayNightBotBase.State == "MORNING", () => "day " + DayNightBotBase.Day + ", " + DayNightBotBase.State);
+		// The players' customers must match the host's from the moment the shutter goes up.
+		Delay("b-loads-the-morning", 10f);
+		Do("open-click-next-day", delegate
+		{
+			StoreShutterButton.Instance.OnClick();
+			return "sent";
+		});
+		WaitFor("opened-next-day", 30f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
+		Do("my-queue-next-day", () => Customers.DigestText());
+		Delay("b-compares-the-queue", 30f);
 	}
 }

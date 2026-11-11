@@ -400,6 +400,7 @@ public static class DayNight
 		};
 		Exception ex = null;
 		int num = 0;
+		msgDnShutter.picks = SupplierPicks.ForOpening();
 		using (Replay.Server(out msgDnShutter.seed))
 		{
 			ex = RunOpen(m.paper);
@@ -475,6 +476,7 @@ public static class DayNight
 		}
 		int num = 0;
 		Exception ex;
+		SupplierPicks.Adopt(m.picks);
 		using (Replay.Client(m.seed))
 		{
 			ex = RunOpen(m.paper);
