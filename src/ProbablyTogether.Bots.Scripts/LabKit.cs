@@ -130,6 +130,12 @@ public static class LabKit
 					return Set(a, b);
 				case "give":
 					return Give(a, b, c);
+				case "rentpaid":
+				{
+					int playerCash = Game.Store.playerCash;
+					Game.Store.OnRentPaid();
+					return "rent paid: cash " + playerCash + " -> " + Game.Store.playerCash;
+				}
 				default:
 					return "unknown op '" + op + "'";
 				}
