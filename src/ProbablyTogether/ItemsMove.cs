@@ -765,6 +765,12 @@ public static class ItemsMove
 		{
 			return null;
 		}
+		string text = Systems.Bays.Refusal(player, nodes);
+		if (text != null)
+		{
+			counterRefusal = text;
+			return "counter";
+		}
 		if (!Items.CustomerPresent)
 		{
 			return null;
@@ -815,6 +821,12 @@ public static class ItemsMove
 		if (!GeneralHelper.MayPlayerInsertInto(val))
 		{
 			return "notallowed";
+		}
+		string own1 = Systems.Bays.MoveRefusal(from, item, (GraphNodeStorage)val);
+		if (own1 != null)
+		{
+			counterRefusal = own1;
+			return "counter";
 		}
 		why = Counter(from, (GraphNodeStorage)item.parentInventory, (GraphNodeStorage)val);
 		if (why != null)
@@ -985,6 +997,12 @@ public static class ItemsMove
 		{
 			return "notallowed";
 		}
+		string own2 = Systems.Bays.MoveRefusal(from, item, node);
+		if (own2 != null)
+		{
+			counterRefusal = own2;
+			return "counter";
+		}
 		why = Counter(from, (GraphNodeStorage)item.parentInventory, node);
 		if (why != null)
 		{
@@ -1034,6 +1052,12 @@ public static class ItemsMove
 				if ((Object)(object)MapUIManager.Instance != (Object)null && MapUIManager.Instance.isOutside)
 				{
 					return "notallowed";
+				}
+				string own3 = Systems.Bays.MoveRefusal(from, item, (GraphNodeStorage)(object)trash);
+				if (own3 != null)
+				{
+					counterRefusal = own3;
+					return "counter";
 				}
 				text = Counter(from, (GraphNodeStorage)item.parentInventory);
 				if (text != null)
@@ -1085,6 +1109,12 @@ public static class ItemsMove
 		foreach (GameItem item in items)
 		{
 			list.Add((GraphNodeStorage)(object)item.parentInventory);
+			string own4 = Systems.Bays.MoveRefusal(from, item, (GraphNodeStorage)(object)inv);
+			if (own4 != null)
+			{
+				counterRefusal = own4;
+				return "counter";
+			}
 		}
 		text = Counter(from, list.ToArray());
 		if (text != null)
@@ -1225,7 +1255,7 @@ public static class ItemsMove
 		{
 			return "notallowed";
 		}
-		text = Counter(from, (GraphNodeStorage)item.parentInventory);
+		text = Counter(from, (GraphNodeStorage)item.parentInventory, (GraphNodeStorage)(object)item);
 		if (text != null)
 		{
 			return text;
