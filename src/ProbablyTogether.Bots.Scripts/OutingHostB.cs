@@ -110,7 +110,8 @@ public sealed class OutingHostB : DayNightBotBase
 		}, () => "my item #" + yId + " is in the inventory, where clearing the counter sent it");
 		Agree("nego-after-jackson", 12f, "out.nego").ContinueOnFail = true;
 		Agree("same-after-jackson", 30f, Same);
-		Check("no-reloads", () => DayNight.Mismatches == 0, () => "day/night mismatches " + DayNight.Mismatches);
+		Check("no-reloads", () => DayNight.Mismatches == 0 && Digest.ReloadsAsked == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked for " + Digest.ReloadsAsked + "; differences sat out while the host was away " + Digest.Deferred);
+		Check("sat-out-the-hosts-deal", () => Digest.Deferred >= 1, () => "differences sat out " + Digest.Deferred + " (the host's deal at the stall was not ours to see until it came home)");
 		Ready("ready");
 		WaitFor("night", 200f, () => DayNightBotBase.Live && DayNightBotBase.Day == day0 + 1 && DayNightBotBase.State == "MORNING", () => "day " + DayNightBotBase.Day + ", " + DayNightBotBase.State);
 		Agree("same-night", 30f, "day", "cash", "dn.state", "dn.digest", "items.digest");

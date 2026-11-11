@@ -24,6 +24,14 @@ public sealed class OutingHost : DayNightBotBase
 
 	private int given0;
 
+	private string repFaction = "";
+
+	private double repAfter;
+
+	private int cashAfter;
+
+	private int soldId;
+
 	private int moveQ;
 
 	private long xId;
@@ -253,6 +261,30 @@ public sealed class OutingHost : DayNightBotBase
 		WaitFor("b-cleared-the-clone", 90f, () => Count((GameInventory)(object)E.backInvinvElementCounter) == 0, () => "the clone holds " + Count((GameInventory)(object)E.backInvinvElementCounter) + " item(s) after B pressed clear-the-counter at home; the stall still shows " + Count((GameInventory)(object)E.frontInvinvElement) + " ware(s)");
 		Check("stall-untouched", () => Count((GameInventory)(object)E.frontInvinvElement) > 0 && DayNightBotBase.Ps.currentClientInstance != null && DayNightOuting.LocationId == "dr_jackson", () => "still at the stall with " + Count((GameInventory)(object)E.frontInvinvElement) + " ware(s)");
 		Delay("b-compares-at-jackson", 14f);
+		Do("a-deal-at-the-stall", delegate
+		{
+			// What selling something to Dr. Jackson does to the shop of record: money in, standing with a faction
+			// changed, the thing on the shop's list of sold items.
+			StoreReputation val = DayNightBotBase.Ps.storeReputations.FirstOrDefault((StoreReputation r) => r != null);
+			repFaction = ((val != null) ? val.factionId : "");
+			repAfter = ((val != null) ? (val.GetReputationExact() + 2.5) : 0.0);
+			if (val != null)
+			{
+				val.SetReputation(repAfter);
+			}
+			GameItem val2 = ItemSpawner.Spawn("bottled_water");
+			GeneralHelper.SetItemOwned(val2, false);
+			if (val2.uniqueId == 0)
+			{
+				val2.uniqueId = DayNightBotBase.Ps.GetUniqueID();
+			}
+			((GameInventory)E.soldElement).UncheckedAccept(val2);
+			soldId = val2.uniqueId;
+			cashAfter = DayNightBotBase.Ps.playerCash + 37;
+			DayNightBotBase.Ps.playerCash = cashAfter;
+			return "sold something for 37: cash " + cashAfter + ", " + repFaction + " standing " + repAfter.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + ", sold item #" + soldId;
+		});
+		Delay("b-lives-with-the-difference", 24f);
 		Do("return-2", delegate
 		{
 			MapUIManager.Instance.ReturnNow();
@@ -265,7 +297,12 @@ public sealed class OutingHost : DayNightBotBase
 			bool flag = ((GameInventory)E.frontInvinvElement).childItems.All((GameItem i) => GeneralHelper.IsItemOwned(i));
 			return !HostTrip.CountersBorrowed && val != null && (object)val.parentInventory == E.invElement && Count((GameInventory)(object)E.backInvinvElementCounter) == 0 && flag && DayNightBotBase.Ps.currentClientInstance == null;
 		}, () => "our item is in the inventory where B's clear-the-counter sent it; back counter " + Count((GameInventory)(object)E.backInvinvElement) + " item(s), clone " + Count((GameInventory)(object)E.backInvinvElementCounter) + ", front counter " + Count((GameInventory)(object)E.frontInvinvElement) + ", customer " + ((DayNightBotBase.Ps.currentClientInstance != null) ? "still there" : "gone"));
-		Check("items-home-2", () => Items.All().Count() == itemsBefore + (LabKit.Given - given0), () => "items now " + Items.All().Count() + ", before " + itemsBefore + " plus " + (LabKit.Given - given0) + " the lab handed to the player at home");
+		Check("the-deal-is-the-shops", delegate
+		{
+			StoreReputation val = DayNightBotBase.Ps.storeReputations.FirstOrDefault((StoreReputation r) => r != null && r.factionId == repFaction);
+			return DayNightBotBase.Ps.playerCash == cashAfter && (val == null || val.GetReputationExact() == repAfter) && ((GameInventory)E.soldElement).childItems.Any((GameItem i) => i.uniqueId == soldId) && HostTrip.LastLeak.Contains("sold:1");
+		}, () => "cash " + DayNightBotBase.Ps.playerCash + " (expected " + cashAfter + "); what the trip changed in the shop: " + HostTrip.LastLeak);
+		Check("items-home-2", () => Items.All().Count() == itemsBefore + (LabKit.Given - given0) + 1, () => "items now " + Items.All().Count() + ", before " + itemsBefore + " plus " + (LabKit.Given - given0) + " the lab handed to the player at home");
 		Check("trips-used", () => DayNightBotBase.Ps.visitLeftTonight == budget - 2, () => "trips left " + DayNightBotBase.Ps.visitLeftTonight + " of " + budget);
 		Delay("b-compares-after-2", 12f);
 		Ready("ready");
