@@ -2,6 +2,16 @@
 
 All changes to Probably Together.
 
+## 0.3.2 - 2026-11-10
+
+Same protocol (4).
+
+### Changed
+- Clearing the counter at home while the host is out now works, including while the host is at Dr. Jackson's.
+
+### Added
+- Test tools for setting up a shop's state and starting tests from any save.
+
 ## 0.3.1 - 2026-11-10
 
 Protocol 4. Every player needs it.

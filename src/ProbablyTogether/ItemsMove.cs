@@ -1304,11 +1304,10 @@ public static class ItemsMove
 		{
 			return "target";
 		}
-		if (Systems.HostTrip.CountersBorrowed)
-		{
-			return "The host is at Dr. Jackson's with the counters: clear them by hand until the host is back.";
-		}
-		string text = Counter(from, (GraphNodeStorage)e.frontInvinvElement, (GraphNodeStorage)e.backInvinvElement);
+		// While the host is out on its own, "the counters" are the ones the players at home see (HostTrip clones).
+		GraphNodeStorage frontNode = Systems.HostTrip.Front(e);
+		GraphNodeStorage backNode = Systems.HostTrip.Back(e);
+		string text = Counter(from, frontNode, backNode);
 		if (text != null)
 		{
 			return text;
@@ -1316,18 +1315,33 @@ public static class ItemsMove
 		bool front = m.frontVisible;
 		run = delegate
 		{
-			if (front && ((GameInventory)e.frontInvinvElement).childItems.Count != 0)
+			List<GameItem> onFront = GraphUtils.FindAllChildrenType<GameItem>(frontNode, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null).FindAll((GameItem i) => (object)i.parentInventory == frontNode);
+			List<GameItem> onBack = GraphUtils.FindAllChildrenType<GameItem>(backNode, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null).FindAll((GameItem i) => (object)i.parentInventory == backNode);
+			if (front && onFront.Count != 0)
 			{
-				foreach (GameItem item in new List<GameItem>(((GameInventory)e.frontInvinvElement).childItems))
+				foreach (GameItem item in onFront)
 				{
-					GraphUtils.TryAcceptAll((GraphNodeStorage)(object)e.backInvinvElement, item, -1);
+					GraphUtils.TryAcceptAll(backNode, item, -1);
 				}
 				return;
 			}
-			e.TransferOwnedItemBackToInv();
+			// Same as the game's TransferOwnedItemBackToInv / TransferOwnedItemFrontToInv, on the counters chosen above.
+			foreach (GameItem item2 in onBack)
+			{
+				if (GeneralHelper.IsItemOwned(item2))
+				{
+					GraphUtils.TryAcceptAll((GraphNodeStorage)(object)e.invElement, item2, -1);
+				}
+			}
 			if (front)
 			{
-				e.TransferOwnedItemFrontToInv();
+				foreach (GameItem item3 in onFront)
+				{
+					if (GeneralHelper.IsItemOwned(item3))
+					{
+						GraphUtils.TryAcceptAll((GraphNodeStorage)(object)e.invElement, item3, -1);
+					}
+				}
 			}
 		};
 		return null;
