@@ -21,9 +21,17 @@ public static class Replay
 
 		private bool done;
 
+		private readonly bool wound;
+
 		internal Scope(Seed s, bool isClient, int actor)
 		{
 			apply = Net.Apply(actor);
+			if (isClient && actor <= 0 && s != null && s.P > 0)
+			{
+				// The server served this as that player's request; here it is replayed as that player's doing.
+				Systems.Wounds.Enter(s.P);
+				wound = true;
+			}
 			depth++;
 			seed = s;
 			client = isClient;
@@ -99,6 +107,10 @@ public static class Replay
 			finally
 			{
 				depth--;
+				if (wound)
+				{
+					Systems.Wounds.Leave();
+				}
 				apply.Dispose();
 			}
 		}
@@ -152,7 +164,8 @@ public static class Replay
 			RandomState = "i:" + num,
 			SysSeed = sysSeed,
 			UidBase = (store?.currentUniqueId ?? 0),
-			Actor = ((actor < 0) ? (-1) : actor)
+			Actor = ((actor < 0) ? (-1) : actor),
+			P = ((actor > 0) ? actor : (Dispatch.InRequest ? Dispatch.Requester : 0))
 		};
 		return new Scope(seed, isClient: false, seed.Actor);
 	}

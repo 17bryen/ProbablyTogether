@@ -134,8 +134,16 @@ public static class DayNightOuting
 		HealthData healthData = store.healthData;
 		if (healthData != null)
 		{
-			Mix(ref h, healthData.woundState);
-			Mix(ref h, healthData.isWoundedFresh ? 1 : 0);
+			if (Wounds.Active)
+			{
+				// Each copy's fields show its own player's wound: the record of all of them is what must agree.
+				Mix(ref h, Wounds.Raw);
+			}
+			else
+			{
+				Mix(ref h, healthData.woundState);
+				Mix(ref h, healthData.isWoundedFresh ? 1 : 0);
+			}
 			Mix(ref h, healthData.wentToAfterhoursLastNight ? 1 : 0);
 		}
 		Mix(ref h, LocationId);

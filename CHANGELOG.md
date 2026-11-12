@@ -2,6 +2,17 @@
 
 All changes to Probably Together.
 
+## 0.6.0 - 2026-11-12
+
+Protocol 11. Every player needs it.
+
+### Added
+- In shops where everyone goes out alone, each player has their own wound, treated, healed and reported separately. Older shops start everyone from the shop's one wound.
+- Every replayed action records which player did it.
+
+### Changed
+- A customer who asks for a player now says so in separate lines, paced like the game's conversations.
+
 ## 0.5.2 - 2026-11-12
 
 Same protocol (10).

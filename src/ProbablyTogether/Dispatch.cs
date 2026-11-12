@@ -280,6 +280,8 @@ internal static class Dispatch
 		string text2 = requestKind;
 		requester = player;
 		requestKind = kind;
+		// The server checks and serves a player's request with that player's wound in the game's fields.
+		Systems.Wounds.Enter(player);
 		try
 		{
 			value.OnServer(obj, player);
@@ -294,6 +296,7 @@ internal static class Dispatch
 		}
 		finally
 		{
+			Systems.Wounds.Leave();
 			requester = num;
 			requestKind = text2;
 		}

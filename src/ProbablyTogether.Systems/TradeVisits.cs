@@ -240,12 +240,12 @@ public static class TradeVisits
 		}
 	}
 
-	private static readonly string[] openers = new string[4]
+	private static readonly string[][] openers = new string[4][]
 	{
-		"I'm here to see {0}. Word is this shop has a {1} now.",
-		"Which one of you is {0}? I was told to ask for the {1}.",
-		"I'm looking for {0}. The {1}, right?",
-		"Is {0} in? My business is with the {1}."
+		new string[2] { "I'm here to see {0}.", "Word is this shop has a {1} now." },
+		new string[2] { "Which one of you is {0}?", "I was told to ask for the {1}." },
+		new string[2] { "I'm looking for {0}.", "The {1}, right?" },
+		new string[2] { "Is {0} in?", "My business is with the {1}." }
 	};
 
 	internal static readonly Dictionary<string, string> Openers = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -263,27 +263,45 @@ public static class TradeVisits
 		{
 			num = num * 31 + c2;
 		}
-		string text = Lang.Trf(openers[(int)((uint)num % (uint)openers.Length)], player, Lang.Tr(arg));
-		Openers[c.identifier ?? ""] = text;
-		if ((int)c.clientIntent == (int)StoreClient.ClientIntent.DIALOGUE)
+		string[] array = openers[(int)((uint)num % (uint)openers.Length)];
+		List<string> list = new List<string>();
+		Dialogue dialogue = null;
+		Dialogue dialogue2 = null;
+		foreach (string en in array)
 		{
-			Dialogue dialogue = new Dialogue();
-			dialogue.SetText(mainDialogue.title ?? c.displayName, text);
-			dialogue.portrait = mainDialogue.portrait;
-			dialogue.priority = mainDialogue.priority;
-			dialogue.isMainDialog = mainDialogue.isMainDialog;
-			dialogue.SetNextDialogue(mainDialogue);
-			c.mainDialogue = dialogue;
+			string text = Lang.Trf(en, player, Lang.Tr(arg));
+			list.Add(text);
+			Dialogue dialogue3 = new Dialogue();
+			dialogue3.SetText(mainDialogue.title ?? c.displayName, text);
+			dialogue3.portrait = mainDialogue.portrait;
+			dialogue3.priority = mainDialogue.priority;
+			if (dialogue == null)
+			{
+				dialogue = dialogue3;
+			}
+			else
+			{
+				dialogue2.SetNextDialogue(dialogue3);
+			}
+			dialogue2 = dialogue3;
+		}
+		Openers[c.identifier ?? ""] = string.Join(" / ", list);
+		if (dialogue == null)
+		{
 			return;
 		}
-		if (mainDialogue.plainText != null)
+		dialogue2.SetNextDialogue(mainDialogue);
+		Action startAction = mainDialogue.startAction;
+		mainDialogue.startAction = delegate
 		{
-			mainDialogue.SetText(mainDialogue.title, text + " " + mainDialogue.plainText);
-		}
-		else
-		{
-			mainDialogue.text = new RichTextBuilder().Add(text + " ").Add(mainDialogue.text);
-		}
+			if (c.mainDialogue == dialogue)
+			{
+				c.mainDialogue = mainDialogue;
+			}
+			startAction?.Invoke();
+		};
+		dialogue.isMainDialog = mainDialogue.isMainDialog;
+		c.mainDialogue = dialogue;
 	}
 
 	private static void Run(StoreClientManager mgr, PlayerStore store, StoreStation station, string spec, int day)

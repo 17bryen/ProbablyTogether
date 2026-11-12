@@ -11,6 +11,9 @@ public static class Net
 
 		private bool done;
 
+		/// This scope turned the game's wound fields to its actor's wound (Systems.Wounds).
+		internal bool Wound;
+
 		internal ApplyScope(int prev)
 		{
 			prevActor = prev;
@@ -21,6 +24,10 @@ public static class Net
 			if (!done)
 			{
 				done = true;
+				if (Wound)
+				{
+					Systems.Wounds.Leave();
+				}
 				applyDepth--;
 				actorPlus1 = prevActor;
 				if (applyDepth == 0)
@@ -160,6 +167,12 @@ public static class Net
 		}
 		applyDepth++;
 		actorPlus1 = ((actor >= 0) ? (actor + 1) : 0);
+		if (actor > 0)
+		{
+			// While a player acts, the game's wound fields hold their own wound.
+			Systems.Wounds.Enter(actor);
+			result.Wound = true;
+		}
 		return result;
 	}
 

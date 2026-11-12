@@ -14,6 +14,9 @@ public sealed class Seed
 
 	public int Actor = -1;
 
+	/// The player whose action this is (0: nobody); replays run with that player's wound (Systems.Wounds).
+	public int P;
+
 	public bool IsEmpty
 	{
 		get

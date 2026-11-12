@@ -47,6 +47,8 @@ public sealed class MsgOutReturn
 
 	public bool fresh;
 
+	public bool stable = true;
+
 	public int waste;
 
 	public bool jackson;
@@ -68,6 +70,8 @@ public sealed class MsgOutReturned
 	public int wound;
 
 	public bool fresh;
+
+	public bool stable = true;
 
 	public int waste;
 
@@ -191,6 +195,8 @@ public static class Outings
 			ResetClient("disconnected");
 		};
 	}
+
+	internal static string LastDoorRefusal = "";
 
 	internal static bool DropsWhilePrivate(string kind)
 	{
@@ -489,6 +495,7 @@ public static class Outings
 			visited = array3,
 			wound = (store?.healthData?.woundState ?? 0),
 			fresh = (store?.healthData?.isWoundedFresh ?? false),
+			stable = (store?.healthData?.isWoundStable ?? true),
 			waste = num,
 			jackson = jackson
 		};
@@ -615,7 +622,12 @@ public static class Outings
 	private static void ApplyReturned(PlayerStore store, MsgOutReturned m)
 	{
 		HealthData healthData = store.healthData;
-		if (healthData != null)
+		if (Wounds.Active)
+		{
+			// Only the traveller's own wound is updated.
+			Wounds.Returned(m.by, m.wound, m.stable, m.fresh);
+		}
+		else if (healthData != null)
 		{
 			if (m.wound > healthData.woundState)
 			{
@@ -714,6 +726,7 @@ public static class Outings
 		}
 		if (text != null)
 		{
+			LastDoorRefusal = Net.PlayerName(from) + ": " + text;
 			DayNight.Refuse(from, "goOut", text);
 			return;
 		}
@@ -837,6 +850,7 @@ public static class Outings
 			went = m.went,
 			wound = m.wound,
 			fresh = m.fresh,
+			stable = m.stable,
 			waste = Mathf.Clamp(m.waste, 0, 64),
 			jackson = m.jackson
 		};

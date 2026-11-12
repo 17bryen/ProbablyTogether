@@ -19,7 +19,15 @@ public abstract class TradeVisitsBotBase : DayNightBotBase
 	protected static string FirstLine(string id)
 	{
 		StoreClient storeClient = DayNightBotBase.Ps?.storeClientManager?.clientStack?.FirstOrDefault((StoreClient c) => c != null && c.identifier == id);
-		return storeClient?.mainDialogue?.plainText ?? "";
+		// Two greeting lines, then the customer's own first line.
+		List<string> list = new List<string>();
+		Dialogue dialogue = storeClient?.mainDialogue;
+		for (int i = 0; i < 3 && dialogue != null; i++)
+		{
+			list.Add(dialogue.plainText ?? "");
+			dialogue = dialogue.nextDialogue;
+		}
+		return string.Join(" / ", list);
 	}
 
 	protected static string Where => "day " + DayNightBotBase.Day + " " + DayNightBotBase.State + ", shop scenario " + DayNightBotBase.Ps.startType + ", chemist seat " + Specs.TakenBy("DRUG_DEALER") + " (first day " + (Members.Fact(Specs.TakenBy("DRUG_DEALER"), TradeVisits.DayFact) ?? "-") + "), cartel man in queue " + InQueue("cartelIntro") + " for seat " + TradeVisits.SeatFor("cartelIntro") + ", standing with the cartel " + KnowsCartel + ", added for trades " + TradeVisits.Added + " (" + TradeVisits.LastAdded + ")";
