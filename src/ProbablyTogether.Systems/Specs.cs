@@ -134,7 +134,20 @@ public static class Specs
 		return 0;
 	}
 
+	/// Member fact: trades taken through Joe Wild, comma separated.
 	internal const string MoreFact = "more";
+
+	/// Member fact: the items each kit put into the shop, "TRADE:id,id;TRADE:id".
+	internal const string KitFact = "kit";
+
+	internal static string LastKitIds = "";
+
+	internal static string KitFactWith(int seat, string trade, string ids)
+	{
+		string text = Members.Fact(seat, KitFact);
+		string text2 = trade + ":" + (ids ?? "");
+		return string.IsNullOrEmpty(text) ? text2 : (text + ";" + text2);
+	}
 
 	public static bool Holds(int seat, string id)
 	{
@@ -167,6 +180,19 @@ public static class Specs
 		{ "RANCHER", new string[1] { "animal_cage" } },
 		{ "AQUAFARMER", new string[1] { "ras" } }
 	};
+
+	internal static List<string> WildEntriesOf(string trade)
+	{
+		List<string> list = new List<string>();
+		foreach (KeyValuePair<string, string> wildTrade in wildTrades)
+		{
+			if (wildTrade.Value == trade)
+			{
+				list.Add(wildTrade.Key);
+			}
+		}
+		return list;
+	}
 
 	internal static int WildTaken;
 
@@ -226,6 +252,7 @@ public static class Specs
 		member.x.TryGetValue("mach", out var value2);
 		List<string> list = new List<string>((value2 ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries));
 		string text2 = "no storage bay: no kit";
+		string kitFact = null;
 		GameItem val = Bays.BayOf(num);
 		if (val != null)
 		{
@@ -241,6 +268,7 @@ public static class Specs
 				text2 = RunKit(num, text, val, out machines);
 			}
 			Kits++;
+			kitFact = KitFactWith(num, text, LastKitIds);
 			Net.ToAll("spec.kit", msgSpecKit);
 			foreach (string item3 in (machines ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 			{
@@ -270,11 +298,16 @@ public static class Specs
 				}
 			}
 		}
-		Members.SetFacts(num, new Dictionary<string, string>
+		Dictionary<string, string> dictionary = new Dictionary<string, string>
 		{
 			{ MoreFact, string.IsNullOrEmpty(value) ? text : (value + "," + text) },
 			{ "mach", string.Join(",", list) }
-		});
+		};
+		if (kitFact != null)
+		{
+			dictionary[KitFact] = kitFact;
+		}
+		Members.SetFacts(num, dictionary);
 		// A trade taken through Joe Wild brings no scripted visitors.
 		WildTaken++;
 		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") bought " + upgradeId + " from Joe Wild and is now the shop's " + TradeVisits.Word(text) + "; kit " + text2 + "; machine kinds: " + string.Join(",", list));
@@ -487,6 +520,7 @@ public static class Specs
 			int refund = 0;
 			List<string> noRoom = new List<string>();
 			List<string> list2 = new List<string>();
+			List<string> kept = new List<string>();
 			foreach (GameItem item2 in list)
 			{
 				if (Machine(item2) && !list2.Contains(item2.identifier))
@@ -502,6 +536,7 @@ public static class Specs
 				if (val2 != null && GraphUtils.TryAccept(val2, item2) != -1)
 				{
 					num++;
+					kept.Add(Ids.Of(item2).ToString(CultureInfo.InvariantCulture));
 					continue;
 				}
 				bool flag = false;
@@ -516,6 +551,7 @@ public static class Specs
 				if (flag)
 				{
 					num2++;
+					kept.Add(Ids.Of(item2).ToString(CultureInfo.InvariantCulture));
 					continue;
 				}
 				// Nothing fits anywhere: turn the item into its worth in cash (replayed, so the same on every copy).
@@ -556,6 +592,23 @@ public static class Specs
 				}
 			}
 			machines = string.Join(",", list2);
+			foreach (string item4 in new List<string>(kept))
+			{
+				GameItem val4 = Ids.Find(long.Parse(item4, CultureInfo.InvariantCulture));
+				if (val4 == null)
+				{
+					continue;
+				}
+				foreach (GameItem item5 in GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)val4, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+				{
+					string text2 = Ids.Of(item5).ToString(CultureInfo.InvariantCulture);
+					if (item5 != null && Ids.Of(item5) > 0 && !kept.Contains(text2))
+					{
+						kept.Add(text2);
+					}
+				}
+			}
+			LastKitIds = string.Join(",", kept);
 			return list.Count + " item(s): " + num + " into the bay, " + num2 + " into the shop's storage" + ((num3 > 0) ? (", " + num3 + " found no room anywhere and went into the till as " + refund) : "") + "; machine kinds: " + ((machines.Length > 0) ? machines : "none");
 		}
 	}
@@ -751,6 +804,7 @@ public static class Specs
 		{
 			{ "spec", id },
 			{ "mach", machines },
+			{ KitFact, KitFactWith(num, id, LastKitIds) },
 			{ TradeVisits.DayFact, TradeVisits.DayForPick() }
 		});
 		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") is the shop's " + id + "; kit " + text);
@@ -766,7 +820,7 @@ public static class Specs
 		}
 		if (num > 0 && Of(num) != null)
 		{
-			return "Your trade in this shop is " + Label(Of(num)) + ". It cannot be changed.";
+			return "Your trade in this shop is " + Label(Of(num)) + ". Only " + Members.NameOf(1) + " can let you give it up (/retrade).";
 		}
 		List<KeyValuePair<string, string>> list = Choices();
 		if (string.IsNullOrEmpty(what))

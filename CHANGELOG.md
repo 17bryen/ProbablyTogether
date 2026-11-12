@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.7.0 - 2026-11-12
+
+Protocol 13. Every player needs it.
+
+### Added
+- The founder can use `/retrade <player>` to let a player give up their trade and pick again, and `/remove <player>` to remove an offline player for good. Only while the shop is closed; the trade's machines, kit, Joe Wild entries, permits and cartel ties go with it.
+- A kit remembers which items it was, so a trade that leaves takes exactly those.
+- A ledger tracks each player's cash in and out, goods sold and bought, and faction standing earned; `/ledger` prints it. A deal counts for the player who put the item on the counter.
+
 ## 0.6.2 - 2026-11-12
 
 Protocol 12. Every player needs it.

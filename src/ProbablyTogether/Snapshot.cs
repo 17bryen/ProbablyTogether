@@ -640,6 +640,7 @@ public static class Snapshot
 	internal static void OnSnapshot(MsgSnapshot m)
 	{
 		Systems.Outings.OnSnapshot();
+		Systems.Standing.NewScene();
 		if (m == null || (m.save == null && m.saveB64 == null))
 		{
 			Client.Disconnect("the server sent an empty snapshot");

@@ -191,6 +191,22 @@ public static class Wounds
 		Write(new Dictionary<int, W>(dictionary) { [seat] = w });
 	}
 
+	/// Drops the seat's record; the next player in that seat starts healthy.
+	internal static void Drop(int seat)
+	{
+		if (!Active || seat <= 0)
+		{
+			return;
+		}
+		Dictionary<int, W> dictionary = Table();
+		if (dictionary.ContainsKey(seat))
+		{
+			Dictionary<int, W> dictionary2 = new Dictionary<int, W>(dictionary);
+			dictionary2.Remove(seat);
+			Write(dictionary2);
+		}
+	}
+
 	/// Sets a wound from outside the player's doing (a trip handed over), shown at once if on view.
 	private static void Set(int seat, W w)
 	{

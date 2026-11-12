@@ -191,6 +191,23 @@ public static class Chat
 			});
 			return;
 		}
+		if (text.StartsWith("/ledger", StringComparison.OrdinalIgnoreCase))
+		{
+			Net.ToPlayer(from, "chat.notice", new MsgChatNotice
+			{
+				text = ProbablyTogether.Systems.Standing.ChatCommand()
+			});
+			return;
+		}
+		if (text.StartsWith("/retrade", StringComparison.OrdinalIgnoreCase) || text.StartsWith("/remove", StringComparison.OrdinalIgnoreCase))
+		{
+			bool flag = text.StartsWith("/remove", StringComparison.OrdinalIgnoreCase);
+			Net.ToPlayer(from, "chat.notice", new MsgChatNotice
+			{
+				text = ProbablyTogether.Systems.Leaving.ChatCommand(from, flag, text.Substring(flag ? 7 : 8).Trim())
+			});
+			return;
+		}
 		if (text.Length == 0)
 		{
 			Net.ToPlayer(from, "chat.notice", new MsgChatNotice

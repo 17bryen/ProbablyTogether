@@ -1,0 +1,434 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using HarmonyLib;
+
+namespace ProbablyTogether.Systems;
+
+/// Per-seat ledger of whose deals moved the shop's cash and standing: a deal counts for whoever last dragged the item
+/// onto the players' side of the counter (seat 0: the shop). Changed by replayed code, so every copy has the same.
+public static class Standing
+{
+	public sealed class Row
+	{
+		public int Earned;
+
+		public int Spent;
+
+		public int Sold;
+
+		public int Bought;
+
+		public readonly SortedDictionary<string, long> Rep = new SortedDictionary<string, long>(StringComparer.Ordinal);
+
+		public int Net => Earned - Spent;
+	}
+
+	private const string Key = "ledger";
+
+	private static string cachedRaw;
+
+	private static Dictionary<int, Row> cached = new Dictionary<int, Row>();
+
+	private static readonly Dictionary<long, int> placer = new Dictionary<long, int>();
+
+	internal static int Credited;
+
+	internal static int Unclaimed;
+
+	public static bool Active => Net.IsOnline && Bays.Enabled && Game.ShopLoaded && Game.Store != null;
+
+	public static string Raw
+	{
+		get
+		{
+			try
+			{
+				return ModHelper.GetModData("bellun_probably_together", Key, (string)null) ?? "";
+			}
+			catch
+			{
+				return "";
+			}
+		}
+	}
+
+	private static Dictionary<int, Row> Parse(string raw)
+	{
+		Dictionary<int, Row> dictionary = new Dictionary<int, Row>();
+		foreach (string item in (raw ?? "").Split(new char[1] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+		{
+			string[] array = item.Split(':');
+			if (array.Length < 5 || !int.TryParse(array[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))
+			{
+				continue;
+			}
+			Row row = new Row();
+			int.TryParse(array[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out row.Earned);
+			int.TryParse(array[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out row.Spent);
+			int.TryParse(array[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out row.Sold);
+			int.TryParse(array[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out row.Bought);
+			if (array.Length > 5)
+			{
+				foreach (string item2 in array[5].Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+				{
+					int num = item2.IndexOf('=');
+					if (num > 0 && long.TryParse(item2.Substring(num + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var result2))
+					{
+						row.Rep[item2.Substring(0, num)] = result2;
+					}
+				}
+			}
+			dictionary[result] = row;
+		}
+		return dictionary;
+	}
+
+	private static string Format(Dictionary<int, Row> table)
+	{
+		StringBuilder stringBuilder = new StringBuilder();
+		foreach (KeyValuePair<int, Row> item in table.OrderBy((KeyValuePair<int, Row> p) => p.Key))
+		{
+			Row value = item.Value;
+			if (stringBuilder.Length > 0)
+			{
+				stringBuilder.Append(';');
+			}
+			stringBuilder.Append(item.Key.ToString(CultureInfo.InvariantCulture)).Append(':').Append(value.Earned.ToString(CultureInfo.InvariantCulture)).Append(':')
+				.Append(value.Spent.ToString(CultureInfo.InvariantCulture))
+				.Append(':')
+				.Append(value.Sold.ToString(CultureInfo.InvariantCulture))
+				.Append(':')
+				.Append(value.Bought.ToString(CultureInfo.InvariantCulture))
+				.Append(':')
+				.Append(string.Join(",", value.Rep.Where((KeyValuePair<string, long> r) => r.Value != 0).Select((KeyValuePair<string, long> r) => r.Key + "=" + r.Value.ToString(CultureInfo.InvariantCulture))));
+		}
+		return stringBuilder.ToString();
+	}
+
+	private static Dictionary<int, Row> Table()
+	{
+		string raw = Raw;
+		if ((object)raw != cachedRaw && raw != cachedRaw)
+		{
+			cachedRaw = raw;
+			cached = Parse(raw);
+		}
+		return cached;
+	}
+
+	private static void Change(int seat, Action<Row> change)
+	{
+		if (seat < 0)
+		{
+			return;
+		}
+		Dictionary<int, Row> dictionary = Parse(Raw);
+		if (!dictionary.TryGetValue(seat, out var value))
+		{
+			value = (dictionary[seat] = new Row());
+		}
+		change(value);
+		string text = Format(dictionary);
+		using (Net.Apply())
+		{
+			ModHelper.SetModData("bellun_probably_together", Key, text);
+		}
+		cachedRaw = text;
+		cached = dictionary;
+	}
+
+	/// A seat's row (seat 0: the shop).
+	public static Row Of(int seat)
+	{
+		Row value;
+		return Table().TryGetValue(seat, out value) ? value : new Row();
+	}
+
+	public static double RepOf(int seat, string faction)
+	{
+		long value;
+		return Of(seat).Rep.TryGetValue(faction ?? "", out value) ? ((double)value / 10000.0) : 0.0;
+	}
+
+	internal static void Drop(int seat)
+	{
+		if (!Active || seat <= 0 || !Table().ContainsKey(seat))
+		{
+			return;
+		}
+		Dictionary<int, Row> dictionary = Parse(Raw);
+		dictionary.Remove(seat);
+		string text = Format(dictionary);
+		using (Net.Apply())
+		{
+			ModHelper.SetModData("bellun_probably_together", Key, text);
+		}
+		cachedRaw = text;
+		cached = dictionary;
+	}
+
+	/// Every copy: items moved onto the players' side of the counter become the actor's; items moved off become nobody's.
+	internal static void NoteMoves(int actor, List<ItemsOp> ops)
+	{
+		if (ops == null || !Game.ShopLoaded)
+		{
+			return;
+		}
+		int num = (actor > 0) ? Members.SeatOf(actor) : 0;
+		foreach (ItemsOp op in ops)
+		{
+			Note(op.i, num);
+			Note(op.nw, num);
+		}
+		if (placer.Count > 400)
+		{
+			foreach (long item in placer.Keys.ToList())
+			{
+				if (!OnOurSide(Items.Find(item)))
+				{
+					placer.Remove(item);
+				}
+			}
+		}
+	}
+
+	private static void Note(long id, int seat)
+	{
+		if (id == 0L)
+		{
+			return;
+		}
+		GameItem val = Items.Find(id);
+		if (val != null && OnOurSide(val))
+		{
+			if (seat > 0)
+			{
+				placer[id] = seat;
+			}
+		}
+		else
+		{
+			placer.Remove(id);
+		}
+	}
+
+	private static bool OnOurSide(GameItem item)
+	{
+		try
+		{
+			return item != null && item.parentInventory != null && Items.RootOf((GraphNodeStorage)(object)item.parentInventory) == "back";
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	/// Clears counter claims when a morning starts loading, before its moves replay ("loaded" would wipe the rebuilt claims).
+	internal static void NewScene()
+	{
+		placer.Clear();
+		cachedRaw = null;
+	}
+
+	/// The seat a deal about this item counts for (0: the shop).
+	public static int PlacedBy(GameItem item)
+	{
+		if (item == null)
+		{
+			return 0;
+		}
+		int value;
+		return (placer.TryGetValue(Ids.Of(item), out value) && Members.BySeat(value) != null) ? value : 0;
+	}
+
+	internal static void Sold(GameItem item, int cost)
+	{
+		// A deal on a private trip reaches the shop as the trip's cash and is counted there.
+		if (!Active || item == null || cost <= 0 || Outings.Private)
+		{
+			return;
+		}
+		int num = PlacedBy(item);
+		Count(num);
+		Change(num, delegate(Row r)
+		{
+			r.Sold++;
+			r.Earned = Crew.Cap((long)r.Earned + cost);
+		});
+	}
+
+	internal static void Bought(GameItem item, int cost)
+	{
+		// A deal on a private trip reaches the shop as the trip's cash and is counted there.
+		if (!Active || item == null || cost <= 0 || Outings.Private)
+		{
+			return;
+		}
+		int num = PlacedBy(item);
+		Count(num);
+		Change(num, delegate(Row r)
+		{
+			r.Bought++;
+			r.Spent = Crew.Cap((long)r.Spent + cost);
+		});
+	}
+
+	private static void Count(int seat)
+	{
+		if (seat > 0)
+		{
+			Credited++;
+		}
+		else
+		{
+			Unclaimed++;
+		}
+	}
+
+	/// Cash a player spent (negative) or brought in (positive) on a private trip.
+	internal static void Cash(int player, int amount)
+	{
+		if (!Active || amount == 0 || player <= 0)
+		{
+			return;
+		}
+		int num = Members.SeatOf(player);
+		if (num <= 0)
+		{
+			return;
+		}
+		Change(num, delegate(Row r)
+		{
+			if (amount > 0)
+			{
+				r.Earned = Crew.Cap((long)r.Earned + amount);
+			}
+			else
+			{
+				r.Spent = Crew.Cap((long)r.Spent - amount);
+			}
+		});
+	}
+
+	internal static double RepNow(string factionId)
+	{
+		try
+		{
+			return StoreReputation.GetStoreReputation(factionId)?.GetReputationExact() ?? 0.0;
+		}
+		catch
+		{
+			return 0.0;
+		}
+	}
+
+	internal static void Traded(string factionId, GameItem item, double delta)
+	{
+		if (!Active || string.IsNullOrEmpty(factionId) || delta == 0.0 || Outings.Private)
+		{
+			return;
+		}
+		long num = (long)Math.Round(delta * 10000.0);
+		if (num == 0L)
+		{
+			return;
+		}
+		int seat = PlacedBy(item);
+		Change(seat, delegate(Row r)
+		{
+			r.Rep.TryGetValue(factionId, out var value);
+			r.Rep[factionId] = value + num;
+		});
+	}
+
+	private static string Money(int v)
+	{
+		return v.ToString("N0", CultureInfo.InvariantCulture);
+	}
+
+	/// Chat: "/ledger".
+	internal static string ChatCommand()
+	{
+		if (!Active)
+		{
+			return "This shop keeps no ledger.";
+		}
+		List<string> list = new List<string>();
+		foreach (Member item in Members.State.list.OrderBy((Member m) => m.s))
+		{
+			list.Add(Line(item.n, Of(item.s)));
+		}
+		Row row = Of(0);
+		if (row.Earned != 0 || row.Spent != 0)
+		{
+			list.Add(Line("Nobody in particular", row));
+		}
+		return string.Join("  |  ", list);
+	}
+
+	internal static string Line(string name, Row r)
+	{
+		string text = string.Join(", ", r.Rep.Where((KeyValuePair<string, long> p) => Math.Abs(p.Value) >= 500).Select((KeyValuePair<string, long> p) => FactionName(p.Key) + " " + ((p.Value > 0) ? "+" : "") + ((double)p.Value / 10000.0).ToString("0.0", CultureInfo.InvariantCulture)));
+		return name + ": in " + Money(r.Earned) + " (" + r.Sold + " sold), out " + Money(r.Spent) + " (" + r.Bought + " bought), net " + ((r.Net > 0) ? "+" : "") + Money(r.Net) + ((text.Length > 0) ? ("; standing " + text) : "");
+	}
+
+	internal static string FactionName(string factionId)
+	{
+		try
+		{
+			string text = StoreReputation.GetStoreReputation(factionId)?.factionDisplay;
+			if (!string.IsNullOrEmpty(text))
+			{
+				return text;
+			}
+		}
+		catch
+		{
+		}
+		return (factionId ?? "").Replace("FACTION_", "").Replace('_', ' ').ToLowerInvariant();
+	}
+
+	[SystemInit]
+	internal static void Init()
+	{
+		Digest.AddPart("standing", () => Active ? Raw : "");
+		Digest.AddExplain("standing", () => Active ? string.Join(";", Members.State.list.OrderBy((Member m) => m.s).Select((Member m) => Line(m.n.Replace(';', ' '), Of(m.s)))) : "");
+		Snapshot.Loaded += delegate
+		{
+			cachedRaw = null;
+		};
+		// Server side of NewScene: a captured morning starts with no counter claims.
+		Snapshot.BeforeMorningCapture += delegate
+		{
+			placer.Clear();
+		};
+	}
+}
+
+[HarmonyPatch(typeof(StoreReputation), "OnItemTraded")]
+internal static class StandingTradedPatch
+{
+	private static void Prefix(string factionId, out double __state)
+	{
+		__state = Standing.RepNow(factionId);
+	}
+
+	private static void Postfix(string factionId, GameItem gameItem, double __state)
+	{
+		try
+		{
+			Standing.Traded(factionId, gameItem, Standing.RepNow(factionId) - __state);
+		}
+		catch (Exception ex)
+		{
+			if (Log.Allow("standing|traded", 30000L, out var skipped))
+			{
+				Log.Warn("standing: counting a deal's standing threw" + Log.More(skipped) + ": " + ex.Message);
+			}
+		}
+	}
+}

@@ -569,6 +569,7 @@ public static class ItemsMove
 		}
 		itemsOps.seq = ++seq;
 		NoteMovers(actor, itemsOps.ops);
+		Systems.Standing.NoteMoves(actor, itemsOps.ops);
 		Net.ToAll("items.ops", itemsOps);
 		Log.Info("items: #" + itemsOps.seq + " " + Net.PlayerName(actor) + " " + what + ": " + Summary(itemsOps.ops));
 		return true;
@@ -1484,6 +1485,7 @@ public static class ItemsMove
 		{
 			itemsDepth--;
 		}
+		Systems.Standing.NoteMoves(m.actor, m.ops);
 		long num2 = RandomHash();
 		LastRandomCheck = ((m.ra == 0L || num2 == 0L) ? "not compared" : ((num2 == m.ra) ? "same" : "differs"));
 		if (m.ra != 0L && num2 != 0L && num2 != m.ra)

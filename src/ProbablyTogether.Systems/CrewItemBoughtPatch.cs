@@ -26,6 +26,13 @@ internal static class CrewItemBoughtPatch
 
 	private static void Postfix(GameItem __0, int __1, StoreClient __2)
 	{
+		if (__0 != null && __1 > 0)
+		{
+			CrewHook.Guard("standing bought", delegate
+			{
+				Standing.Bought(__0, __1);
+			});
+		}
 		if (Crew.Counting && __0 != null && __1 > 0)
 		{
 			CrewHook.Guard("bought", delegate

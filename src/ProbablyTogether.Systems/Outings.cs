@@ -754,6 +754,7 @@ public static class Outings
 		{
 			return;
 		}
+		Standing.Cash(m.by, m.cash);
 		if (m.by == Net.LocalPlayer && !DayLog.Replaying)
 		{
 			return;
@@ -981,6 +982,7 @@ public static class Outings
 				credit = CommissaryApply(store, m.credit, m.items, m.stock, Net.PlayerName(from));
 			}
 		}
+		Standing.Cash(from, num);
 		if (m.credit != 0 || m.items != null)
 		{
 			CommissaryTaken++;

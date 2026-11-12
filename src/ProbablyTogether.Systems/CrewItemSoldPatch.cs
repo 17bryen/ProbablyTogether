@@ -27,6 +27,13 @@ internal static class CrewItemSoldPatch
 
 	private static void Postfix(GameItem __0, int __1, StoreClient __3)
 	{
+		if (__0 != null && __1 > 0 && (__3 == null || !(__3.identifier == "businessPermitOfficial")))
+		{
+			CrewHook.Guard("standing sold", delegate
+			{
+				Standing.Sold(__0, __1);
+			});
+		}
 		if (Crew.Counting && __0 != null && __1 > 0 && (__3 == null || !(__3.identifier == "businessPermitOfficial")))
 		{
 			CrewHook.Guard("sold", delegate

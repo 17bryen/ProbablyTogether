@@ -339,6 +339,27 @@ public static class Members
 		return true;
 	}
 
+	internal static bool Online(int seat)
+	{
+		return seat > 0 && SeatOnline(seat);
+	}
+
+	internal static bool DropFacts(int seat, params string[] keys)
+	{
+		MembersState membersState = Parse(Read());
+		Member member = membersState.list.Find((Member x) => x.s == seat);
+		if (member == null || keys == null)
+		{
+			return false;
+		}
+		foreach (string key in keys)
+		{
+			member.x.Remove(key);
+		}
+		Publish(membersState, 0);
+		return true;
+	}
+
 	internal static bool SetFact(int seat, string key, string value)
 	{
 		MembersState membersState = Parse(Read());
