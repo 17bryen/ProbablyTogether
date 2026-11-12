@@ -40,6 +40,11 @@ internal static class DialogueSystem
 			}
 			ch.CheckScene();
 			ch.SyncMorning();
+			if (Net.IsHost && !Dispatch.InRequest && ch is PhoneChannel)
+			{
+				// The host's own clicks keep the host's hold on the line alive, as a player's requests keep theirs.
+				Locks.Touch(ch.LockName, Net.LocalPlayer);
+			}
 			MsgDlgStep msgDlgStep = new MsgDlgStep
 			{
 				ch = ch.Name,
@@ -115,6 +120,8 @@ internal static class DialogueSystem
 	private static object optionsFor;
 
 	private static float phoneIdle;
+
+	private static float phoneOrphan;
 
 	internal static int ShownTimeouts;
 
@@ -523,9 +530,18 @@ internal static class DialogueSystem
 		}
 		PhoneUIManager instance = PhoneUIManager.Instance;
 		DialoguePhoneUIManager instance2 = DialoguePhoneUIManager.Instance;
-		if ((Object)(object)instance == (Object)null || (Object)(object)instance2 == (Object)null || PhoneChannel.Talking)
+		if ((Object)(object)instance == (Object)null || (Object)(object)instance2 == (Object)null)
 		{
 			return;
+		}
+		if (PhoneChannel.Talking)
+		{
+			// No copy's morning scene has a call in it.
+			ServerEndCall("a new morning (" + reason + ")");
+			if (PhoneChannel.Talking)
+			{
+				return;
+			}
 		}
 		int num = Locks.Holder(Phone.LockName);
 		bool flag = reason == "night";
@@ -547,6 +563,43 @@ internal static class DialogueSystem
 				Log.Info("dialogue: the phone kept " + ((text2.Length > 0) ? text2 : "an unfinished line") + " from before; cleared before the morning snapshot (" + reason + "), as every client's fresh scene has it: " + text + " -> " + DigestPart());
 			}
 		}
+	}
+
+	internal static int EndedCalls;
+
+	internal static string LastEndedCall = "";
+
+	/// Server: a call that cannot go on (night; its player let go, left or reloaded) is hung up for everyone.
+	internal static bool ServerEndCall(string why)
+	{
+		if (!Net.IsServer || !Game.ShopLoaded || !Phone.Ready)
+		{
+			return false;
+		}
+		PhoneUIManager instance = PhoneUIManager.Instance;
+		if ((Object)(object)instance == (Object)null || (!PhoneChannel.Talking && Phone.Current == null))
+		{
+			return false;
+		}
+		int num = Locks.Holder(Phone.LockName);
+		string text = DigestPart();
+		try
+		{
+			instance.StopCall();
+		}
+		catch (Exception ex)
+		{
+			Log.Error("dialogue: hanging up (" + why + ") threw: " + ex);
+		}
+		int num2 = Locks.Holder(Phone.LockName);
+		if (num2 >= 0)
+		{
+			Locks.Release(Phone.LockName, num2);
+		}
+		EndedCalls++;
+		LastEndedCall = ((num >= 0) ? Net.PlayerName(num) : "nobody") + ": " + why;
+		Log.Info("dialogue: the server hung up " + ((num >= 0) ? (Net.PlayerName(num) + "'s call") : "a call nobody held") + " (" + why + "): " + text + " -> " + DigestPart());
+		return true;
 	}
 
 	internal static void ServerCallEnded()
@@ -621,6 +674,20 @@ internal static class DialogueSystem
 		else
 		{
 			phoneIdle = 0f;
+		}
+		if (num3 < 0 && PhoneChannel.Talking)
+		{
+			// A call nobody holds: nobody can go on with it or end it.
+			phoneOrphan += Time.unscaledDeltaTime;
+			if (phoneOrphan > 3f)
+			{
+				phoneOrphan = 0f;
+				ServerEndCall("nobody holds the line any more");
+			}
+		}
+		else
+		{
+			phoneOrphan = 0f;
 		}
 	}
 

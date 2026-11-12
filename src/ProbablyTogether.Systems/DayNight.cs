@@ -1109,6 +1109,8 @@ public static class DayNight
 			Log.Error("dayNight: no end-of-day manager in the scene; the night cannot run");
 			return;
 		}
+		// A call still going on ends with the day; otherwise the server stays in it while every morning has none.
+		DialogueSystem.ServerEndCall("the night");
 		int[] array = ready.OrderBy((int x) => x).ToArray();
 		ready.Clear();
 		deadlineMs = 0L;

@@ -14,6 +14,12 @@ internal static class PhStartCall
 		{
 			return true;
 		}
+		if (Net.IsHost && !Dispatch.InRequest && !Net.Applying)
+		{
+			// The host's dial goes through the server like any player's call, so the call belongs to the host.
+			DialogueSync.RequestCall(currentNumber, __instance.isQuickDialCall);
+			return false;
+		}
 		if (Net.IsServer)
 		{
 			if (StorePhoneClient.IsNumberExist(currentNumber))
@@ -30,7 +36,6 @@ internal static class PhStartCall
 		{
 			return true;
 		}
-		// The host's dial goes through the server like any player's call, so the call belongs to the host.
 		DialogueSync.RequestCall(currentNumber, __instance.isQuickDialCall);
 		return false;
 	}

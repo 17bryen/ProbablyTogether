@@ -339,6 +339,10 @@ internal static class Server
 			return;
 		}
 		}
+		if (kind == "sys.ping")
+		{
+			return;
+		}
 		if (kind.StartsWith("sys.", StringComparison.Ordinal))
 		{
 			if (Log.Allow("s" + value.Id + "|sys|" + kind, 10000L, out var skipped3))

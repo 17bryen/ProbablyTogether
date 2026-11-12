@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.6.1 - 2026-11-12
+
+Same protocol (11). Only the host needs it.
+
+### Fixed
+- A phone call left open when the night starts no longer makes players reload in a loop the next morning. The server hangs up open calls at nightfall and ends calls nobody holds.
+- The host log no longer warns about "unexpected sys.ping" every ten seconds.
+
 ## 0.6.0 - 2026-11-12
 
 Protocol 11. Every player needs it.
