@@ -8,6 +8,7 @@ internal static class PhSelectChoice
 {
 	private static bool Prefix(DialoguePhoneUIManager __instance, int index, out DialogueSystem.Step __state)
 	{
+		DialoguePatchUtil.EnterHome();
 		__state = null;
 		if (!Net.IsOnline)
 		{
@@ -38,6 +39,6 @@ internal static class PhSelectChoice
 
 	private static Exception Finalizer(Exception __exception, DialogueSystem.Step __state)
 	{
-		return DialoguePatchUtil.Close(__exception, __state);
+		return DialoguePatchUtil.ClosePhone(__exception, __state);
 	}
 }

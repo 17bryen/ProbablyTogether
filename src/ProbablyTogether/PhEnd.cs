@@ -8,6 +8,7 @@ internal static class PhEnd
 {
 	private static bool Prefix(out DialogueSystem.Step __state)
 	{
+		DialoguePatchUtil.EnterHome();
 		__state = null;
 		if (!Net.IsOnline)
 		{
@@ -23,6 +24,6 @@ internal static class PhEnd
 
 	private static Exception Finalizer(Exception __exception, DialogueSystem.Step __state)
 	{
-		return DialoguePatchUtil.Close(__exception, __state);
+		return DialoguePatchUtil.ClosePhone(__exception, __state);
 	}
 }

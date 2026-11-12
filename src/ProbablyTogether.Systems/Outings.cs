@@ -886,7 +886,19 @@ public static class Outings
 		}
 		foreach (GameItem item2 in list)
 		{
-			long num = Ids.Assign(item2);
+			long num;
+			if (Net.IsServer)
+			{
+				num = Ids.Assign(item2);
+			}
+			else
+			{
+				// On a travelling player's game the counter is in the trip's own range (HostTrip.Begin).
+				PlayerStore store = Game.Store;
+				num = ++store.currentUniqueId;
+				item2.uniqueId = (int)num;
+				Ids.Bind(item2, num);
+			}
 			if (item2.itemFeatures != null)
 			{
 				foreach (ItemFeature itemFeature in item2.itemFeatures)

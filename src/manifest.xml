@@ -3,7 +3,7 @@
   <ID>bellun_probably_together</ID>
   <Name>Probably Together</Name>
   <Author>Bellun</Author>
-  <ModVersion>0.5.1</ModVersion>
+  <ModVersion>0.5.2</ModVersion>
   <Description>Online co-op for Probably Stolen: 2 to 4 players run one shop together. One player hosts from the main menu (Host a shop) and plays in the same game; the others click Join server and type the host's address. Adds hosting without a separate server, stepping out and back in as host, instant counter takeover, a ghost of items other players are dragging, and optional individual night outings. It needs internet access to reach the host, file access for the shop's own saves, and Steam features to show your Steam name to the other players. Your own saves are never touched. Do not run it together with another co-op mod.
 
 A free, unofficial mod by Bellun (MIT licence). Not made by or affiliated with Questing Goose Studio or tinyBuild.</Description>

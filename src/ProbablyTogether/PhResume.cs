@@ -7,6 +7,7 @@ internal static class PhResume
 {
 	private static bool Prefix()
 	{
+		DialoguePatchUtil.EnterHome();
 		if (!DialoguePatchUtil.ClientBlocks)
 		{
 			return true;
@@ -17,5 +18,10 @@ internal static class PhResume
 			DialogueSync.RequestAdvance("phone");
 		}
 		return false;
+	}
+
+	private static void Finalizer()
+	{
+		DialoguePatchUtil.LeaveHome();
 	}
 }

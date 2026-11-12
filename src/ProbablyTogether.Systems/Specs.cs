@@ -389,7 +389,7 @@ public static class Specs
 		}
 	}
 
-	private static bool Machine(GameItem item)
+	internal static bool Machine(GameItem item)
 	{
 		try
 		{

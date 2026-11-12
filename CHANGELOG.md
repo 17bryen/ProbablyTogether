@@ -2,6 +2,18 @@
 
 All changes to Probably Together.
 
+## 0.5.2 - 2026-11-12
+
+Same protocol (10).
+
+### Fixed
+- Joe Wild's window now opens for a player at home while the host is at Dr. Jackson's.
+- A travelling player's game no longer runs the shop's chemistry by itself.
+- A travelling player's bag copy no longer logs a warning at every trip start.
+
+### Added
+- Desync reports now show both sides' conversations and each machine's fingerprint.
+
 ## 0.5.1 - 2026-11-11
 
 Protocol 10. Every player needs it.

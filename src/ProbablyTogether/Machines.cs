@@ -777,7 +777,16 @@ public static class Machines
 	/// The game's once-a-second work runs only on the copy that serves the shop (a host too, though Net.IsClient is true).
 	internal static bool OnTickFunction()
 	{
-		if (Net.IsServer || !Net.IsClient || Net.Applying)
+		bool flag = Net.IsServer || !Net.IsClient;
+		if (!flag)
+		{
+			// Seen from home during a private trip, the shop's machines are left to the server.
+			using (Systems.HostTrip.AtHome())
+			{
+				flag = Net.Applying;
+			}
+		}
+		if (flag)
 		{
 			ServerTicks++;
 			return true;

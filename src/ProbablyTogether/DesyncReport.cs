@@ -40,6 +40,42 @@ internal static class DesyncReport
 				select p.Key.ToString(CultureInfo.InvariantCulture) + "=" + (p.Value ?? "").Replace(';', ' ').Replace(',', ' '));
 		});
 		Digest.AddExplain("nego", () => Negotiation.Explain());
+		// The two conversations (counter, phone): which step each copy is at and the line it is showing.
+		Digest.AddExplain("dialogue", delegate
+		{
+			List<string> list = new List<string>();
+			string[] array = new string[2] { "counter", "phone" };
+			foreach (string text in array)
+			{
+				DialogueChannel dialogueChannel = DialogueSystem.Chan(text);
+				if (dialogueChannel != null)
+				{
+					Dialogue current = dialogueChannel.Current;
+					string text2 = (current == null) ? "(nobody talking)" : ((current.title ?? "") + ": " + (current.plainText ?? "(a line without plain text)"));
+					text2 = text2.Replace(';', ' ').Replace(',', ' ').Replace('=', ' ');
+					list.Add(text + ".step=" + dialogueChannel.Seq);
+					list.Add(text + ".line=" + ((text2.Length > 160) ? text2.Substring(0, 160) : text2));
+				}
+			}
+			return string.Join(";", list);
+		});
+		// Every machine with its own fingerprint, so a "machines" difference names the machine.
+		Digest.AddExplain("machines", delegate
+		{
+			List<string> list = new List<string>();
+			if (Items.Ready)
+			{
+				foreach (GameItem item in Items.All())
+				{
+					if (item != null && Systems.Specs.Machine(item))
+					{
+						list.Add(Ids.Of(item).ToString(CultureInfo.InvariantCulture) + "=" + item.identifier + ":" + Machines.Digest(item));
+					}
+				}
+			}
+			list.Sort(StringComparer.Ordinal);
+			return string.Join(";", list);
+		});
 		Digest.AddExplain("members", () => Systems.Members.Describe());
 	}
 

@@ -7,6 +7,7 @@ internal static class PhTextDisplayed
 {
 	private static bool Prefix()
 	{
+		DialoguePatchUtil.EnterHome();
 		if (!Net.IsOnline)
 		{
 			return true;
@@ -20,5 +21,10 @@ internal static class PhTextDisplayed
 			}
 		}
 		return false;
+	}
+
+	private static void Finalizer()
+	{
+		DialoguePatchUtil.LeaveHome();
 	}
 }
