@@ -103,6 +103,16 @@ public sealed class OpenB : DayNightBotBase
 			return (list.Count == 0) ? ("same, " + array.Length + " part(s)") : (list.Count + " of " + Math.Max(array.Length, array2.Length) + " part(s) differ: " + string.Join("  ", list.Take(12)));
 		});
 		Check("opened-with-the-hosts-supplier-picks", () => SupplierPicks.Adopted >= 1, () => "took over the host's picks " + SupplierPicks.Adopted + " time(s)");
+		Check("a-trades-supplier-asks-for-its-holder", delegate
+		{
+			StoreClient storeClient = DayNightBotBase.Ps.storeClientManager.clientStack.FirstOrDefault((StoreClient c) => c != null && c.identifier == "retired_rancher");
+			int num = Specs.TakenBy("RANCHER");
+			return storeClient == null || num == 0 || (TradeVisits.SeatFor("retired_rancher") == num && (storeClient.mainDialogue?.plainText ?? "").Contains(Members.NameOf(num)));
+		}, delegate
+		{
+			StoreClient storeClient = DayNightBotBase.Ps.storeClientManager.clientStack.FirstOrDefault((StoreClient c) => c != null && c.identifier == "retired_rancher");
+			return (storeClient == null) ? "no rancher's supplier today" : ("for seat " + TradeVisits.SeatFor("retired_rancher") + " (the rancher is seat " + Specs.TakenBy("RANCHER") + "); first line: '" + (storeClient.mainDialogue?.plainText ?? "") + "'");
+		});
 		Check("no-reload-asked", () => Digest.ReloadsAsked == 0 && DayNight.Mismatches == 0, () => "reloads asked " + Digest.ReloadsAsked + ", day/night mismatches " + DayNight.Mismatches);
 	}
 }

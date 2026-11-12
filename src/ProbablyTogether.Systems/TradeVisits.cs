@@ -424,7 +424,8 @@ internal static class TradeSupplierWindowPatch
 	{
 		try
 		{
-			return AccessTools.Method(typeof(StoreClientManager), "HandleSupplierClient", Type.EmptyTypes, (Type[])null);
+			// Weekly trade suppliers are picked here; HandleSupplierClient picks only the day-one supplier.
+			return AccessTools.Method(typeof(StoreClientManager), "HandleContentUnlockClient", Type.EmptyTypes, (Type[])null);
 		}
 		catch
 		{
