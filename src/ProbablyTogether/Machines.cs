@@ -1650,7 +1650,7 @@ public static class Machines
 		if (val != null)
 		{
 			lastRepair[from] = realtimeSinceStartup;
-			string text = (string.IsNullOrEmpty(Args.Bot) ? "" : DiffNote(DigestText(val), r.mine));
+			string text = DiffNote(DigestText(val), r.mine);
 			LastRepairWhy = Clip(r.why, 80);
 			Log.Warn("machines: " + Net.PlayerName(from) + " differs on " + Describe(val) + " (" + LastRepairWhy + "); sending it whole" + text);
 			Items.BroadcastSubtree(val, "machine-repair");
@@ -2407,11 +2407,8 @@ public static class Machines
 
 	private static bool Volatile(string k)
 	{
-		if (!(k == "CONTAINER_TEMP_TAG"))
-		{
-			return k == "HEATING_TAG";
-		}
-		return true;
+		// CHEMICAL_MACHINE_UPGRADE_COUNT grows on every load and is never read, so it differs between copies.
+		return k == "CONTAINER_TEMP_TAG" || k == "HEATING_TAG" || k == "CHEMICAL_MACHINE_UPGRADE_COUNT";
 	}
 
 	public static List<GameItem> Subtree(GameItem m)

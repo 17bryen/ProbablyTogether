@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.7.2 - 2026-11-12
+
+Same protocol (14). Every player should take it.
+
+### Fixed
+- Pressing a button on a chemistry machine with a module in it no longer makes copies appear to differ.
+- The host's log always says what differs when a player's machine differs.
+
 ## 0.7.1 - 2026-11-12
 
 Protocol 14. Every player needs it.
