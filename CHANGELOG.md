@@ -2,6 +2,18 @@
 
 All changes to Probably Together.
 
+## 0.7.1 - 2026-11-12
+
+Protocol 14. Every player needs it.
+
+### Added
+- Some customers know a player from that player's standing with their faction: they mention them, ask for them, or make an offer only that player can close.
+- The reputation panel shows how much of each faction's standing each player earned.
+- Deals made on a trip to Dr. Jackson's count for the traveller in the ledger.
+
+### Changed
+- The "X is at the counter" label is gone; the counter now only says when a shotgun is aimed or a customer will deal with one player only.
+
 ## 0.7.0 - 2026-11-12
 
 Protocol 13. Every player needs it.

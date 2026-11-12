@@ -369,6 +369,12 @@ public static class Negotiation
 
 	internal static string TakeCounter(int from, out bool took)
 	{
+		string text = Systems.Regulars.Refusal(from);
+		if (text != null)
+		{
+			took = false;
+			return text;
+		}
 		if (!Customers.TryCounter(from, out var refusal, out took))
 		{
 			return refusal;

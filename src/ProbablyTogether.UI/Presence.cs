@@ -960,6 +960,11 @@ public static class Presence
 					activity = "is aiming the shotgun";
 					flag = true;
 				}
+				else if (heldLock.Key == "counter")
+				{
+					// The counter changes hands too fast to say who is at it.
+					continue;
+				}
 				DrawLabel(heldLock.Key, heldLock.Value, value, activity, val.Value, hashSet);
 			}
 		}
@@ -978,6 +983,31 @@ public static class Presence
 				DrawLabel("aim", aiming, value2, "is aiming the shotgun", val2.Value, hashSet);
 			}
 		}
+		try
+		{
+			int num = ProbablyTogether.Systems.Regulars.OnlyNow();
+			Vector2? val3 = (num > 0) ? CounterAnchor() : null;
+			if (num > 0 && val3.HasValue)
+			{
+				int num2 = 0;
+				PlayerInfo who = null;
+				foreach (KeyValuePair<int, PlayerInfo> player in Net.Players)
+				{
+					if (player.Value != null && player.Value.Seat == num)
+					{
+						num2 = player.Key;
+						who = player.Value;
+					}
+				}
+				if (who != null)
+				{
+					DrawLabel("only", num2, who, "", val3.Value, hashSet, Lang.Trf("This customer will only deal with {0}", "<color=#" + Kit.Hex(Kit.PlayerColor(num2)) + ">" + Kit.Name(who.Name) + "</color>"));
+				}
+			}
+		}
+		catch
+		{
+		}
 		foreach (string item in new List<string>(lockLabels.Keys))
 		{
 			if (!hashSet.Contains(item))
@@ -992,11 +1022,11 @@ public static class Presence
 		}
 	}
 
-	private static void DrawLabel(string key, int player, PlayerInfo who, string activity, Vector2 a, HashSet<string> live)
+	private static void DrawLabel(string key, int player, PlayerInfo who, string activity, Vector2 a, HashSet<string> live, string whole = null)
 	{
 		if (!(a.x < 0f) && !(a.x > 1f) && !(a.y < 0f) && !(a.y > 1f))
 		{
-			string text = "<color=#" + Kit.Hex(Kit.PlayerColor(player)) + ">" + Kit.Name(who.Name) + "</color> " + Lang.Tr(activity);
+			string text = whole ?? ("<color=#" + Kit.Hex(Kit.PlayerColor(player)) + ">" + Kit.Name(who.Name) + "</color> " + Lang.Tr(activity));
 			if (!lockLabels.TryGetValue(key, out var value) || (Object)(object)value == (Object)null)
 			{
 				value = Kit.Plate((Transform)(object)Overlay.Labels, "lock_" + key, out var content, 0.9f, 6, 0f);

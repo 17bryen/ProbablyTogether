@@ -23,4 +23,20 @@ internal static class CustGenerateClientPatch
 	{
 		return CustomersGate.Allow();
 	}
+
+	private static void Postfix(bool __runOriginal, StoreClientManager __instance)
+	{
+		if (!__runOriginal)
+		{
+			return;
+		}
+		try
+		{
+			Regulars.AfterQueue(__instance);
+		}
+		catch (System.Exception ex)
+		{
+			Log.Error("regulars: looking over the day's queue threw: " + ex);
+		}
+	}
 }

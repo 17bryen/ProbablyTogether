@@ -70,6 +70,9 @@ public sealed class MsgOutReturned
 {
 	public int by;
 
+	/// The trip's standing changes by faction, credited to the traveller in the ledger.
+	public List<MsgHostRep> rep;
+
 	public bool went;
 
 	public string[] visited;
@@ -793,6 +796,7 @@ public static class Outings
 			return;
 		}
 		outPlayers.Remove(m.by);
+		Standing.TripRep(m.by, m.rep);
 		using (Net.Apply())
 		{
 			ApplyReturned(store, m);
@@ -946,6 +950,10 @@ public static class Outings
 				store.healthData.wentToAfterhoursLastNight = true;
 			}
 		}
+		if (Net.IsHost && from == Net.LocalPlayer)
+		{
+			Standing.HostTripStarts();
+		}
 		Net.ToAll("outing.left", new MsgOutLeft
 		{
 			by = from,
@@ -1049,8 +1057,10 @@ public static class Outings
 			fresh = m.fresh,
 			stable = m.stable,
 			waste = Mathf.Clamp(m.waste, 0, 64),
-			jackson = m.jackson
+			jackson = m.jackson,
+			rep = ((Net.IsHost && from == Net.LocalPlayer) ? Standing.HostTripRep() : m.rep)
 		};
+		Standing.TripRep(from, msgOutReturned.rep);
 		List<string> list = new List<string>();
 		if (m.went && m.visited != null)
 		{

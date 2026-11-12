@@ -2,5 +2,5 @@ namespace ProbablyTogether;
 
 public static class Protocol
 {
-	public const int Version = 13;
+	public const int Version = 14;
 }

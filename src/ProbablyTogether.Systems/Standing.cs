@@ -314,6 +314,80 @@ public static class Standing
 		});
 	}
 
+	private static Dictionary<string, double> hostTripStart;
+
+	/// Host: the host's game is the shop, so its trip's standing change is the difference between leaving and coming home.
+	internal static void HostTripStarts()
+	{
+		hostTripStart = new Dictionary<string, double>(StringComparer.Ordinal);
+		PlayerStore store = Game.Store;
+		if (store?.storeReputations == null)
+		{
+			return;
+		}
+		foreach (StoreReputation storeReputation in store.storeReputations)
+		{
+			if (storeReputation != null && storeReputation.factionId != null)
+			{
+				hostTripStart[storeReputation.factionId] = storeReputation.GetReputationExact();
+			}
+		}
+	}
+
+	internal static List<MsgHostRep> HostTripRep()
+	{
+		List<MsgHostRep> list = new List<MsgHostRep>();
+		PlayerStore store = Game.Store;
+		if (hostTripStart == null || store?.storeReputations == null)
+		{
+			return list;
+		}
+		foreach (StoreReputation storeReputation in store.storeReputations)
+		{
+			if (storeReputation != null && storeReputation.factionId != null && hostTripStart.TryGetValue(storeReputation.factionId, out var value) && storeReputation.GetReputationExact() != value)
+			{
+				list.Add(new MsgHostRep
+				{
+					f = storeReputation.factionId,
+					v = storeReputation.GetReputationExact() - value
+				});
+			}
+		}
+		hostTripStart = null;
+		return list;
+	}
+
+	/// Every copy: a returning player's trip standing changes are credited to them.
+	internal static void TripRep(int player, List<MsgHostRep> rep)
+	{
+		if (!Active || rep == null || rep.Count == 0 || player <= 0)
+		{
+			return;
+		}
+		int num = Members.SeatOf(player);
+		if (num <= 0)
+		{
+			return;
+		}
+		Change(num, delegate(Row r)
+		{
+			int num2 = 0;
+			foreach (MsgHostRep item in rep)
+			{
+				if (item == null || string.IsNullOrEmpty(item.f) || double.IsNaN(item.v) || double.IsInfinity(item.v) || num2++ >= 16)
+				{
+					continue;
+				}
+				long num3 = (long)Math.Round(Math.Max(-50.0, Math.Min(50.0, item.v)) * 10000.0);
+				if (num3 != 0L)
+				{
+					r.Rep.TryGetValue(item.f, out var value);
+					r.Rep[item.f] = value + num3;
+				}
+			}
+		});
+	}
+
 	internal static double RepNow(string factionId)
 	{
 		try
@@ -392,9 +466,38 @@ public static class Standing
 		return (factionId ?? "").Replace("FACTION_", "").Replace('_', ' ').ToLowerInvariant();
 	}
 
+	internal static void LabGrant(int seat, string faction, double points)
+	{
+		if (!Net.IsServer || !Bots.BotRunner.Enabled)
+		{
+			return;
+		}
+		MsgStandingLab msgStandingLab = new MsgStandingLab
+		{
+			seat = seat,
+			f = faction,
+			v = points
+		};
+		ApplyLab(msgStandingLab);
+		Net.ToAll("standing.lab", msgStandingLab);
+	}
+
+	private static void ApplyLab(MsgStandingLab m)
+	{
+		if (m == null || !Bots.BotRunner.Enabled || string.IsNullOrEmpty(m.f))
+		{
+			return;
+		}
+		Change(m.seat, delegate(Row r)
+		{
+			r.Rep[m.f] = (long)Math.Round(m.v * 10000.0);
+		});
+	}
+
 	[SystemInit]
 	internal static void Init()
 	{
+		Net.On<MsgStandingLab>("standing.lab", null, ApplyLab);
 		Digest.AddPart("standing", () => Active ? Raw : "");
 		Digest.AddExplain("standing", () => Active ? string.Join(";", Members.State.list.OrderBy((Member m) => m.s).Select((Member m) => Line(m.n.Replace(';', ' '), Of(m.s)))) : "");
 		Snapshot.Loaded += delegate
@@ -407,6 +510,15 @@ public static class Standing
 			placer.Clear();
 		};
 	}
+}
+
+public sealed class MsgStandingLab
+{
+	public int seat;
+
+	public string f;
+
+	public double v;
 }
 
 [HarmonyPatch(typeof(StoreReputation), "OnItemTraded")]
