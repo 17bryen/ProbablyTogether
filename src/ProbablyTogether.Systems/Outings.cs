@@ -22,6 +22,13 @@ public sealed class MsgOutCash
 	public int cash;
 
 	public int favor;
+
+	/// Commissary credit redeemed (+) or spent (-); items[i] left the shelves by stock[i] (negative).
+	public int credit;
+
+	public string[] items;
+
+	public int[] stock;
 }
 
 public sealed class MsgOutLeft
@@ -105,6 +112,19 @@ public static class Outings
 	private static int lastFavor;
 
 	private static float lastCashCheck;
+
+	// Commissary state last reported by this trip, and as last seen at home (changes at home are not the trip's).
+	private static int lastCredit;
+
+	private static int[] lastStock = new int[0];
+
+	private static int homeCredit;
+
+	private static int[] homeStock = new int[0];
+
+	internal static int CommissarySent;
+
+	internal static int CommissaryTaken;
 
 	private static bool jackson;
 
@@ -290,6 +310,7 @@ public static class Outings
 		backpackId = m.backpackId;
 		lastCash = store.playerCash;
 		lastFavor = store.wildFavor;
+		CommissaryRead(store, ref lastCredit, ref lastStock);
 		jackson = false;
 		visited.Clear();
 		Log.Info("outing: private trip starts (bag " + backpackId + ", cash " + lastCash + "); " + "the shop stays live while we are out");
@@ -344,14 +365,47 @@ public static class Outings
 		}
 		int num = store.playerCash - lastCash;
 		int num2 = store.wildFavor - lastFavor;
-		if (num != 0 || num2 != 0)
+		int num3 = 0;
+		List<string> list = null;
+		List<int> list2 = null;
+		CommissaryData commissaryData = store.commissaryData;
+		if (commissaryData?.commissaryItemDatas != null)
+		{
+			num3 = commissaryData.redeemedCredit - lastCredit;
+			if (lastStock.Length != commissaryData.commissaryItemDatas.Count)
+			{
+				CommissaryRead(store, ref lastCredit, ref lastStock);
+				num3 = 0;
+			}
+			for (int i = 0; i < lastStock.Length; i++)
+			{
+				CommissaryItemData commissaryItemData = commissaryData.commissaryItemDatas[i];
+				int num4 = commissaryItemData.StockCount - lastStock[i];
+				if (num4 != 0)
+				{
+					(list ?? (list = new List<string>())).Add(commissaryItemData.identifier);
+					(list2 ?? (list2 = new List<int>())).Add(num4);
+					lastStock[i] = commissaryItemData.StockCount;
+				}
+			}
+			lastCredit = commissaryData.redeemedCredit;
+		}
+		if (num != 0 || num2 != 0 || num3 != 0 || list != null)
 		{
 			lastCash = store.playerCash;
 			lastFavor = store.wildFavor;
+			if (num3 != 0 || list != null)
+			{
+				CommissarySent++;
+				Log.Info("outing: the commissary on this trip: credit " + ((num3 > 0) ? "+" : "") + num3 + ((list != null) ? (", shelves " + CommissaryText(list.ToArray(), list2.ToArray())) : "") + "; told the server");
+			}
 			Net.ToServer("outing.cash", new MsgOutCash
 			{
 				cash = num,
-				favor = num2
+				favor = num2,
+				credit = num3,
+				items = list?.ToArray(),
+				stock = list2?.ToArray()
 			});
 		}
 	}
@@ -385,6 +439,117 @@ public static class Outings
 	{
 		lastCash += cash;
 		lastFavor += favor;
+	}
+
+	/// Snapshots the commissary when the game briefly switches to the shop at home.
+	internal static void HomeCommissaryEnter(PlayerStore store)
+	{
+		CommissaryRead(store, ref homeCredit, ref homeStock);
+	}
+
+	/// Back on the trip: commissary changes since the snapshot came from home.
+	internal static void HomeCommissaryLeave(PlayerStore store)
+	{
+		CommissaryData commissaryData = store?.commissaryData;
+		if (commissaryData?.commissaryItemDatas == null || homeStock.Length != commissaryData.commissaryItemDatas.Count || lastStock.Length != homeStock.Length)
+		{
+			return;
+		}
+		lastCredit += commissaryData.redeemedCredit - homeCredit;
+		for (int i = 0; i < homeStock.Length; i++)
+		{
+			lastStock[i] += commissaryData.commissaryItemDatas[i].StockCount - homeStock[i];
+		}
+	}
+
+	private static void CommissaryRead(PlayerStore store, ref int credit, ref int[] stock)
+	{
+		CommissaryData commissaryData = store?.commissaryData;
+		int num = commissaryData?.commissaryItemDatas?.Count ?? 0;
+		if (stock.Length != num)
+		{
+			stock = new int[num];
+		}
+		credit = commissaryData?.redeemedCredit ?? 0;
+		for (int i = 0; i < num; i++)
+		{
+			stock[i] = commissaryData.commissaryItemDatas[i].StockCount;
+		}
+	}
+
+	private static string CommissaryText(string[] items, int[] stock)
+	{
+		if (items == null || stock == null)
+		{
+			return "-";
+		}
+		List<string> list = new List<string>();
+		for (int i = 0; i < items.Length && i < stock.Length; i++)
+		{
+			list.Add(items[i] + " " + ((stock[i] > 0) ? "+" : "") + stock[i]);
+		}
+		return string.Join(", ", list);
+	}
+
+	/// Applies a trip's commissary credit and shelves, clamped at zero since two trips may spend the same credit or stock.
+	private static int CommissaryApply(PlayerStore store, int credit, string[] items, int[] stock, string who)
+	{
+		CommissaryData commissaryData = store?.commissaryData;
+		if (commissaryData == null || (credit == 0 && items == null))
+		{
+			return credit;
+		}
+		int num = credit;
+		if (commissaryData.redeemedCredit + num < 0)
+		{
+			if (Net.IsServer)
+			{
+				Log.Warn("outing: " + who + " spent " + -num + " commissary credit but the shop has " + commissaryData.redeemedCredit + "; clamped");
+			}
+			num = -commissaryData.redeemedCredit;
+		}
+		commissaryData.redeemedCredit += num;
+		for (int i = 0; items != null && stock != null && i < items.Length && i < stock.Length; i++)
+		{
+			CommissaryItemData itemData = commissaryData.GetItemData(items[i]);
+			if (itemData != null)
+			{
+				itemData.StockCount = Math.Max(0, itemData.StockCount + stock[i]);
+			}
+		}
+		return num;
+	}
+
+	internal static HashSet<GameItem> CarriedNow()
+	{
+		HashSet<GameItem> hashSet = new HashSet<GameItem>();
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		if ((Object)(object)instance == (Object)null)
+		{
+			return hashSet;
+		}
+		GraphNodeStorage[] array = new GraphNodeStorage[4]
+		{
+			(GraphNodeStorage)(object)instance.afterhourPocketSlotInvBackpack,
+			(GraphNodeStorage)(object)instance.afterhourPocketSlotInvRight,
+			(GraphNodeStorage)(object)instance.afterhourPocketSlotInvLeft,
+			(GraphNodeStorage)(object)instance.afterhourInventory
+		};
+		foreach (GraphNodeStorage val in array)
+		{
+			if (val == null)
+			{
+				continue;
+			}
+			foreach (GameItem item in GraphUtils.FindAllChildrenType<GameItem>(val, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+			{
+				if (item != null)
+				{
+					hashSet.Add(item);
+				}
+			}
+		}
+		return hashSet;
 	}
 
 	internal static void HostHome()
@@ -597,6 +762,25 @@ public static class Outings
 		{
 			store.playerCash += m.cash;
 			store.wildFavor += m.favor;
+			if (m.credit != 0 || m.items != null)
+			{
+				CommissaryApply(store, m.credit, m.items, m.stock, Net.PlayerName(m.by));
+				CommissaryTaken++;
+			}
+		}
+		if ((m.credit != 0 || m.items != null) && !DayLog.Replaying)
+		{
+			try
+			{
+				CommissaryUIManager instance = CommissaryUIManager.Instance;
+				if ((Object)(object)instance != (Object)null && Economy.CommissaryWindowOpen)
+				{
+					instance.RefreshUI();
+				}
+			}
+			catch
+			{
+			}
 		}
 	}
 
@@ -774,7 +958,7 @@ public static class Outings
 	private static void ServerCash(MsgOutCash m, int from)
 	{
 		PlayerStore store = Game.Store;
-		if (m == null || store == null || !away.ContainsKey(from) || (m.cash == 0 && m.favor == 0))
+		if (m == null || store == null || !away.ContainsKey(from) || (m.cash == 0 && m.favor == 0 && m.credit == 0 && m.items == null))
 		{
 			return;
 		}
@@ -786,19 +970,30 @@ public static class Outings
 			Log.Warn("outing: " + Net.PlayerName(from) + " spent " + -num + " but the shop has " + store.playerCash + "; clamped");
 			num = -store.playerCash;
 		}
+		int credit = m.credit;
 		if (!(Net.IsHost && from == Net.LocalPlayer))
 		{
 			using (Net.Apply())
 			{
 				store.playerCash += num;
 				store.wildFavor += m.favor;
+				// Commissary credit and shelves are shared, like cash.
+				credit = CommissaryApply(store, m.credit, m.items, m.stock, Net.PlayerName(from));
 			}
+		}
+		if (m.credit != 0 || m.items != null)
+		{
+			CommissaryTaken++;
+			Log.Info("outing: " + Net.PlayerName(from) + " at the commissary: credit " + ((credit > 0) ? "+" : "") + credit + ", shelves " + CommissaryText(m.items, m.stock) + "; the shop now has " + (store.commissaryData?.redeemedCredit ?? 0) + " credit");
 		}
 		Net.ToAll("outing.cashed", new MsgOutCash
 		{
 			by = from,
 			cash = num,
-			favor = m.favor
+			favor = m.favor,
+			credit = credit,
+			items = m.items,
+			stock = m.stock
 		});
 	}
 

@@ -141,6 +141,8 @@ public static class Economy
 		Net.On<MsgEconService>("econ.service", null, OnService);
 		Net.On<MsgEconCommissary>("econ.commissary", OnCommissaryRequest, null);
 		Net.On<MsgEconCommissaryDone>("econ.commissary.done", null, OnCommissaryDone);
+		Net.On<MsgEconRedeemHome>("econ.redeemHome", OnRedeemHomeRequest, null);
+		Net.On<MsgEconRedeemHome>("econ.redeemedHome", null, OnRedeemedHome);
 		Net.On<MsgEconWindow>("econ.commissary.open", OnWindowOpenRequest, null);
 		Net.On<MsgEconWindow>("econ.commissary.close", OnWindowCloseRequest, null);
 		Net.On<MsgEconFill>("econ.request.fill", OnFillRequest, null);
@@ -1037,6 +1039,213 @@ public static class Economy
 		}
 		Game.Store.ModCash(num, true);
 		return num;
+	}
+
+	/// Redeemed on own trips: carried items here, server requests at home.
+	internal static int RedeemedCarried;
+
+	internal static int RedeemedHomeAsked;
+
+	internal static int RedeemedHome;
+
+	private static string RedeemTag(string op)
+	{
+		if (op == "stamps")
+		{
+			return "FOOD_STAMP_TAG";
+		}
+		if (op == "lottery")
+		{
+			return "LOTTERY_IS_WINNING_TAG";
+		}
+		return null;
+	}
+
+	/// "Redeem all" on one's own trip: carried items redeem here; the server redeems what lies in the shop at home.
+	internal static void RedeemOnTrip(string op)
+	{
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		PlayerStore store = Game.Store;
+		string text = RedeemTag(op);
+		if ((Object)(object)instance == (Object)null || store == null || text == null)
+		{
+			return;
+		}
+		HashSet<GameItem> hashSet = Outings.CarriedNow();
+		List<long> list = new List<long>();
+		int num = 0;
+		int num2 = 0;
+		foreach (GameItem item in new List<GameItem>(instance.GetAllOwnedItems(false, true)))
+		{
+			if (item == null || !item.IsTag(text))
+			{
+				continue;
+			}
+			if (!hashSet.Contains(item))
+			{
+				long num3 = Ids.Of(item);
+				if (num3 > 0)
+				{
+					list.Add(num3);
+				}
+				continue;
+			}
+			num++;
+			GameItem it = item;
+			Game_("commissary " + op + " (carried)", delegate
+			{
+				if (op == "stamps")
+				{
+					it.ActivateSlotItem();
+				}
+				else
+				{
+					num2 += (int)it.unitValue;
+					it.Destroy();
+				}
+			});
+		}
+		if (num2 != 0)
+		{
+			store.ModCash(num2, true);
+		}
+		RedeemedCarried += num;
+		if (list.Count > 0)
+		{
+			RedeemedHomeAsked += list.Count;
+			Net.ToServer("econ.redeemHome", new MsgEconRedeemHome
+			{
+				op = op,
+				ids = list.ToArray()
+			});
+		}
+		Log.Info("economy: commissary " + op + " on this player's own trip: " + num + " carried redeemed here" + ((num2 != 0) ? (" (" + num2 + " cash)") : "") + ", " + list.Count + " in the shop at home asked of the server; credit here " + (store.commissaryData?.redeemedCredit ?? 0));
+		RedeemUi(op, num2);
+	}
+
+	private static void RedeemUi(string op, int cash)
+	{
+		try
+		{
+			CommissaryUIManager instance = CommissaryUIManager.Instance;
+			if ((Object)(object)instance != (Object)null && CommissaryWindowOpen)
+			{
+				instance.RefreshUI();
+			}
+			if (op == "lottery" && cash != 0)
+			{
+				ReputationUIManager instance2 = ReputationUIManager.Instance;
+				if (instance2 != null)
+				{
+					instance2.Notify(LocHelper.GetLocalizedMechanic("mech_commissary_lottery_redeemed", new object[1] { cash }), "default");
+				}
+			}
+		}
+		catch
+		{
+		}
+	}
+
+	private static int RunRedeemHome(string op, long[] ids)
+	{
+		int num = 0;
+		int num2 = 0;
+		string text = RedeemTag(op);
+		foreach (long id in ids)
+		{
+			GameItem val = Ids.Find(id);
+			if (val == null || text == null || !val.IsTag(text))
+			{
+				Log.Warn("economy: commissary " + op + " at home: item #" + id + " is not here");
+				continue;
+			}
+			if (op == "stamps")
+			{
+				val.ActivateSlotItem();
+			}
+			else
+			{
+				num += (int)val.unitValue;
+				val.Destroy();
+			}
+			num2++;
+		}
+		if (num != 0)
+		{
+			Game.Store.ModCash(num, true);
+		}
+		RedeemedHome += num2;
+		return num;
+	}
+
+	private static void OnRedeemHomeRequest(MsgEconRedeemHome m, int from)
+	{
+		PlayerStore store = Game.Store;
+		string text = RedeemTag(m?.op);
+		if (m?.ids == null || text == null || store?.commissaryData == null || !Game.ShopLoaded)
+		{
+			return;
+		}
+		if (!Outings.IsOut(from))
+		{
+			Refuse(from, "commissary " + m.op, "you are not at the commissary");
+			return;
+		}
+		List<long> list = new List<long>();
+		foreach (long id in m.ids)
+		{
+			GameItem val = Ids.Find(id);
+			if (val != null && val.IsTag(text) && val.IsTag("IS_OWNED_TAG") && !list.Contains(id))
+			{
+				list.Add(id);
+			}
+		}
+		if (list.Count == 0)
+		{
+			return;
+		}
+		long[] ids = list.ToArray();
+		int credit = store.commissaryData.redeemedCredit;
+		int playerCash = store.playerCash;
+		Seed seed;
+		using (Replay.Server(out seed))
+		{
+			Game_("commissary " + m.op + " (at home)", delegate
+			{
+				RunRedeemHome(m.op, ids);
+			});
+		}
+		Applied++;
+		Net.ToAll("econ.redeemedHome", new MsgEconRedeemHome
+		{
+			op = m.op,
+			ids = ids,
+			by = from,
+			seed = seed
+		});
+		Log.Info("economy: " + Net.PlayerName(from) + " (at the commissary) redeemed " + ids.Length + " " + m.op + " item(s) lying in the shop: credit " + credit + " -> " + store.commissaryData.redeemedCredit + ", cash " + playerCash + " -> " + store.playerCash);
+	}
+
+	private static void OnRedeemedHome(MsgEconRedeemHome m)
+	{
+		PlayerStore store = Game.Store;
+		if (m?.ids == null || store?.commissaryData == null)
+		{
+			return;
+		}
+		int num = 0;
+		using (Replay.Client(m.seed ?? new Seed()))
+		{
+			Game_("commissary " + m.op + " (at home)", delegate
+			{
+				num = RunRedeemHome(m.op, m.ids);
+			});
+		}
+		Applied++;
+		if (!DayLog.Replaying && m.by == Net.LocalPlayer)
+		{
+			RedeemUi(m.op, num);
+		}
 	}
 
 	private static void OnCommissaryDone(MsgEconCommissaryDone m)

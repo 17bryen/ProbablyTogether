@@ -253,6 +253,7 @@ internal static class HostTrip
 		}
 		homeCash = store.playerCash;
 		homeFavor = store.wildFavor;
+		Outings.HomeCommissaryEnter(store);
 		HomeView = true;
 		Swaps++;
 		return true;
@@ -303,6 +304,7 @@ internal static class HostTrip
 			repAtEnter = null;
 		}
 		Outings.HomeCashMoved(store.playerCash - homeCash, store.wildFavor - homeFavor);
+		Outings.HomeCommissaryLeave(store);
 	}
 
 	internal static GraphNodeStorage Back(EmporiumEntry e)

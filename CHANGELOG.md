@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.6.2 - 2026-11-12
+
+Protocol 12. Every player needs it.
+
+### Fixed
+- The Commissary's credit and stock are now shared: what one player spends on a trip is gone for the next.
+- "Redeem all" on a trip now redeems what the traveller carries, and the server redeems what lies in the shop for everybody.
+
 ## 0.6.1 - 2026-11-12
 
 Same protocol (11). Only the host needs it.

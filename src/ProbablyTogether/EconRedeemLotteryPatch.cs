@@ -21,6 +21,12 @@ internal static class EconRedeemLotteryPatch
 
 	private static bool Prefix()
 	{
+		if (Net.IsOnline && Systems.Outings.Private && !DayLog.Replaying)
+		{
+			// On a private trip the game would redeem from the shop at home, on this copy only.
+			Economy.RedeemOnTrip("lottery");
+			return false;
+		}
 		if (!Net.IsOnline || Net.Applying)
 		{
 			return true;
