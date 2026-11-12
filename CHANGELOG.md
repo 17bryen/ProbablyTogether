@@ -2,6 +2,18 @@
 
 All changes to Probably Together.
 
+## 0.5.0 - 2026-11-11
+
+Protocol 9. Every player needs it.
+
+### Added
+- Joe Wild's trade entries are personal: a held trade's entries can only be bought by its holder, and buying an unheld trade's entry makes the buyer its holder. The list says who holds what.
+- The rest of Joe Wild's list stays the shop's.
+- A trade's weekly supplier comes for its holder and greets them.
+
+### Fixed
+- Weekly trade suppliers are now really tied to a player's trade.
+
 ## 0.4.9 - 2026-11-11
 
 Protocol 8. Every player needs it.

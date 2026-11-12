@@ -206,6 +206,11 @@ public static class Economy
 			ClosedWindowRefusals++;
 			text = "the network window is not open";
 		}
+		if (text == null)
+		{
+			// An entry that belongs to a trade is its holder's alone.
+			text = Systems.Specs.WildRefusal(by, id);
+		}
 		if (text != null)
 		{
 			Refuse(by, "network.buy " + id, text);
@@ -239,6 +244,7 @@ public static class Economy
 			p = Parts()
 		};
 		Net.ToAll("econ.network.bought", msg);
+		Systems.Specs.WildBought(by, id);
 		HostRefresh("network", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " bought " + id + " for " + cost + " (favor " + favor + ", cash " + cash + "); state " + up.state + ", cash now " + store.playerCash + ", favor " + store.wildFavor);
 		return null;

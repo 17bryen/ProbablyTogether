@@ -184,6 +184,53 @@ public static class TradeVisits
 		{ "AQUAFARMER", "aquafarmer" }
 	};
 
+	internal static string Word(string spec)
+	{
+		string value;
+		return (spec != null && tradeWords.TryGetValue(spec, out value)) ? value : Specs.Label(spec).ToLowerInvariant();
+	}
+
+	private static readonly Dictionary<string, string> supplierTrades = new Dictionary<string, string>(StringComparer.Ordinal)
+	{
+		{ "retired_water_merchant", "WATER_MERCHANT" },
+		{ "retired_gunsmith", "GUNSMITH" },
+		{ "retired_farmer", "FARMER" },
+		{ "retired_rancher", "RANCHER" },
+		{ "retired_aquafarmer", "AQUAFARMER" },
+		{ "retired_chemist", "DRUG_DEALER" },
+		{ "shadyFarmer", "DRUG_DEALER" },
+		{ "street_dealer", "DRUG_DEALER" }
+	};
+
+	/// Every copy, after the game picks the day's suppliers: a trade's suppliers come for the player who holds it.
+	internal static void AfterSuppliers(StoreClientManager mgr, HashSet<StoreClient> before)
+	{
+		if (mgr?.clientStack == null || before == null || !Net.IsOnline || !Bays.Enabled)
+		{
+			return;
+		}
+		StoreStation instance = StoreStation.Instance;
+		int day = (instance != null) ? instance.dayCounter : 0;
+		foreach (StoreClient item in mgr.clientStack)
+		{
+			if (item == null || before.Contains(item) || item.identifier == null || !supplierTrades.TryGetValue(item.identifier, out var value))
+			{
+				continue;
+			}
+			int num = Specs.TakenBy(value);
+			Member member = (num > 0) ? Members.BySeat(num) : null;
+			if (member == null || forSeat.ContainsKey(item.identifier))
+			{
+				continue;
+			}
+			forSeat[item.identifier] = num;
+			Greet(item, member.n, value, day);
+			Added++;
+			LastAdded = item.identifier + " for seat " + num;
+			Log.Info("trade visits: " + item.identifier + " comes for " + member.n + " (the shop's " + Word(value) + ")");
+		}
+	}
+
 	private static readonly string[] openers = new string[4]
 	{
 		"I'm here to see {0}. Word is this shop has a {1} now.",
@@ -201,8 +248,7 @@ public static class TradeVisits
 		{
 			return;
 		}
-		string value;
-		string arg = tradeWords.TryGetValue(spec, out value) ? value : Specs.Label(spec).ToLowerInvariant();
+		string arg = Word(spec);
 		int num = day;
 		foreach (char c2 in c.identifier ?? "")
 		{
@@ -396,14 +442,23 @@ internal static class TradeSupplierWindowPatch
 		return target;
 	}
 
-	private static void Prefix()
+	private static void Prefix(StoreClientManager __instance, out HashSet<StoreClient> __state)
 	{
 		TradeVisits.InSuppliers = Net.IsOnline && Bays.Enabled;
+		__state = (TradeVisits.InSuppliers && __instance?.clientStack != null) ? new HashSet<StoreClient>(__instance.clientStack) : null;
 	}
 
-	private static void Finalizer()
+	private static void Finalizer(StoreClientManager __instance, HashSet<StoreClient> __state)
 	{
 		TradeVisits.InSuppliers = false;
+		try
+		{
+			TradeVisits.AfterSuppliers(__instance, __state);
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("trade visits: threw after the day's suppliers were picked: " + ex.Message);
+		}
 	}
 }
 
@@ -453,6 +508,50 @@ internal static class TradeStartPredicatePatch
 			catch
 			{
 			}
+		}
+	}
+}
+
+/// Joe Wild's list: an entry that belongs to a trade says who holds it.
+[HarmonyPatch]
+internal static class WildTradeNotePatch
+{
+	private static readonly MethodBase target = Find();
+
+	private static MethodBase Find()
+	{
+		try
+		{
+			return AccessTools.Method(typeof(NetworkUpgrade), "GetLocalizedDescription", Type.EmptyTypes, (Type[])null);
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private static bool Prepare()
+	{
+		return target != null;
+	}
+
+	private static MethodBase TargetMethod()
+	{
+		return target;
+	}
+
+	private static void Postfix(NetworkUpgrade __instance, ref string __result)
+	{
+		try
+		{
+			string text = Specs.WildNote(__instance?.id);
+			if (text.Length > 0)
+			{
+				__result = (string.IsNullOrEmpty(__result) ? "" : (__result + "\n\n")) + text;
+			}
+		}
+		catch
+		{
 		}
 	}
 }

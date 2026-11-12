@@ -126,8 +126,145 @@ public static class Specs
 			{
 				return item.s;
 			}
+			if (item.x.TryGetValue(MoreFact, out var value2) && value2.Split(',').Any((string t) => string.Equals(t, id, StringComparison.OrdinalIgnoreCase)))
+			{
+				return item.s;
+			}
 		}
 		return 0;
+	}
+
+	internal const string MoreFact = "more";
+
+	public static bool Holds(int seat, string id)
+	{
+		return seat > 0 && TakenBy(id) == seat;
+	}
+
+	private static readonly Dictionary<string, string> wildTrades = new Dictionary<string, string>(StringComparer.Ordinal)
+	{
+		{ "RETIRED_FARMER", "FARMER" },
+		{ "PLANT_DNA", "FARMER" },
+		{ "RETIRED_GUNSMITH", "GUNSMITH" },
+		{ "GUN_PERMIT_I", "GUNSMITH" },
+		{ "GUN_PERMIT_II", "GUNSMITH" },
+		{ "GUN_PERMIT_III", "GUNSMITH" },
+		{ "RETIRED_CHEMIST", "DRUG_DEALER" },
+		{ "RETIRED_RANCHER", "RANCHER" },
+		{ "WATER_TRADER", "WATER_MERCHANT" },
+		{ "AQUACULTURE", "AQUAFARMER" },
+		{ "AQUACULTURE_II", "AQUAFARMER" }
+	};
+
+	/// The machines of each trade, used when a trade is taken through Joe Wild (no kit runs then).
+	private static readonly Dictionary<string, string[]> tradeMachines = new Dictionary<string, string[]>(StringComparer.Ordinal)
+	{
+		{ "WATER_MERCHANT", new string[3] { "bottle_printer", "portable_water_purifier", "water_filter" } },
+		{ "FENCE", new string[1] { "desequencer" } },
+		{ "FARMER", new string[1] { "hydroponic" } },
+		{ "GUNSMITH", new string[1] { "printer" } },
+		{ "DRUG_DEALER", new string[4] { "blender", "heating_plate", "evaporator", "chem_finisher" } },
+		{ "RANCHER", new string[1] { "animal_cage" } },
+		{ "AQUAFARMER", new string[1] { "ras" } }
+	};
+
+	internal static int WildTaken;
+
+	/// The trade an entry belongs to (null: the shop's).
+	public static string WildTrade(string upgradeId)
+	{
+		string value;
+		return (upgradeId != null && wildTrades.TryGetValue(upgradeId, out value)) ? value : null;
+	}
+
+	/// Server: null when this player may buy that entry, else the refusal.
+	internal static string WildRefusal(int player, string upgradeId)
+	{
+		string text = WildTrade(upgradeId);
+		if (text == null || !Bays.Enabled || player <= 0)
+		{
+			return null;
+		}
+		int num = Members.SeatOf(player);
+		if (num <= 0)
+		{
+			return "Guests cannot take a trade: join with your own account.";
+		}
+		int num2 = TakenBy(text);
+		if (num2 != 0 && num2 != num)
+		{
+			return Members.NameOf(num2) + " is the shop's " + TradeVisits.Word(text) + ". Only they can buy this.";
+		}
+		return null;
+	}
+
+	/// Server: the buyer takes the trade if nobody holds it.
+	internal static void WildBought(int player, string upgradeId)
+	{
+		string text = WildTrade(upgradeId);
+		if (text == null || !Bays.Enabled || !Net.IsServer || player <= 0)
+		{
+			return;
+		}
+		int num = Members.SeatOf(player);
+		if (num <= 0 || TakenBy(text) != 0)
+		{
+			return;
+		}
+		Member member = Members.BySeat(num);
+		if (member == null)
+		{
+			return;
+		}
+		member.x.TryGetValue(MoreFact, out var value);
+		member.x.TryGetValue("mach", out var value2);
+		List<string> list = new List<string>((value2 ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+		if (tradeMachines.TryGetValue(text, out var value3))
+		{
+			foreach (string item in value3)
+			{
+				if (!list.Contains(item))
+				{
+					list.Add(item);
+				}
+			}
+		}
+		if (extraTools.TryGetValue(text, out var value4))
+		{
+			foreach (string item2 in value4)
+			{
+				if (!list.Contains(item2))
+				{
+					list.Add(item2);
+				}
+			}
+		}
+		Members.SetFacts(num, new Dictionary<string, string>
+		{
+			{ MoreFact, string.IsNullOrEmpty(value) ? text : (value + "," + text) },
+			{ "mach", string.Join(",", list) }
+		});
+		WildTaken++;
+		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") bought " + upgradeId + " from Joe Wild and is now the shop's " + TradeVisits.Word(text) + "; machine kinds: " + string.Join(",", list));
+	}
+
+	public static string WildNote(string upgradeId)
+	{
+		string text = WildTrade(upgradeId);
+		if (text == null || !Net.IsOnline || !Bays.Enabled || !Game.ShopLoaded)
+		{
+			return "";
+		}
+		int num = TakenBy(text);
+		if (num == 0)
+		{
+			return Lang.Trf("Whoever buys this becomes the shop's {0}: its machines will be theirs alone.", Lang.Tr(TradeVisits.Word(text)));
+		}
+		if (num == Members.LocalSeat)
+		{
+			return Lang.Trf("You are the shop's {0}: only you can buy this.", Lang.Tr(TradeVisits.Word(text)));
+		}
+		return Lang.Trf("{0} is the shop's {1}: only they can buy this.", Members.NameOf(num), Lang.Tr(TradeVisits.Word(text)));
 	}
 
 	/// The seat that owns every machine of this kind (0: nobody).
