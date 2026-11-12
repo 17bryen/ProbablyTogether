@@ -2,6 +2,16 @@
 
 All changes to Probably Together.
 
+## 0.4.9 - 2026-11-11
+
+Protocol 8. Every player needs it.
+
+### Changed
+- Coming home from a trip no longer reloads the shop: the shop stays live underneath while a player is out.
+- A player's deals at Dr. Jackson's now count for the shop.
+- The shop's cash updates live on a traveller's screen.
+- Customers who come for a player's trade now say so in their own words, replacing the on-screen notice.
+
 ## 0.4.8 - 2026-11-11
 
 Protocol 7. Every player needs it.

@@ -16,6 +16,12 @@ public abstract class TradeVisitsBotBase : DayNightBotBase
 
 	protected static bool KnowsCartel => DayNightBotBase.Ps.storeReputations.Any((StoreReputation r) => r != null && r.factionId == "FACTION_CARTEL");
 
+	protected static string FirstLine(string id)
+	{
+		StoreClient storeClient = DayNightBotBase.Ps?.storeClientManager?.clientStack?.FirstOrDefault((StoreClient c) => c != null && c.identifier == id);
+		return storeClient?.mainDialogue?.plainText ?? "";
+	}
+
 	protected static string Where => "day " + DayNightBotBase.Day + " " + DayNightBotBase.State + ", shop scenario " + DayNightBotBase.Ps.startType + ", chemist seat " + Specs.TakenBy("DRUG_DEALER") + " (first day " + (Members.Fact(Specs.TakenBy("DRUG_DEALER"), TradeVisits.DayFact) ?? "-") + "), cartel man in queue " + InQueue("cartelIntro") + " for seat " + TradeVisits.SeatFor("cartelIntro") + ", standing with the cartel " + KnowsCartel + ", added for trades " + TradeVisits.Added + " (" + TradeVisits.LastAdded + ")";
 }
 
@@ -79,6 +85,7 @@ public sealed class TradeVisitsH : TradeVisitsBotBase
 		});
 		WaitFor("opened-next-day", 30f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Check("the-cartels-man-is-in-todays-queue-for-b", () => InQueue("cartelIntro") && TradeVisits.SeatFor("cartelIntro") == Specs.TakenBy("DRUG_DEALER") && KnowsCartel, () => Where);
+		Check("he-says-who-he-came-for", () => FirstLine("cartelIntro").Contains(Members.NameOf(Specs.TakenBy("DRUG_DEALER"))) && FirstLine("cartelIntro").Contains("chemist"), () => "his first line: '" + FirstLine("cartelIntro") + "'");
 		Check("the-shop-is-what-it-was", () => DayNightBotBase.Ps.startType != NewGameData.StartType.DRUG_DEALER && StoreStation.Instance.dayCounter == day0 + 1, () => Where + "; day counter " + StoreStation.Instance.dayCounter);
 		Do("my-queue-next-day", () => Customers.DigestText());
 		Delay("b-compares-the-queue", 30f);
@@ -119,6 +126,7 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		WaitFor("opened-next-day", 120f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Delay("the-opening-lands", 2f);
 		Check("the-cartels-man-is-in-my-queue-for-me", () => InQueue("cartelIntro") && TradeVisits.SeatFor("cartelIntro") == Members.LocalSeat && KnowsCartel, () => Where);
+		Check("he-says-he-came-for-me", () => FirstLine("cartelIntro").Contains(Members.NameOf(Members.LocalSeat)) && TradeVisits.Openers.ContainsKey("cartelIntro"), () => "his first line here: '" + FirstLine("cartelIntro") + "'");
 		WaitServer("the-hosts-queue", 20f, delegate(IReadOnlyDictionary<string, string> v)
 		{
 			theirs = DayNightBotBase.V(v, "cust.text");

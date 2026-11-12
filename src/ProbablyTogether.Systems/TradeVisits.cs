@@ -118,6 +118,7 @@ public static class TradeVisits
 		{
 			forDay = dayCounter;
 			forSeat.Clear();
+			Openers.Clear();
 			announced = "";
 		}
 		string text = store.startType.ToString();
@@ -151,6 +152,14 @@ public static class TradeVisits
 				if (item2 != null && !hashSet.Contains(item2))
 				{
 					forSeat[item2.identifier ?? ""] = item.s;
+					try
+					{
+						Greet(item2, item.n, value, dayCounter);
+					}
+					catch (Exception ex2)
+					{
+						Log.Warn("trade visits: giving " + item2.identifier + " its opening line threw: " + ex2.Message);
+					}
 					list.Add(item2.identifier);
 					Added++;
 				}
@@ -160,6 +169,65 @@ public static class TradeVisits
 				LastAdded = string.Join(",", list) + " for seat " + item.s;
 				Log.Info("trade visits: day " + dayCounter + " is day " + num + " of " + item.n + "'s trade (" + value + "): " + string.Join(", ", list) + " will come for them");
 			}
+		}
+	}
+
+	private static readonly Dictionary<string, string> tradeWords = new Dictionary<string, string>(StringComparer.Ordinal)
+	{
+		{ "DRUG_DEALER", "chemist" },
+		{ "FENCE", "fence" },
+		{ "GUNSMITH", "gunsmith" },
+		{ "SCAV", "junker" },
+		{ "WATER_MERCHANT", "water merchant" },
+		{ "RANCHER", "rancher" },
+		{ "FARMER", "farmer" },
+		{ "AQUAFARMER", "aquafarmer" }
+	};
+
+	private static readonly string[] openers = new string[4]
+	{
+		"I'm here to see {0}. Word is this shop has a {1} now.",
+		"Which one of you is {0}? I was told to ask for the {1}.",
+		"I'm looking for {0}. The {1}, right?",
+		"Is {0} in? My business is with the {1}."
+	};
+
+	internal static readonly Dictionary<string, string> Openers = new Dictionary<string, string>(StringComparer.Ordinal);
+
+	private static void Greet(StoreClient c, string player, string spec, int day)
+	{
+		Dialogue mainDialogue = c.mainDialogue;
+		if (mainDialogue == null || string.IsNullOrEmpty(player))
+		{
+			return;
+		}
+		string value;
+		string arg = tradeWords.TryGetValue(spec, out value) ? value : Specs.Label(spec).ToLowerInvariant();
+		int num = day;
+		foreach (char c2 in c.identifier ?? "")
+		{
+			num = num * 31 + c2;
+		}
+		string text = Lang.Trf(openers[(int)((uint)num % (uint)openers.Length)], player, Lang.Tr(arg));
+		Openers[c.identifier ?? ""] = text;
+		if ((int)c.clientIntent == (int)StoreClient.ClientIntent.DIALOGUE)
+		{
+			Dialogue dialogue = new Dialogue();
+			dialogue.SetText(mainDialogue.title ?? c.displayName, text);
+			dialogue.portrait = mainDialogue.portrait;
+			dialogue.priority = mainDialogue.priority;
+			dialogue.isMainDialog = mainDialogue.isMainDialog;
+			dialogue.SetNextDialogue(mainDialogue);
+			c.mainDialogue = dialogue;
+			return;
+		}
+		if (mainDialogue.plainText != null)
+		{
+			mainDialogue.SetText(mainDialogue.title, text + " " + mainDialogue.plainText);
+		}
+		else
+		{
+			mainDialogue.text = new RichTextBuilder().Add(text + " ").Add(mainDialogue.text);
 		}
 	}
 
@@ -257,11 +325,6 @@ public static class TradeVisits
 			return;
 		}
 		announced = text;
-		int num = SeatFor(text);
-		if (num > 0 && !Outings.Private)
-		{
-			Notices.Show(Lang.Trf("{0} is here for {1}.", storeClient.displayName ?? text, Kit.Name(Members.NameOf(num))), "trade");
-		}
 	}
 }
 
