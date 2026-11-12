@@ -124,50 +124,70 @@ public static class TradeVisits
 		string text = store.startType.ToString();
 		foreach (Member item in Members.State.list.OrderBy((Member m) => m.s).ToList())
 		{
-			if (item.x == null || !item.x.TryGetValue("spec", out var value) || value == text)
+			if (item.x == null)
 			{
 				continue;
 			}
-			if (!item.x.TryGetValue(DayFact, out var value2) || !int.TryParse(value2, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))
+			// Only the starting trade has scripted visitors (the shop's own scenario is the game's); Joe Wild's trades have none.
+			List<KeyValuePair<string, string>> list = new List<KeyValuePair<string, string>>();
+			if (item.x.TryGetValue("spec", out var value) && value != text && item.x.TryGetValue(DayFact, out var value2))
 			{
-				continue;
+				list.Add(new KeyValuePair<string, string>(value, value2));
 			}
-			int num = dayCounter - result + 1;
-			if (num < 1)
+			if (item.x.TryGetValue(Specs.MoreFact, out var value3))
 			{
-				continue;
-			}
-			HashSet<StoreClient> hashSet = new HashSet<StoreClient>(mgr.clientStack);
-			try
-			{
-				Run(mgr, store, station, value, num);
-			}
-			catch (Exception ex)
-			{
-				Log.Warn("trade visits: day " + num + " of " + item.n + "'s trade (" + value + ") threw: " + ex.Message);
-			}
-			List<string> list = new List<string>();
-			foreach (StoreClient item2 in mgr.clientStack)
-			{
-				if (item2 != null && !hashSet.Contains(item2))
+				string[] array = value3.Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+				foreach (string text2 in array)
 				{
-					forSeat[item2.identifier ?? ""] = item.s;
-					try
+					if (text2 != text && item.x.TryGetValue(DayFact + "." + text2, out var value4))
 					{
-						Greet(item2, item.n, value, dayCounter);
+						list.Add(new KeyValuePair<string, string>(text2, value4));
 					}
-					catch (Exception ex2)
-					{
-						Log.Warn("trade visits: giving " + item2.identifier + " its opening line threw: " + ex2.Message);
-					}
-					list.Add(item2.identifier);
-					Added++;
 				}
 			}
-			if (list.Count > 0)
+			foreach (KeyValuePair<string, string> item2 in list)
 			{
-				LastAdded = string.Join(",", list) + " for seat " + item.s;
-				Log.Info("trade visits: day " + dayCounter + " is day " + num + " of " + item.n + "'s trade (" + value + "): " + string.Join(", ", list) + " will come for them");
+				if (!int.TryParse(item2.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))
+				{
+					continue;
+				}
+				int num = dayCounter - result + 1;
+				if (num < 1)
+				{
+					continue;
+				}
+				HashSet<StoreClient> hashSet = new HashSet<StoreClient>(mgr.clientStack);
+				try
+				{
+					Run(mgr, store, station, item2.Key, num);
+				}
+				catch (Exception ex)
+				{
+					Log.Warn("trade visits: day " + num + " of " + item.n + "'s trade (" + item2.Key + ") threw: " + ex.Message);
+				}
+				List<string> list2 = new List<string>();
+				foreach (StoreClient item3 in mgr.clientStack)
+				{
+					if (item3 != null && !hashSet.Contains(item3))
+					{
+						forSeat[item3.identifier ?? ""] = item.s;
+						try
+						{
+							Greet(item3, item.n, item2.Key, dayCounter);
+						}
+						catch (Exception ex2)
+						{
+							Log.Warn("trade visits: giving " + item3.identifier + " its opening line threw: " + ex2.Message);
+						}
+						list2.Add(item3.identifier);
+						Added++;
+					}
+				}
+				if (list2.Count > 0)
+				{
+					LastAdded = string.Join(",", list2) + " for seat " + item.s;
+					Log.Info("trade visits: day " + dayCounter + " is day " + num + " of " + item.n + "'s trade (" + item2.Key + "): " + string.Join(", ", list2) + " will come for them");
+				}
 			}
 		}
 	}

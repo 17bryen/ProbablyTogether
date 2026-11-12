@@ -170,6 +170,8 @@ public static class Specs
 
 	internal static int WildTaken;
 
+	internal static string LastNoRoom = "";
+
 	/// The trade an entry belongs to (null: the shop's).
 	public static string WildTrade(string upgradeId)
 	{
@@ -195,6 +197,10 @@ public static class Specs
 		{
 			return Members.NameOf(num2) + " is the shop's " + TradeVisits.Word(text) + ". Only they can buy this.";
 		}
+		if (num2 == 0 && (HostTrip.Out || Outings.AnyOut))
+		{
+			return "Take up a new trade when everyone is back in the shop.";
+		}
 		return null;
 	}
 
@@ -219,6 +225,31 @@ public static class Specs
 		member.x.TryGetValue(MoreFact, out var value);
 		member.x.TryGetValue("mach", out var value2);
 		List<string> list = new List<string>((value2 ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+		string text2 = "no storage bay: no kit";
+		GameItem val = Bays.BayOf(num);
+		if (val != null)
+		{
+			MsgSpecKit msgSpecKit = new MsgSpecKit
+			{
+				seat = num,
+				id = text,
+				bay = Ids.Of(val)
+			};
+			string machines;
+			using (Replay.Server(out msgSpecKit.seed))
+			{
+				text2 = RunKit(num, text, val, out machines);
+			}
+			Kits++;
+			Net.ToAll("spec.kit", msgSpecKit);
+			foreach (string item3 in (machines ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+			{
+				if (!list.Contains(item3))
+				{
+					list.Add(item3);
+				}
+			}
+		}
 		if (tradeMachines.TryGetValue(text, out var value3))
 		{
 			foreach (string item in value3)
@@ -242,10 +273,12 @@ public static class Specs
 		Members.SetFacts(num, new Dictionary<string, string>
 		{
 			{ MoreFact, string.IsNullOrEmpty(value) ? text : (value + "," + text) },
-			{ "mach", string.Join(",", list) }
+			{ "mach", string.Join(",", list) },
+			{ TradeVisits.DayFact + "." + text, TradeVisits.DayForPick() }
 		});
+		// A trade taken through Joe Wild brings no scripted visitors.
 		WildTaken++;
-		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") bought " + upgradeId + " from Joe Wild and is now the shop's " + TradeVisits.Word(text) + "; machine kinds: " + string.Join(",", list));
+		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") bought " + upgradeId + " from Joe Wild and is now the shop's " + TradeVisits.Word(text) + "; kit " + text2 + "; machine kinds: " + string.Join(",", list));
 	}
 
 	public static string WildNote(string upgradeId)
@@ -258,7 +291,7 @@ public static class Specs
 		int num = TakenBy(text);
 		if (num == 0)
 		{
-			return Lang.Trf("Whoever buys this becomes the shop's {0}: its machines will be theirs alone.", Lang.Tr(TradeVisits.Word(text)));
+			return Lang.Trf("Whoever buys this becomes the shop's {0}: the trade's kit goes to their storage bay and its machines will be theirs alone.", Lang.Tr(TradeVisits.Word(text)));
 		}
 		if (num == Members.LocalSeat)
 		{
@@ -452,6 +485,8 @@ public static class Specs
 			int num = 0;
 			int num2 = 0;
 			int num3 = 0;
+			int refund = 0;
+			List<string> noRoom = new List<string>();
 			List<string> list2 = new List<string>();
 			foreach (GameItem item2 in list)
 			{
@@ -484,8 +519,32 @@ public static class Specs
 					num2++;
 					continue;
 				}
+				// Nothing fits anywhere: turn the item into its worth in cash (replayed, so the same on every copy).
 				num3++;
+				long num4 = 0L;
+				try
+				{
+					num4 = Math.Max(0L, (long)item2.unitValue) * Math.Max(1, item2.unitCount);
+					foreach (GameItem item3 in GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)item2, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+					{
+						num4 += Math.Max(0L, (long)item3.unitValue) * Math.Max(1, item3.unitCount);
+					}
+				}
+				catch
+				{
+				}
+				refund += (int)Math.Min(100000L, num4);
+				noRoom.Add(item2.identifier);
 				item2.Destroy();
+			}
+			if (refund > 0)
+			{
+				store.playerCash += refund;
+			}
+			LastNoRoom = (num3 > 0) ? (num3 + " (" + string.Join(", ", noRoom) + ") for " + refund) : "";
+			if (num3 > 0 && Net.HasLocalPlayer && !DayLog.Replaying && !Outings.Private)
+			{
+				Notices.Show(Lang.Trf("{0} thing(s) of the kit found no room in the shop ({1}). Their worth, {2}, went into the till.", num3.ToString(CultureInfo.InvariantCulture), string.Join(", ", noRoom), refund.ToString(CultureInfo.InvariantCulture)), "spec");
 			}
 			if (extraTools.TryGetValue(id, out var value))
 			{
@@ -498,7 +557,7 @@ public static class Specs
 				}
 			}
 			machines = string.Join(",", list2);
-			return list.Count + " item(s): " + num + " into the bay, " + num2 + " into the shop's storage" + ((num3 > 0) ? (", " + num3 + " lost (no room anywhere)") : "") + "; machine kinds: " + ((machines.Length > 0) ? machines : "none");
+			return list.Count + " item(s): " + num + " into the bay, " + num2 + " into the shop's storage" + ((num3 > 0) ? (", " + num3 + " found no room anywhere and went into the till as " + refund) : "") + "; machine kinds: " + ((machines.Length > 0) ? machines : "none");
 		}
 	}
 

@@ -2,6 +2,18 @@
 
 All changes to Probably Together.
 
+## 0.5.1 - 2026-11-11
+
+Protocol 10. Every player needs it.
+
+### Added
+- A trade bought through Joe Wild brings its starting kit into the buyer's storage bay.
+- A trade bought through Joe Wild has no scripted visitors; its weekly supplier still comes.
+- Buying a new trade is refused while anyone is out on a trip.
+
+### Changed
+- Kit items that find no room anywhere are turned into cash, with a notice, instead of being lost.
+
 ## 0.5.0 - 2026-11-11
 
 Protocol 9. Every player needs it.
