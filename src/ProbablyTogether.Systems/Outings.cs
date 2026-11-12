@@ -11,6 +11,8 @@ public sealed class MsgOutGo
 	public long backpackId;
 
 	public bool ok;
+
+	public Subtree pack;
 }
 
 public sealed class MsgOutCash
@@ -187,12 +189,7 @@ public static class Outings
 
 	internal static bool DropsWhilePrivate(string kind)
 	{
-		if (!Private || passWhilePrivate.Contains(kind) || kind.StartsWith("bot.", StringComparison.Ordinal))
-		{
-			return false;
-		}
-		Dropped++;
-		return true;
+		return false;
 	}
 
 	/// A copy reloading at night shows the closed shop the way a loaded save does: morning report on screen, shutter up.
@@ -257,14 +254,21 @@ public static class Outings
 			Log.Warn("outing: the server let us go but there is no shop here");
 			return;
 		}
+		Subtree pack = m.pack;
 		if (Net.IsHost)
 		{
 			away.TryGetValue(Net.LocalPlayer, out var value);
-			if (value == null || !HostTrip.Begin(value.Pack))
+			pack = value?.Pack;
+			if (value == null)
 			{
-				Log.Warn("outing: the host was let go but its trip could not start");
+				Log.Warn("outing: the host was let go but the server has no record of it");
 				return;
 			}
+		}
+		if (!HostTrip.Begin(pack))
+		{
+			Log.Warn("outing: let go, but the trip could not start");
+			return;
 		}
 		Private = true;
 		// A private trip starts from fresh randomness, not the shared state every copy leaves with.
@@ -277,11 +281,7 @@ public static class Outings
 		lastFavor = store.wildFavor;
 		jackson = false;
 		visited.Clear();
-		if (!Net.IsHost)
-		{
-			instance.selectedBackpack = ((backpackId != 0L) ? Ids.Find(backpackId) : null);
-		}
-		Log.Info("outing: private trip starts (bag " + backpackId + ", cash " + lastCash + "); " + (Net.IsHost ? "the shop stays live for the players at home" : "shop updates are ignored until the return"));
+		Log.Info("outing: private trip starts (bag " + backpackId + ", cash " + lastCash + "); " + "the shop stays live while we are out");
 		try
 		{
 			instance2.OpenUI();
@@ -354,7 +354,7 @@ public static class Outings
 			return true;
 		}
 		SendReturn(went: false);
-		return Net.IsHost;
+		return true;
 	}
 
 	/// Hands everything carried to the server and waits for the resync. False = skip the game's return.
@@ -366,7 +366,7 @@ public static class Outings
 			return true;
 		}
 		SendReturn(went: true);
-		return Net.IsHost;
+		return true;
 	}
 
 	/// Host: cash moved at home while the host is out is not the trip's doing.
@@ -438,12 +438,12 @@ public static class Outings
 			}
 			else
 			{
-				GameItem val4 = (Net.IsHost ? instance.afterhourPocketSlotInvBackpack.childItem : ((backpackId != 0L) ? Ids.Find(backpackId) : null));
+				GameItem val4 = instance.afterhourPocketSlotInvBackpack.childItem;
 				if (val4 != null)
 				{
 					list.Add(val4);
 				}
-				if (Net.IsHost && instance.afterhourInventory != null)
+				if (instance.afterhourInventory != null)
 				{
 					list.AddRange(((GameInventory)instance.afterhourInventory).childItems);
 				}
@@ -487,7 +487,7 @@ public static class Outings
 			waste = num,
 			jackson = jackson
 		};
-		if (Net.IsHost)
+		if (Net.HasLocalPlayer)
 		{
 			// The game's own return walks the traveller home after this; carried items join the shop in HostTrip.Finish.
 			foreach (GameItem item2 in list)
@@ -510,7 +510,7 @@ public static class Outings
 			}
 			HostTrip.PendingWent = went;
 			HostTrip.Pending = msgOutReturn;
-			Log.Info("outing: the host is " + (went ? "coming home" : "cancelling the trip") + " with " + list2.Count + " item(s)");
+			Log.Info("outing: " + (Net.IsHost ? "the host is " : "") + (went ? "coming home" : "cancelling the trip") + " with " + list2.Count + " item(s)");
 			return;
 		}
 		Net.ToServer("outing.return", msgOutReturn);
@@ -526,6 +526,10 @@ public static class Outings
 		}
 		Private = false;
 		returning = false;
+		if (!Net.IsServer)
+		{
+			HostTrip.Reset();
+		}
 	}
 
 	private static void ResetClient(string why)
@@ -537,6 +541,10 @@ public static class Outings
 		Private = false;
 		returning = false;
 		outPlayers.Clear();
+		if (!Net.IsServer)
+		{
+			HostTrip.Reset();
+		}
 	}
 
 	private static void ClientLeft(MsgOutLeft m)
@@ -566,6 +574,10 @@ public static class Outings
 	{
 		PlayerStore store = Game.Store;
 		if (m == null || store == null)
+		{
+			return;
+		}
+		if (m.by == Net.LocalPlayer && !DayLog.Replaying)
 		{
 			return;
 		}
@@ -711,7 +723,8 @@ public static class Outings
 		Net.ToPlayer(from, "outing.go", new MsgOutGo
 		{
 			backpackId = rec.PackId,
-			ok = true
+			ok = true,
+			pack = ((Net.IsHost && from == Net.LocalPlayer) ? null : rec.Pack)
 		});
 		if (val != null)
 		{
@@ -842,10 +855,6 @@ public static class Outings
 			}
 		}
 		Log.Info("outing: " + value.Name + (m.went ? (" came back from " + string.Join(",", list)) : " cancelled the trip") + " with " + num + " item(s)" + ((num2 > 0) ? (", " + num2 + " could not be brought in") : "") + "; visits left tonight " + store.visitLeftTonight + "; " + away.Count + " player(s) still out");
-		if (!(Net.IsHost && from == Net.LocalPlayer))
-		{
-			Snapshot.SendTo(from, "outing return");
-		}
 	}
 
 	private static GameItem Bring(Subtree subtree, bool fresh)

@@ -12,6 +12,10 @@ public sealed class OutingA : DayNightBotBase
 
 	private int carriedNew;
 
+	private int loaded0;
+
+	private string digest0 = "";
+
 	private int searches;
 
 	private long packId;
@@ -95,6 +99,15 @@ public sealed class OutingA : DayNightBotBase
 			searches++;
 			return StepStatus.Running;
 		});
+		Do("the-shop-as-i-left-it", delegate
+		{
+			loaded0 = Machines.LoadedCount;
+			using (HostTrip.AtHome())
+			{
+				digest0 = ItemsMove.Digest();
+			}
+			return "shop items at home " + digest0 + "; loads so far " + loaded0 + "; my trip numbers its items from " + DayNightBotBase.Ps.currentUniqueId;
+		});
 		Do("pocket", delegate
 		{
 			EmporiumEntry instance = EmporiumEntry.Instance;
@@ -119,14 +132,27 @@ public sealed class OutingA : DayNightBotBase
 			GameItem childItem = instance.afterhourPocketSlotInvBackpack.childItem;
 			return list.Count + " found; pocketed " + carriedNew + " (" + string.Join(",", list.Take(2).Select((GameItem x) => x.identifier)) + "); backpack in its slot " + ((childItem != null) ? childItem.identifier : "none");
 		});
+		WaitServer("b-moved-something-at-home-and-my-shop-has-it", 60f, delegate(IReadOnlyDictionary<string, string> v)
+		{
+			string text;
+			using (HostTrip.AtHome())
+			{
+				text = ItemsMove.Digest();
+			}
+			return text != digest0 && text == DayNightBotBase.V(v, "items.digest");
+		}, "items.digest");
+		Check("still-at-the-dump", () => Outings.Private && DayNightOuting.LocationId == "dumping_ground", () => "private " + Outings.Private + ", at " + DayNightOuting.LocationId);
 		Do("return", delegate
 		{
 			MapUIManager.Instance.ReturnNow();
 			return "coming home (no request: dayNight.return sent " + DayNightBotBase.SentOf("dayNight.return") + ")";
 		});
 		WaitFor("home-resynced", 60f, () => !Outings.Private && DayNightBotBase.Live && DayNightOuting.LocationId == "", () => "private " + Outings.Private + ", live " + DayNightBotBase.Live + ", at " + DayNightOuting.LocationId);
+		Check("no-reload-on-coming-home", () => Machines.LoadedCount == loaded0, () => "loads " + Machines.LoadedCount + " (was " + loaded0 + " before the trip)");
 		WaitServer("server-sees-home", 20f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.I(v, "out.count") == 0, "out.count");
 		Check("items-home", () => Items.All().Count() == itemsBefore + carriedNew, () => "items now " + Items.All().Count() + ", before " + itemsBefore + " + carried " + carriedNew);
+		Check("shop-ids-only", () => DayNightBotBase.Ps.currentUniqueId < HostTrip.PrivateIdBase && Items.All().All((GameItem i) => i.uniqueId < HostTrip.PrivateIdBase), () => "id counter " + DayNightBotBase.Ps.currentUniqueId + "; items numbered from the trip's range still here: " + Items.All().Count((GameItem i) => i.uniqueId >= HostTrip.PrivateIdBase));
+		Agree("same-shop-after", 30f, "core.digest", "items.digest");
 		Check("visit-used", () => DayNightBotBase.Ps.healthData.wentToAfterhoursLastNight, () => "visits left " + DayNightBotBase.Ps.visitLeftTonight + ", went " + DayNightBotBase.Ps.healthData.wentToAfterhoursLastNight);
 		Agree("same-after", 30f, "dn.digest", "cash", "dn.visit", "dn.state");
 		Ready("ready");

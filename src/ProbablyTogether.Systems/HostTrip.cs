@@ -63,6 +63,9 @@ internal static class HostTrip
 
 		public AfterhourLocation Current;
 
+		/// Swapped only on a client: the server owns the shop's ids, so a client's trip numbers items from a private range.
+		public int Uid;
+
 		public static Body Capture(PlayerStore s)
 		{
 			Body body = new Body
@@ -76,7 +79,8 @@ internal static class HostTrip
 				Browse = s.daySinceLastBrowseUpgrade,
 				Places = s.afterhourState,
 				Customer = s.currentClientInstance,
-				Arrived = s.isClientArrived
+				Arrived = s.isClientArrived,
+				Uid = s.currentUniqueId
 			};
 			StoreClientData storeClientData = PlayerStore.GetStoreClientData();
 			body.Waste = ((storeClientData != null) ? storeClientData.nuclearWasteDumped : 0);
@@ -105,6 +109,10 @@ internal static class HostTrip
 			s.afterhourState = Places;
 			s.currentClientInstance = Customer;
 			s.isClientArrived = Arrived;
+			if (!Net.IsServer)
+			{
+				s.currentUniqueId = Uid;
+			}
 			StoreClientData storeClientData = PlayerStore.GetStoreClientData();
 			if (storeClientData != null)
 			{
@@ -161,6 +169,8 @@ internal static class HostTrip
 	private static Dictionary<string, string> shopBefore;
 
 	internal static string LastLeak = "";
+
+	internal const int PrivateIdBase = 1000000000;
 
 	private static GameGridInventory frontHold;
 
@@ -421,6 +431,15 @@ internal static class HostTrip
 		Pending = null;
 		CountersBorrowed = false;
 		Out = true;
+		if (!Net.IsServer)
+		{
+			store.currentUniqueId = PrivateIdBase + Math.Max(0, Net.LocalPlayer % 20) * 40000000;
+			if (pack != null)
+			{
+				// The server removes the shop's bag next; the trip travels with a renumbered copy.
+				pack.ids = null;
+			}
+		}
 		try
 		{
 			SetFrontAside();
@@ -450,7 +469,7 @@ internal static class HostTrip
 				Log.Error("outing: packing the host's bag threw: " + ex);
 			}
 		}
-		Log.Info("outing: the host's private trip starts; the shop stays open to the players at home");
+		Log.Info(Net.IsHost ? "outing: the host's private trip starts; the shop stays open to the players at home" : "outing: this player's private trip starts; the shop stays live underneath (its changes keep arriving)");
 		return true;
 	}
 
@@ -500,9 +519,9 @@ internal static class HostTrip
 		{
 			Log.Error("outing: settling the host's trip with the shop threw: " + ex2);
 		}
-		Log.Info("outing: the host's private trip ends (" + Swaps + " look(s) at the shop at home while away)");
+		Log.Info("outing: " + (Net.IsHost ? "the host's" : "this player's") + " private trip ends (" + Swaps + " look(s) at the shop at home while away)");
 		Swaps = 0;
-		if (pending != null && Net.IsHost)
+		if (pending != null)
 		{
 			Net.ToServer("outing.return", pending);
 		}
@@ -601,7 +620,7 @@ internal static class HostTrip
 	{
 		if (Out)
 		{
-			Log.Info("outing: the host's private trip is dropped");
+			Log.Info("outing: " + (Net.IsHost ? "the host's" : "this player's") + " private trip is dropped");
 		}
 		if (HomeView)
 		{
