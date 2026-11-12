@@ -162,6 +162,10 @@ internal static class Digest
 			}
 			foreach (GameItem item in GraphUtils.FindAllChildrenType<GameItem>(list[i], (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
 			{
+				if (Systems.HostTrip.NotAtHome(item))
+				{
+					continue;
+				}
 				num += ItemHash(item, i);
 				num2++;
 			}

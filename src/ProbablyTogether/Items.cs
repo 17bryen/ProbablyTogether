@@ -410,6 +410,10 @@ public static class Items
 			}
 			foreach (GameItem item in GraphUtils.FindAllChildrenType<GameItem>(val, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
 			{
+				if (Systems.HostTrip.NotAtHome(item))
+				{
+					continue;
+				}
 				if (hashSet.Add(item))
 				{
 					list.Add(item);

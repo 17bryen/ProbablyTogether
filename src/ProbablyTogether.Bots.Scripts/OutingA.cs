@@ -6,8 +6,35 @@ using UnityEngine;
 
 namespace ProbablyTogether.Bots.Scripts;
 
-public sealed class OutingA : DayNightBotBase
+/// Individual outing, the traveller: goes to the dump alone, pockets loot, comes home, and must match the server's shop.
+public sealed class OutingAJ : OutingA
 {
+	public OutingAJ()
+		: base(toJackson: true)
+	{
+	}
+}
+
+public class OutingA : DayNightBotBase
+{
+	private readonly bool toJackson;
+
+	private string repFaction = "";
+
+	private double repAfter;
+
+	private int cashAfter;
+
+	public OutingA()
+		: this(toJackson: false)
+	{
+	}
+
+	protected OutingA(bool toJackson)
+	{
+		this.toJackson = toJackson;
+	}
+
 	private int itemsBefore;
 
 	private int carriedNew;
@@ -20,7 +47,7 @@ public sealed class OutingA : DayNightBotBase
 
 	private long packId;
 
-	public override string Name => "outing-a";
+	public override string Name => toJackson ? "outing-aj" : "outing-a";
 
 	public override BotRole Role => BotRole.Client;
 
@@ -84,12 +111,38 @@ public sealed class OutingA : DayNightBotBase
 		WaitServer("server-sees-out", 20f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.I(v, "out.count") == 1, "out.count", "dn.loc");
 		Do("travel", delegate
 		{
-			MapUIManager.Instance.Travel(AfterhourLocation.Get("dumping_ground"));
+			MapUIManager.Instance.Travel(AfterhourLocation.Get(toJackson ? "dr_jackson" : "dumping_ground"));
 			return "travelling (no request: dayNight.travel sent " + DayNightBotBase.SentOf("dayNight.travel") + ")";
 		});
-		WaitFor("at-dumping-ground", 20f, () => DayNightOuting.LocationId == "dumping_ground", () => "at " + DayNightOuting.LocationId);
+		WaitFor("at-dumping-ground", 20f, () => DayNightOuting.LocationId == (toJackson ? "dr_jackson" : "dumping_ground"), () => "at " + DayNightOuting.LocationId);
+		if (toJackson)
+		{
+			Check("the-stall-has-the-counters", () => HostTrip.CountersBorrowed && ((GameInventory)EmporiumEntry.Instance.frontInvinvElement).childItems.Count > 0, () => "counters borrowed " + HostTrip.CountersBorrowed + "; wares on the trade counter " + ((GameInventory)EmporiumEntry.Instance.frontInvinvElement).childItems.Count);
+			Do("a-deal-at-the-stall", delegate
+			{
+				// Selling to Dr. Jackson in the traveller's game: money in, faction standing changed, the item on the sold list.
+				StoreReputation val = DayNightBotBase.Ps.storeReputations.FirstOrDefault((StoreReputation r) => r != null);
+				repFaction = ((val != null) ? val.factionId : "");
+				repAfter = ((val != null) ? (val.GetReputationExact() + 2.5) : 0.0);
+				if (val != null)
+				{
+					val.SetReputation(repAfter);
+				}
+				GameItem val2 = ItemSpawner.Spawn("bottled_water");
+				GeneralHelper.SetItemOwned(val2, false);
+				((GameInventory)EmporiumEntry.Instance.soldElement).UncheckedAccept(val2);
+				cashAfter = DayNightBotBase.Ps.playerCash + 37;
+				DayNightBotBase.Ps.playerCash = cashAfter;
+				return "sold something for 37: cash " + cashAfter + ", " + repFaction + " standing " + repAfter + ", sold item numbered " + val2.uniqueId;
+			});
+		}
 		Step("search-all", 90f, delegate(BotStep st)
 		{
+			if (toJackson)
+			{
+				st.Detail = "not at the dump";
+				return StepStatus.Pass;
+			}
 			if (!ScavHelper.CanScavenge())
 			{
 				st.Detail = searches + " search(es); wound " + DayNightBotBase.Ps.healthData.woundState + "; " + ((GameInventory)EmporiumEntry.Instance.afterhourInventory).childItems.Count + " item(s) on the ground";
@@ -141,7 +194,7 @@ public sealed class OutingA : DayNightBotBase
 			}
 			return text != digest0 && text == DayNightBotBase.V(v, "items.digest");
 		}, "items.digest");
-		Check("still-at-the-dump", () => Outings.Private && DayNightOuting.LocationId == "dumping_ground", () => "private " + Outings.Private + ", at " + DayNightOuting.LocationId);
+		Check("still-at-the-dump", () => Outings.Private && DayNightOuting.LocationId == (toJackson ? "dr_jackson" : "dumping_ground"), () => "private " + Outings.Private + ", at " + DayNightOuting.LocationId);
 		Do("return", delegate
 		{
 			MapUIManager.Instance.ReturnNow();
@@ -150,9 +203,21 @@ public sealed class OutingA : DayNightBotBase
 		WaitFor("home-resynced", 60f, () => !Outings.Private && DayNightBotBase.Live && DayNightOuting.LocationId == "", () => "private " + Outings.Private + ", live " + DayNightBotBase.Live + ", at " + DayNightOuting.LocationId);
 		Check("no-reload-on-coming-home", () => Machines.LoadedCount == loaded0, () => "loads " + Machines.LoadedCount + " (was " + loaded0 + " before the trip)");
 		WaitServer("server-sees-home", 20f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.I(v, "out.count") == 0, "out.count");
-		Check("items-home", () => Items.All().Count() == itemsBefore + carriedNew, () => "items now " + Items.All().Count() + ", before " + itemsBefore + " + carried " + carriedNew);
-		Check("shop-ids-only", () => DayNightBotBase.Ps.currentUniqueId < HostTrip.PrivateIdBase && Items.All().All((GameItem i) => i.uniqueId < HostTrip.PrivateIdBase), () => "id counter " + DayNightBotBase.Ps.currentUniqueId + "; items numbered from the trip's range still here: " + Items.All().Count((GameItem i) => i.uniqueId >= HostTrip.PrivateIdBase));
+		Check("items-home", () => Items.All().Count() == itemsBefore + carriedNew + (toJackson ? 1 : 0), () => "items now " + Items.All().Count() + ", before " + itemsBefore + " + carried " + carriedNew + (toJackson ? " + 1 sold at the stall" : ""));
+		// What the trip sold returns from the server as the shop's own item shortly after the return.
+		WaitFor("shop-ids-only", 15f, () => DayNightBotBase.Ps.currentUniqueId < HostTrip.PrivateIdBase && Items.All().All((GameItem i) => i.uniqueId < HostTrip.PrivateIdBase), () => "id counter " + DayNightBotBase.Ps.currentUniqueId + "; items numbered from the trip's range still here: " + string.Join(", ", from i in Items.All()
+			where i.uniqueId >= HostTrip.PrivateIdBase
+			select i.identifier + "#" + i.uniqueId + " in " + ((i.parentInventory != null) ? i.parentInventory.GetType().Name : "nothing") + (((object)i.parentInventory == EmporiumEntry.Instance.soldElement) ? " (sold list)" : (((object)i.parentInventory == EmporiumEntry.Instance.backInvinvElement) ? " (back counter)" : (((object)i.parentInventory == EmporiumEntry.Instance.frontInvinvElement) ? " (front counter)" : (((object)i.parentInventory == EmporiumEntry.Instance.invElement) ? " (storage)" : ""))))));
 		Agree("same-shop-after", 30f, "core.digest", "items.digest");
+		if (toJackson)
+		{
+			Check("my-deal-is-the-shops", delegate
+			{
+				StoreReputation val = DayNightBotBase.Ps.storeReputations.FirstOrDefault((StoreReputation r) => r != null && r.factionId == repFaction);
+				return DayNightBotBase.Ps.playerCash == cashAfter && val != null && Math.Abs(val.GetReputationExact() - repAfter) < 1E-06 && HostTrip.LastLeak.Contains("sold:1");
+			}, () => "cash " + DayNightBotBase.Ps.playerCash + " (expected " + cashAfter + "); what the trip changed: " + HostTrip.LastLeak);
+			Agree("same-records-as-the-server", 30f, "econ.digest", "cash");
+		}
 		Check("visit-used", () => DayNightBotBase.Ps.healthData.wentToAfterhoursLastNight, () => "visits left " + DayNightBotBase.Ps.visitLeftTonight + ", went " + DayNightBotBase.Ps.healthData.wentToAfterhoursLastNight);
 		Agree("same-after", 30f, "dn.digest", "cash", "dn.visit", "dn.state");
 		Ready("ready");

@@ -170,7 +170,37 @@ internal static class HostTrip
 
 	internal static string LastLeak = "";
 
+	/// Item ids below this are the server's; a client's trip numbers from here up.
 	internal const int PrivateIdBase = 1000000000;
+
+	// Client: faction standing at trip start, and how much of the movement since came from the shop at home.
+	private static Dictionary<string, double[]> repStart;
+
+	private static Dictionary<string, double[]> repAtEnter;
+
+	private static readonly Dictionary<string, double[]> repHome = new Dictionary<string, double[]>(StringComparer.Ordinal);
+
+	/// An item the client's own trip created; it becomes the shop's when the trip is handed over.
+	internal static bool NotAtHome(GameItem item)
+	{
+		return HomeView && !Net.IsServer && item != null && item.uniqueId >= PrivateIdBase;
+	}
+
+	private static Dictionary<string, double[]> RepNow(PlayerStore store)
+	{
+		Dictionary<string, double[]> dictionary = new Dictionary<string, double[]>(StringComparer.Ordinal);
+		if (store?.storeReputations != null)
+		{
+			foreach (StoreReputation storeReputation in store.storeReputations)
+			{
+				if (storeReputation != null && storeReputation.factionId != null)
+				{
+					dictionary[storeReputation.factionId] = new double[4] { storeReputation.GetReputationExact(), storeReputation.strength, storeReputation.influence, storeReputation.actionCooldown };
+				}
+			}
+		}
+		return dictionary;
+	}
 
 	private static GameGridInventory frontHold;
 
@@ -217,6 +247,10 @@ internal static class HostTrip
 		}
 		trip = Body.Capture(store);
 		home.Restore(store);
+		if (!Net.IsServer)
+		{
+			repAtEnter = RepNow(store);
+		}
 		homeCash = store.playerCash;
 		homeFavor = store.wildFavor;
 		HomeView = true;
@@ -250,6 +284,24 @@ internal static class HostTrip
 		home = Body.Capture(store);
 		trip.Restore(store);
 		trip = null;
+		if (!Net.IsServer && repAtEnter != null)
+		{
+			foreach (KeyValuePair<string, double[]> item in RepNow(store))
+			{
+				if (repAtEnter.TryGetValue(item.Key, out var value))
+				{
+					if (!repHome.TryGetValue(item.Key, out var value2))
+					{
+						value2 = (repHome[item.Key] = new double[4]);
+					}
+					for (int i = 0; i < 4; i++)
+					{
+						value2[i] += item.Value[i] - value[i];
+					}
+				}
+			}
+			repAtEnter = null;
+		}
 		Outings.HomeCashMoved(store.playerCash - homeCash, store.wildFavor - homeFavor);
 	}
 
@@ -433,6 +485,9 @@ internal static class HostTrip
 		Out = true;
 		if (!Net.IsServer)
 		{
+			repStart = RepNow(store);
+			repHome.Clear();
+			repAtEnter = null;
 			store.currentUniqueId = PrivateIdBase + Math.Max(0, Net.LocalPlayer % 20) * 40000000;
 			if (pack != null)
 			{
@@ -456,6 +511,10 @@ internal static class HostTrip
 				GameItem val = Items.Decode(pack);
 				if (val != null)
 				{
+					if (!Net.IsServer)
+					{
+						Outings.Renumber(val);
+					}
 					GraphUtils.TryAcceptAll((GraphNodeStorage)(object)instance.afterhourPocketSlotInvBackpack, val, -1);
 					if (instance.afterhourPocketSlotInvBackpack.childItem != val)
 					{
@@ -505,6 +564,17 @@ internal static class HostTrip
 				{
 					Log.Warn("outing: clearing the stall's marks from the shop's items: " + ex.Message);
 				}
+			}
+		}
+		if (!Net.IsServer && pending != null)
+		{
+			try
+			{
+				ClientSettle(store, pending);
+			}
+			catch (Exception ex3)
+			{
+				Log.Error("outing: writing down what the trip did to the shop threw: " + ex3);
 			}
 		}
 		Out = false;
@@ -584,6 +654,183 @@ internal static class HostTrip
 		{
 			Log.Info("outing: the host's trip changed the shop itself (" + LastLeak + "); reputation and " + num + " sold item(s) sent to everyone" + ((list.Exists((string x) => x != "reputation")) ? "; other records are not sent yet and wait for the morning" : ""));
 		}
+	}
+
+	/// Client: faction standing goes to the server as differences, stall sales as items, with the return.
+	private static void ClientSettle(PlayerStore store, MsgOutReturn pending)
+	{
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		if (store == null || (Object)(object)instance == (Object)null)
+		{
+			return;
+		}
+		List<string> list = new List<string>();
+		if (repStart != null)
+		{
+			foreach (KeyValuePair<string, double[]> item in RepNow(store))
+			{
+				if (!repStart.TryGetValue(item.Key, out var value))
+				{
+					continue;
+				}
+				repHome.TryGetValue(item.Key, out var value2);
+				double[] array = new double[4];
+				bool flag = false;
+				for (int i = 0; i < 4; i++)
+				{
+					array[i] = item.Value[i] - value[i] - ((value2 != null) ? value2[i] : 0.0);
+					flag |= Math.Abs(array[i]) > 1E-09;
+				}
+				if (flag)
+				{
+					if (pending.rep == null)
+					{
+						pending.rep = new List<MsgHostRep>();
+					}
+					pending.rep.Add(new MsgHostRep
+					{
+						f = item.Key,
+						v = array[0],
+						s = (int)Math.Round(array[1]),
+						i = (int)Math.Round(array[2]),
+						c = (int)Math.Round(array[3])
+					});
+					list.Add(item.Key + " " + array[0].ToString("+0.##;-0.##", System.Globalization.CultureInfo.InvariantCulture));
+				}
+			}
+		}
+		repStart = null;
+		repHome.Clear();
+		List<Subtree> list2 = new List<Subtree>();
+		if (instance.soldElement != null)
+		{
+			foreach (GameItem item2 in new List<GameItem>(((GameInventory)instance.soldElement).childItems))
+			{
+				if (item2 == null || soldBefore.Contains(item2) || item2.uniqueId < PrivateIdBase)
+				{
+					continue;
+				}
+				Subtree subtree = Items.Encode(item2);
+				if (subtree != null)
+				{
+					subtree.ids = null;
+					list2.Add(subtree);
+				}
+				// It comes back as the shop's item, with the shop's id, once the server has it.
+				List<GameItem> list3 = new List<GameItem> { item2 };
+				list3.AddRange(GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)item2, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null));
+				using (Net.Apply())
+				{
+					item2.Destroy();
+				}
+				foreach (GameItem item3 in list3)
+				{
+					Ids.Forget(item3);
+				}
+			}
+		}
+		soldBefore.Clear();
+		if (list2.Count > 0)
+		{
+			pending.sold = list2.ToArray();
+		}
+		LastLeak = string.Join(",", list) + ((list2.Count > 0) ? (((list.Count > 0) ? "," : "") + "sold:" + list2.Count) : "");
+		if (LastLeak.Length > 0)
+		{
+			Log.Info("outing: this trip's deals changed the shop's records (" + LastLeak + "); sent to the server with the return");
+		}
+	}
+
+	internal static void ServerSettle(PlayerStore store, MsgOutReturn m, string who)
+	{
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		if (store == null || m == null || (Object)(object)instance == (Object)null || ((m.rep == null || m.rep.Count == 0) && (m.sold == null || m.sold.Length == 0)))
+		{
+			return;
+		}
+		int num = 0;
+		if (m.rep != null && store.storeReputations != null)
+		{
+			using (Net.Apply())
+			{
+				foreach (MsgHostRep item in m.rep)
+				{
+					if (item == null || num >= 16)
+					{
+						continue;
+					}
+					StoreReputation storeReputation = store.storeReputations.Find((StoreReputation r) => r != null && r.factionId == item.f);
+					if (storeReputation != null && !double.IsNaN(item.v) && !double.IsInfinity(item.v))
+					{
+						// Caps one night's change to a standing.
+						double num2 = Math.Max(-50.0, Math.Min(50.0, item.v));
+						if (num2 != 0.0)
+						{
+							storeReputation.SetReputation(storeReputation.GetReputationExact() + num2);
+						}
+						storeReputation.strength += Math.Max(-20, Math.Min(20, item.s));
+						storeReputation.influence += Math.Max(-20, Math.Min(20, item.i));
+						storeReputation.actionCooldown = Math.Max(0, storeReputation.actionCooldown + Math.Max(-20, Math.Min(20, item.c)));
+						num++;
+					}
+				}
+			}
+		}
+		PublishRep(store);
+		int num3 = 0;
+		if (m.sold != null && instance.soldElement != null)
+		{
+			Subtree[] sold = m.sold;
+			foreach (Subtree subtree in sold)
+			{
+				if (subtree == null || num3 >= 64)
+				{
+					continue;
+				}
+				subtree.ids = null;
+				GameItem val = null;
+				using (Net.Apply())
+				{
+					val = Items.Decode(subtree);
+					if (val != null)
+					{
+						Outings.Renumber(val);
+						GeneralHelper.SetItemOwned(val, false);
+						((GameInventory)instance.soldElement).UncheckedAccept(val);
+					}
+				}
+				if (val != null)
+				{
+					ItemsMove.BroadcastSubtree(val, "sold on a trip");
+					num3++;
+				}
+			}
+		}
+		LastLeak = ((num > 0) ? "reputation" : "") + ((num3 > 0) ? (((num > 0) ? "," : "") + "sold:" + num3) : "");
+		Log.Info("outing: " + who + "'s trip changed the shop's records (" + LastLeak + "); sent to everyone");
+	}
+
+	private static void PublishRep(PlayerStore store)
+	{
+		MsgHostSync msgHostSync = new MsgHostSync();
+		if (store.storeReputations != null)
+		{
+			foreach (StoreReputation storeReputation in store.storeReputations)
+			{
+				if (storeReputation != null)
+				{
+					msgHostSync.rep.Add(new MsgHostRep
+					{
+						f = storeReputation.factionId,
+						v = storeReputation.GetReputationExact(),
+						s = storeReputation.strength,
+						i = storeReputation.influence,
+						c = storeReputation.actionCooldown
+					});
+				}
+			}
+		}
+		Net.ToAll("host.sync", msgHostSync);
 	}
 
 	[SystemInit]

@@ -50,6 +50,11 @@ public sealed class MsgOutReturn
 	public int waste;
 
 	public bool jackson;
+
+	/// How the shop's faction standings moved through the trip's deals (differences, not values).
+	public List<MsgHostRep> rep;
+
+	public Subtree[] sold;
 }
 
 public sealed class MsgOutReturned
@@ -815,6 +820,17 @@ public static class Outings
 				}
 			}
 		}
+		if (!(Net.IsHost && from == Net.LocalPlayer))
+		{
+			try
+			{
+				HostTrip.ServerSettle(store, m, value.Name);
+			}
+			catch (Exception ex)
+			{
+				Log.Error("outing: settling " + value.Name + "'s trip with the shop threw: " + ex);
+			}
+		}
 		MsgOutReturned msgOutReturned = new MsgOutReturned
 		{
 			by = from,
@@ -855,6 +871,33 @@ public static class Outings
 			}
 		}
 		Log.Info("outing: " + value.Name + (m.went ? (" came back from " + string.Join(",", list)) : " cancelled the trip") + " with " + num + " item(s)" + ((num2 > 0) ? (", " + num2 + " could not be brought in") : "") + "; visits left tonight " + store.visitLeftTonight + "; " + away.Count + " player(s) still out");
+	// No snapshot for the traveller: its game kept the shop live while out.
+	}
+
+	/// Gives an item and everything in it new numbers from this copy's counter (the trip's own range while travelling).
+	internal static void Renumber(GameItem val)
+	{
+		List<GameItem> list = new List<GameItem> { val };
+		list.AddRange(GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)val, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null));
+		foreach (GameItem item in list)
+		{
+			Ids.Forget(item);
+			item.uniqueId = 0;
+		}
+		foreach (GameItem item2 in list)
+		{
+			long num = Ids.Assign(item2);
+			if (item2.itemFeatures != null)
+			{
+				foreach (ItemFeature itemFeature in item2.itemFeatures)
+				{
+					if (itemFeature != null)
+					{
+						itemFeature.parentItemUniqueId = (int)num;
+					}
+				}
+			}
+		}
 	}
 
 	private static GameItem Bring(Subtree subtree, bool fresh)
@@ -871,27 +914,7 @@ public static class Outings
 				}
 				if (fresh)
 				{
-					List<GameItem> list = new List<GameItem> { val };
-					list.AddRange(GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)val, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null));
-					foreach (GameItem item in list)
-					{
-						Ids.Forget(item);
-						item.uniqueId = 0;
-					}
-					foreach (GameItem item2 in list)
-					{
-						long num = Ids.Assign(item2);
-						if (item2.itemFeatures != null)
-						{
-							foreach (ItemFeature itemFeature in item2.itemFeatures)
-							{
-								if (itemFeature != null)
-								{
-									itemFeature.parentItemUniqueId = (int)num;
-								}
-							}
-						}
-					}
+					Renumber(val);
 				}
 				EmporiumEntry instance = EmporiumEntry.Instance;
 				if (HostTrip.CountersBorrowed)
