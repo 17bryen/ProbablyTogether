@@ -134,17 +134,6 @@ public static class TradeVisits
 			{
 				list.Add(new KeyValuePair<string, string>(value, value2));
 			}
-			if (item.x.TryGetValue(Specs.MoreFact, out var value3))
-			{
-				string[] array = value3.Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-				foreach (string text2 in array)
-				{
-					if (text2 != text && item.x.TryGetValue(DayFact + "." + text2, out var value4))
-					{
-						list.Add(new KeyValuePair<string, string>(text2, value4));
-					}
-				}
-			}
 			foreach (KeyValuePair<string, string> item2 in list)
 			{
 				if (!int.TryParse(item2.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))

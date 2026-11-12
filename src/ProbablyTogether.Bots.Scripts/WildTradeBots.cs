@@ -69,7 +69,7 @@ public sealed class WildTradeH : WildTradeBotBase
 			return "bought on the server side; my bay held " + bay0 + " item(s) before";
 		});
 		WaitFor("i-hold-three-trades-with-their-kits", 20f, () => Specs.Holds(Members.LocalSeat, "FARMER") && Specs.Holds(Members.LocalSeat, "GUNSMITH") && Specs.Holds(Members.LocalSeat, "WATER_MERCHANT") && Specs.OwnerOfType("hydroponic") == Members.LocalSeat && Specs.OwnerOfType("printer") == Members.LocalSeat && Items.All().Any((GameItem i) => i.identifier == "hydroponic") && Items.All().Any((GameItem i) => i.identifier == "printer"), () => Trades + "; my bay holds " + InBay(Members.LocalSeat) + " item(s) (was " + bay0 + "); a hydroponic in the shop: " + Items.All().Any((GameItem i) => i.identifier == "hydroponic") + ", a printer: " + Items.All().Any((GameItem i) => i.identifier == "printer"));
-		Check("their-calendars-start-today", () => Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".GUNSMITH") == day0.ToString() && Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".FARMER") == day0.ToString(), () => "gunsmith from day " + Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".GUNSMITH") + ", farmer from day " + Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".FARMER") + " (today is " + day0 + ", " + DayNightBotBase.State + ")");
+		Check("no-story-comes-with-a-trade-from-wild", () => Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".GUNSMITH") == null && Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".FARMER") == null, () => "first-day facts for the gunsmith's and farmer's trade: " + (Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".GUNSMITH") ?? "none") + " / " + (Members.Fact(Members.LocalSeat, TradeVisits.DayFact + ".FARMER") ?? "none"));
 		WaitFor("b-took-the-ranchers-trade-with-a-real-click", 180f, () => Specs.TakenBy("RANCHER") == Members.SeatOf(Other) && Specs.OwnerOfType("animal_cage") == Members.SeatOf(Other) && NetworkUpgrade.IsRetiredRancherUnlocked(), () => Trades + "; last refusal here: '" + Economy.LastRefusal + "'");
 		WaitFor("b-was-refused-the-farmers-entry", 60f, () => Economy.LastRefusal.Contains("PLANT_DNA") && Economy.LastRefusal.Contains("is the shop's farmer"), () => "last refusal: '" + Economy.LastRefusal + "'");
 		Check("plant-dna-not-sold", () => !NetworkUpgrade.IsPlantDnaUnlocked(), () => "Plant DNA unlocked: " + NetworkUpgrade.IsPlantDnaUnlocked());
@@ -80,11 +80,8 @@ public sealed class WildTradeH : WildTradeBotBase
 			return "sent";
 		});
 		WaitFor("opened", 40f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State + "; refused: " + DayNight.LastRefusedWhat + " " + DayNight.LastRefusedWhy);
-		Check("the-gunsmiths-first-customer-asks-for-me", delegate
-		{
-			StoreClient storeClient = Queued("ll_gun_buyer");
-			return storeClient != null && TradeVisits.SeatFor("ll_gun_buyer") == Members.LocalSeat && (storeClient.mainDialogue?.plainText ?? "").Contains(Members.NameOf(Members.LocalSeat)) && (storeClient.mainDialogue?.plainText ?? "").Contains("gunsmith");
-		}, () => "in the queue: " + (Queued("ll_gun_buyer") != null) + ", for seat " + TradeVisits.SeatFor("ll_gun_buyer") + "; first line: '" + (Queued("ll_gun_buyer")?.mainDialogue?.plainText ?? "") + "'");
+		Check("no-scripted-visitor-for-my-trades-from-wild", () => Queued("ll_gun_buyer") == null && TradeVisits.SeatFor("ll_gun_buyer") == 0, () => "the gunsmith's first customer in the queue: " + (Queued("ll_gun_buyer") != null));
+		Check("the-picked-trade-keeps-its-story", () => Queued("cartelIntro") != null && TradeVisits.SeatFor("cartelIntro") == Members.SeatOf(Other), () => "the cartel's man in the queue: " + (Queued("cartelIntro") != null) + ", for seat " + TradeVisits.SeatFor("cartelIntro") + " (the chemist picked that trade at the start)");
 		Delay("b-checks", 30f);
 	}
 }
@@ -134,11 +131,7 @@ public sealed class WildTradeB : WildTradeBotBase
 		});
 		WaitFor("opened-by-host", 120f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Delay("the-opening-lands", 2f);
-		Check("the-gunsmiths-first-customer-asks-for-the-host", delegate
-		{
-			StoreClient storeClient = Queued("ll_gun_buyer");
-			return storeClient != null && TradeVisits.SeatFor("ll_gun_buyer") == 1 && (storeClient.mainDialogue?.plainText ?? "").Contains(Members.NameOf(1));
-		}, () => "first line here: '" + (Queued("ll_gun_buyer")?.mainDialogue?.plainText ?? "") + "'");
+		Check("only-my-picked-trade-has-a-story", () => Queued("ll_gun_buyer") == null && Queued("cartelIntro") != null && TradeVisits.SeatFor("cartelIntro") == Members.LocalSeat && (Queued("cartelIntro").mainDialogue?.plainText ?? "").Contains(Members.NameOf(Members.LocalSeat)), () => "gunsmith's first customer here: " + (Queued("ll_gun_buyer") != null) + "; the cartel's man: '" + (Queued("cartelIntro")?.mainDialogue?.plainText ?? "") + "'");
 		Check("no-reload", () => DayNight.Mismatches == 0 && Digest.ReloadsAsked == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked " + Digest.ReloadsAsked);
 	}
 }

@@ -273,8 +273,7 @@ public static class Specs
 		Members.SetFacts(num, new Dictionary<string, string>
 		{
 			{ MoreFact, string.IsNullOrEmpty(value) ? text : (value + "," + text) },
-			{ "mach", string.Join(",", list) },
-			{ TradeVisits.DayFact + "." + text, TradeVisits.DayForPick() }
+			{ "mach", string.Join(",", list) }
 		});
 		// A trade taken through Joe Wild brings no scripted visitors.
 		WildTaken++;
