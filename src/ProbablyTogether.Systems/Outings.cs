@@ -748,7 +748,9 @@ public static class Outings
 			return;
 		}
 		int num = m.cash;
-		if (store.playerCash + num < 0)
+		// The host's own game is the shop's cash, so its trip spending is already deducted.
+		bool flag = Net.IsHost && from == Net.LocalPlayer;
+		if (!flag && store.playerCash + num < 0)
 		{
 			Log.Warn("outing: " + Net.PlayerName(from) + " spent " + -num + " but the shop has " + store.playerCash + "; clamped");
 			num = -store.playerCash;

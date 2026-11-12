@@ -19,18 +19,59 @@ public static class Log
 
 	internal static int GateCount => gates.Count;
 
+	/// The last lines this copy logged, newest last (for desync reports).
+	private static readonly Queue<string> recent = new Queue<string>();
+
+	private static readonly object recentLock = new object();
+
+	private static void Keep(char level, string m)
+	{
+		try
+		{
+			string text = Text.OneLine(m);
+			if (text.Length > 500)
+			{
+				text = text.Substring(0, 500) + "...";
+			}
+			lock (recentLock)
+			{
+				recent.Enqueue(DateTime.UtcNow.ToString("HH:mm:ss.fff") + " " + level + " " + text);
+				while (recent.Count > 240)
+				{
+					recent.Dequeue();
+				}
+			}
+		}
+		catch
+		{
+		}
+	}
+
+	internal static string Tail(int lines)
+	{
+		lock (recentLock)
+		{
+			string[] array = recent.ToArray();
+			int num = Math.Max(0, array.Length - lines);
+			return string.Join("\n", array, num, array.Length - num);
+		}
+	}
+
 	public static void Info(string m)
 	{
+		Keep('I', m);
 		Debug.Log((object)("[ProbablyTogether] " + Text.OneLine(m)));
 	}
 
 	public static void Warn(string m)
 	{
+		Keep('W', m);
 		Debug.LogWarning((object)("[ProbablyTogether] " + Text.OneLine(m)));
 	}
 
 	public static void Error(string m)
 	{
+		Keep('E', m);
 		Debug.LogError((object)("[ProbablyTogether] " + Text.OneLine(m)));
 	}
 

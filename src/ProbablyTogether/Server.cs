@@ -306,7 +306,11 @@ internal static class Server
 		{
 			if (TryRead<MsgResync>(value, kind, d, out var msg4))
 			{
-				Snapshot.OnResyncRequest(value, msg4?.reason ?? "asked");
+				DesyncReport.Receive(value.Info.Name, msg4?.reason ?? "asked", msg4?.report, msg4 != null && msg4.hold);
+				if (msg4 == null || !msg4.hold)
+				{
+					Snapshot.OnResyncRequest(value, msg4?.reason ?? "asked");
+				}
 			}
 			return;
 		}

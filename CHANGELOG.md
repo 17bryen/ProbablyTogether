@@ -2,6 +2,18 @@
 
 All changes to Probably Together.
 
+## 0.4.8 - 2026-11-11
+
+Protocol 7. Every player needs it.
+
+### Added
+- When a copy disagrees with the server, both sides are saved to a report in the shop's `desync-reports` folder and the log names what differed.
+- Differences a copy sits out (at night, during trips) are reported too, at most once a minute.
+
+### Fixed
+- The host's spending on a trip now reaches the players as the full amount.
+- The replay check no longer asks for a reload at night or while someone is out.
+
 ## 0.4.7 - 2026-11-11
 
 Protocol 6. Every player needs it.

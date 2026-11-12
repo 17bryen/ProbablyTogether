@@ -275,6 +275,9 @@ public static class Replay
 		}
 	}
 
+	/// Replay-check differences this copy sat out (night, someone out).
+	internal static int SatOut;
+
 	private static void Mismatch(string detail)
 	{
 		ChecksBad++;
@@ -297,6 +300,26 @@ public static class Replay
 		if (Locks.LocalHoldsAny())
 		{
 			Log.Warn("client: " + text + "; resync waits: this player holds a lock (the 10 s digest retries)");
+			return;
+		}
+		// The same hold-off as the periodic fingerprint: nobody reloads at night or while someone is out.
+		string text2 = null;
+		if (Systems.Outings.AnyOut)
+		{
+			text2 = "somebody is out on a trip";
+		}
+		else if (Game.Store != null && (int)Game.Store.storeState == 0)
+		{
+			text2 = "it is night";
+		}
+		if (text2 != null)
+		{
+			SatOut++;
+			if (Log.Allow("c|replay|satout", 60000L, out var skipped))
+			{
+				Log.Info("client: " + text + "; no reload asked for: " + text2 + Log.More(skipped));
+			}
+			ProbablyTogether.Digest.ReportSatOut("replay check: " + LastMismatch);
 			return;
 		}
 		long ms = Clock.Ms;

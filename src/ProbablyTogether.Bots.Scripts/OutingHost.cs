@@ -284,6 +284,15 @@ public sealed class OutingHost : DayNightBotBase
 			DayNightBotBase.Ps.playerCash = cashAfter;
 			return "sold something for 37: cash " + cashAfter + ", " + repFaction + " standing " + repAfter.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + ", sold item #" + soldId;
 		});
+		Delay("the-sale-reaches-the-shop", 2f);
+		Do("a-dear-purchase-at-the-stall", delegate
+		{
+			// Spend all but 10, so a cash check made after the purchase would show.
+			int num = DayNightBotBase.Ps.playerCash - 10;
+			cashAfter = 10;
+			DayNightBotBase.Ps.playerCash = 10;
+			return "bought something for " + num + ": cash " + cashAfter;
+		});
 		Delay("b-lives-with-the-difference", 24f);
 		Do("return-2", delegate
 		{
@@ -305,6 +314,7 @@ public sealed class OutingHost : DayNightBotBase
 		Check("items-home-2", () => Items.All().Count() == itemsBefore + (LabKit.Given - given0) + 1, () => "items now " + Items.All().Count() + ", before " + itemsBefore + " plus " + (LabKit.Given - given0) + " the lab handed to the player at home");
 		Check("trips-used", () => DayNightBotBase.Ps.visitLeftTonight == budget - 2, () => "trips left " + DayNightBotBase.Ps.visitLeftTonight + " of " + budget);
 		Delay("b-compares-after-2", 12f);
+		Check("the-players-side-of-a-difference-reached-me", () => DesyncReport.Received >= 1 && System.IO.File.Exists(DesyncReport.LastFile), () => DesyncReport.Received + " report(s); last: " + DesyncReport.LastSummary + " -> " + DesyncReport.LastFile);
 		Ready("ready");
 		WaitFor("night", 200f, () => DayNightBotBase.Live && DayNightBotBase.Day == day0 + 1 && DayNightBotBase.State == "MORNING", () => "day " + DayNightBotBase.Day + ", " + DayNightBotBase.State);
 		// The players' customers must match the host's from the moment the shutter goes up.

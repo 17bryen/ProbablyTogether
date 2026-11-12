@@ -509,7 +509,8 @@ public static class Snapshot
 				Log.Info("client: asking for a resync (" + reason + ")");
 				Client.Send(Wire.Encode("sys.resync", new MsgResync
 				{
-					reason = reason
+					reason = reason,
+					report = DesyncReport.Build(reason)
 				}));
 				askTable = ItemTable();
 				askReason = reason;

@@ -28,6 +28,51 @@ internal static class Digest
 
 	private static int askedSame;
 
+	private static readonly List<KeyValuePair<string, Func<string>>> explainList = new List<KeyValuePair<string, Func<string>>>();
+
+	/// The readable content behind a part of the fingerprint: "a,b,c" or "k=v;k=v".
+	public static void AddExplain(string name, Func<string> text)
+	{
+		if (!string.IsNullOrEmpty(name) && text != null)
+		{
+			explainList.RemoveAll((KeyValuePair<string, Func<string>> p) => p.Key == name);
+			explainList.Add(new KeyValuePair<string, Func<string>>(name, text));
+		}
+	}
+
+	internal static Dictionary<string, string> Explain()
+	{
+		Dictionary<string, string> dictionary = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (KeyValuePair<string, Func<string>> explain in explainList)
+		{
+			string text;
+			try
+			{
+				text = explain.Value() ?? "";
+			}
+			catch (Exception ex)
+			{
+				text = "!threw " + ex.GetType().Name + ": " + ex.Message;
+			}
+			dictionary[explain.Key] = (text.Length > 40000) ? text.Substring(0, 40000) : text;
+		}
+		return dictionary;
+	}
+
+	/// A difference this copy does not reload for: the server still gets this side, at most once a minute.
+	internal static void ReportSatOut(string what)
+	{
+		if (Net.IsClient && !Net.IsHost && Client.State == ClientState.Ready && Log.Allow("c|satout|report", 60000L, out var _))
+		{
+			Client.Send(Wire.Encode("sys.resync", new MsgResync
+			{
+				reason = Text.Clip(what, 180),
+				hold = true,
+				report = DesyncReport.Build(what)
+			}));
+		}
+	}
+
 	public static void AddPart(string name, Func<string> part)
 	{
 		if (string.IsNullOrEmpty(name) || part == null)
@@ -345,6 +390,7 @@ internal static class Digest
 		{
 			Deferred++;
 			mismatches = 0;
+			ReportSatOut("digest mismatch: " + text);
 			if (Log.Allow("c|digest|deferred", 60000L, out var skipped))
 			{
 				Log.Info("client: no reload asked for (" + AreasOf(text) + "): " + text3 + Log.More(skipped));
