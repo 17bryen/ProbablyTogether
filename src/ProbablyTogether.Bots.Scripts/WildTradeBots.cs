@@ -80,7 +80,8 @@ public sealed class WildTradeH : WildTradeBotBase
 			return "sent";
 		});
 		WaitFor("opened", 40f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State + "; refused: " + DayNight.LastRefusedWhat + " " + DayNight.LastRefusedWhy);
-		Check("no-scripted-visitor-for-my-trades-from-wild", () => Queued("ll_gun_buyer") == null && TradeVisits.SeatFor("ll_gun_buyer") == 0, () => "the gunsmith's first customer in the queue: " + (Queued("ll_gun_buyer") != null));
+		// The game itself may queue a gun buyer; the mod's calendar must not add one for the trade.
+		Check("no-scripted-visitor-for-my-trades-from-wild", () => TradeVisits.SeatFor("ll_gun_buyer") == 0 && !TradeVisits.LastAdded.Contains("ll_gun_buyer"), () => "added by the trade calendar today: " + TradeVisits.LastAdded + "; a gun buyer from the game's own referral in the queue: " + (Queued("ll_gun_buyer") != null));
 		Check("the-picked-trade-keeps-its-story", () => Queued("cartelIntro") != null && TradeVisits.SeatFor("cartelIntro") == Members.SeatOf(Other), () => "the cartel's man in the queue: " + (Queued("cartelIntro") != null) + ", for seat " + TradeVisits.SeatFor("cartelIntro") + " (the chemist picked that trade at the start)");
 		Delay("b-checks", 30f);
 	}
@@ -131,7 +132,7 @@ public sealed class WildTradeB : WildTradeBotBase
 		});
 		WaitFor("opened-by-host", 120f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Delay("the-opening-lands", 2f);
-		Check("only-my-picked-trade-has-a-story", () => Queued("ll_gun_buyer") == null && Queued("cartelIntro") != null && TradeVisits.SeatFor("cartelIntro") == Members.LocalSeat && (Queued("cartelIntro").mainDialogue?.plainText ?? "").Contains(Members.NameOf(Members.LocalSeat)), () => "gunsmith's first customer here: " + (Queued("ll_gun_buyer") != null) + "; the cartel's man: '" + (Queued("cartelIntro")?.mainDialogue?.plainText ?? "") + "'");
+		Check("only-my-picked-trade-has-a-story", () => TradeVisits.SeatFor("ll_gun_buyer") == 0 && Queued("cartelIntro") != null && TradeVisits.SeatFor("cartelIntro") == Members.LocalSeat && (Queued("cartelIntro").mainDialogue?.plainText ?? "").Contains(Members.NameOf(Members.LocalSeat)), () => "gunsmith's first customer here: " + (Queued("ll_gun_buyer") != null) + "; the cartel's man: '" + (Queued("cartelIntro")?.mainDialogue?.plainText ?? "") + "'");
 		Check("no-reload", () => DayNight.Mismatches == 0 && Digest.ReloadsAsked == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked " + Digest.ReloadsAsked);
 	}
 }
