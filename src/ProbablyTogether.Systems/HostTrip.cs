@@ -317,6 +317,33 @@ internal static class HostTrip
 		return (GraphNodeStorage)(object)((HomeView && FrontAway && frontHold != null) ? frontHold : e.frontInvinvElement);
 	}
 
+	internal static int HomeCounterRemaps;
+
+	/// In the home view, maps the game's "counter" grid (Dr. Jackson's while he is there) back to the shop's counter.
+	internal static GraphNodeStorage HomeCounter(GraphNodeStorage node)
+	{
+		if (!HomeView || node == null)
+		{
+			return node;
+		}
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		if ((Object)(object)instance == (Object)null)
+		{
+			return node;
+		}
+		if (CountersBorrowed && node == (object)instance.backInvinvElement && instance.backInvinvElementCounter != null)
+		{
+			HomeCounterRemaps++;
+			return (GraphNodeStorage)(object)instance.backInvinvElementCounter;
+		}
+		if (FrontAway && frontHold != null && node == (object)instance.frontInvinvElement)
+		{
+			HomeCounterRemaps++;
+			return (GraphNodeStorage)(object)frontHold;
+		}
+		return node;
+	}
+
 	/// While it stands in for the back counter, nothing else may resolve the same items under a second name.
 	internal static GraphNodeStorage Holding(EmporiumEntry e)
 	{
@@ -558,6 +585,7 @@ internal static class HostTrip
 			home.Restore(store);
 			if (store.currentClientInstance == null)
 			{
+				// Dr. Jackson counts as a customer, so handing the counters back marks the shop's items as on offer; clear that.
 				try
 				{
 					EmporiumEntry.Instance.RemoveTemporaryClientFeatureFromItems();

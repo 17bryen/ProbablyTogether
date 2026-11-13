@@ -69,12 +69,14 @@ public sealed class WildWhileOutH : DayNightBotBase
 		WaitFor("at-jackson", 20f, () => DayNightOuting.LocationId == "dr_jackson" && HostTrip.CountersBorrowed, () => "at " + DayNightOuting.LocationId + ", counters borrowed " + HostTrip.CountersBorrowed);
 		Delay("b-calls-joe-wild-meanwhile", 75f);
 		Check("his-window-is-not-on-my-screen", () => !WildNetworkUI.IsOpen && DayNightOuting.LocationId == "dr_jackson", () => "Wild's window open here: " + WildNetworkUI.IsOpen + "; I am at " + DayNightOuting.LocationId + "; windows kept off this screen " + Economy.WindowsSkipped);
+		Check("his-delivery-is-not-on-dr-jacksons-counter", () => !((GameInventory)E.backInvinvElement).childItems.Any((GameItem i) => i != null && i.identifier.StartsWith("wine_", StringComparison.Ordinal)) && HostTrip.HomeCounterRemaps >= 8, () => "wine things on the counter in front of me (Dr. Jackson's): " + ((GameInventory)E.backInvinvElement).childItems.Count((GameItem i) => i != null && i.identifier.StartsWith("wine_", StringComparison.Ordinal)) + "; deliveries sent to the shop's counter instead: " + HostTrip.HomeCounterRemaps + "; winemaker entry " + (DayNightBotBase.Ps.networkUpgrade.TryGetValue("WINEMAKER", out var value) ? value.state : (-1)));
 		Do("return", delegate
 		{
 			MapUIManager.Instance.ReturnNow();
 			return "coming home";
 		});
 		WaitFor("home", 30f, () => !HostTrip.Out && !Outings.Private && DayNightOuting.LocationId == "", () => "host out " + HostTrip.Out + ", at " + DayNightOuting.LocationId);
+		Check("his-delivery-is-on-the-shops-counter", () => ((GameInventory)E.backInvinvElement).childItems.Count((GameItem i) => i != null && i.identifier == "wine_yeast") == 3, () => "wine yeast on the shop's counter: " + ((GameInventory)E.backInvinvElement).childItems.Count((GameItem i) => i != null && i.identifier == "wine_yeast"));
 		Delay("b-finishes", 25f);
 	}
 }
@@ -102,6 +104,10 @@ public sealed class WildWhileOutB : DayNightBotBase
 		Check("his-window-is-on-my-screen", () => WildNetworkUI.IsOpen, () => "Wild's window open here: " + WildNetworkUI.IsOpen + "; dialogue refusals " + DialogueSync.RefusedCount + " (" + DialogueSystem.LastRefused + ")");
 		WaitServer("the-host-is-still-there", 10f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.V(v, "out.jackson") == "1", "out.jackson");
 		Agree("same-conversation-as-the-host", 30f, "core.digest");
+		Do("buy-the-winemakers-referral", () => EconomyLab.ClickBuy("WINEMAKER"));
+		WaitFor("his-delivery-is-on-my-counter", 20f, () => DayNightBotBase.Ps.networkUpgrade.TryGetValue("WINEMAKER", out var value) && value.state == 2 && ((GameInventory)EmporiumEntry.Instance.backInvinvElement).childItems.Count((GameItem i) => i != null && i.identifier == "wine_yeast") == 3, () => "winemaker entry " + (DayNightBotBase.Ps.networkUpgrade.TryGetValue("WINEMAKER", out var value2) ? value2.state : (-1)) + "; wine yeast on my counter " + ((GameInventory)EmporiumEntry.Instance.backInvinvElement).childItems.Count((GameItem i) => i != null && i.identifier == "wine_yeast") + "; cash " + DayNightBotBase.Ps.playerCash + "; last refusal " + Economy.LastRefusal);
+		WaitServer("the-host-is-still-at-jackson", 10f, (IReadOnlyDictionary<string, string> v) => DayNightBotBase.V(v, "out.jackson") == "1", "out.jackson");
+		Agree("same-shop-as-the-host-with-the-delivery", 30f, "core.digest", "items.digest");
 		Do("hang-up", delegate
 		{
 			WildNetworkUI.Close();

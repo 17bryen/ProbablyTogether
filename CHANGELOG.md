@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.7.3 - 2026-11-13
+
+Same protocol (14). Every player needs it.
+
+### Fixed
+- Joe Wild's counter deliveries now land on the shop's counter, not Dr. Jackson's, while a player is at Dr. Jackson's.
+
 ## 0.7.2 - 2026-11-12
 
 Same protocol (14). Every player should take it.
