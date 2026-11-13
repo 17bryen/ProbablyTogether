@@ -828,6 +828,7 @@ public static class Snapshot
 		long num2 = Clock.Ms - loadStartMs;
 		List<KeyValuePair<string, JToken>> queue = new List<KeyValuePair<string, JToken>>(held);
 		held.Clear();
+		Systems.Bays.OpenAll();
 		DayLog.ReplayStats replayStats = DayLog.ReplayHeld(queue, replayCount);
 		if (Client.State != ClientState.Ready)
 		{

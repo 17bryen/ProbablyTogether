@@ -2,6 +2,17 @@
 
 All changes to Probably Together.
 
+## 0.7.4 - 2026-11-13
+
+Same protocol (14). Every player needs it.
+
+### Fixed
+- Joining after someone moved items inside a storage that sits in their storage bay no longer causes endless reloads.
+- A move the server made is applied even if the local game refuses it, instead of costing a reload.
+
+### Changed
+- When an item cannot be moved, the log now says which of the game's rules refused it.
+
 ## 0.7.3 - 2026-11-13
 
 Same protocol (14). Every player needs it.

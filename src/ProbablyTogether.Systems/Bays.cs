@@ -246,6 +246,53 @@ public static class Bays
 		val2.mayInventoryAddItemFunc = (GameItem added, GameInventory inv) => added != null && added != self && !GraphUtils.FindParentEquals((GraphNodeStorage)(object)self, (GraphNodeStorage)(object)added);
 	}
 
+	/// Sets the rule now on owned bays under root; the timed look-over does not run while a shop loads.
+	internal static void OpenTree(GameItem root)
+	{
+		if (root == null)
+		{
+			return;
+		}
+		try
+		{
+			if (TagOwner(root) != 0)
+			{
+				TakeAnything(root);
+			}
+			foreach (GameItem item in GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)root, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+			{
+				if (TagOwner(item) != 0)
+				{
+					TakeAnything(item);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("bays: opening an arrived bay threw: " + ex.Message);
+		}
+	}
+
+	/// Every owned bay takes anything; called after a load, before the day's log is replayed.
+	internal static void OpenAll()
+	{
+		try
+		{
+			opened.Clear();
+			foreach (GameItem item in Items.All())
+			{
+				if (TagOwner(item) != 0)
+				{
+					TakeAnything(item);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("bays: opening the bays after a load threw: " + ex.Message);
+		}
+	}
+
 	/// Owned bays take anything; on a player's copy, other players' bays are locked.
 	private static void Look()
 	{

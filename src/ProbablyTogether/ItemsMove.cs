@@ -1515,11 +1515,86 @@ public static class ItemsMove
 		if (text != null)
 		{
 			ApplyMismatches++;
+			LastApplyProblem = "#" + m.seq + " " + m.kind + ": " + text;
 			Log.Warn("items: #" + m.seq + " (" + m.kind + " by " + Net.PlayerName(m.actor) + ") applied " + num + "/" + m.ops.Count + " step(s); first problem: " + text);
 			if (!DayLog.Replaying)
 			{
 				Snapshot.RequestResync("items #" + m.seq + " " + m.kind + ": " + text);
 			}
+		}
+	}
+
+	/// Which game rule blocks taking an item out, for the log. A shape-changing item (a silencer) may only leave
+	/// if every container around it still fits where it sits without it.
+	internal static string WhyRefused(GameItem item)
+	{
+		try
+		{
+			GameInventory from = item?.parentInventory;
+			if (from == null)
+			{
+				return "why: the item is in no inventory";
+			}
+			string text = "why: may leave " + item.MaxNumRemove() + " of " + item.unitCount + (item.MayParentShapeModifier() ? ", changes the shape of what holds it" : "");
+			foreach (GameItem box in GraphUtils.FindParentsType<GameItem>((GraphNodeStorage)(object)from, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+			{
+				GameInventory inv = box?.parentInventory;
+				if (inv == null)
+				{
+					continue;
+				}
+				(GridShape, int, int, TagSystem) st = box.ComputeModifiedShapeState(null, null, null, null, item);
+				GridShape shape = st.Item1;
+				SlotMarker slot = inv.TryInventorySlot(box, shape, st.Item4);
+				text = text + "; around it #" + Ids.Of(box) + " " + box.identifier + " in " + Items.RefOf((GraphNodeStorage)(object)inv) + "@" + shape.minX + "," + shape.minY + " " + shape.width + "x" + shape.height + ": fits " + (slot?.numTransfer ?? (-1)) + ", may go in " + inv.MayHaveValidInventorySlot(box) + ", may leave " + box.MaxNumRemove();
+				if (inv is GameGridInventory grid)
+				{
+					bool inside = shape.FullyIntersects(grid.inventoryShape, (byte b, byte bo) => b != 1 || bo == 0);
+					List<string> over = (from o in grid.childItems
+						where o != null && o != box && shape.Intersects(o.modifiedShape)
+						select "#" + Ids.Of(o) + " " + o.identifier + "@" + o.modifiedShape.minX + "," + o.modifiedShape.minY).ToList();
+					text = text + ", grid " + grid.inventoryShape.width + "x" + grid.inventoryShape.height + ", inside it " + inside + ", overlaps " + ((over.Count == 0) ? "nothing" : string.Join(" ", over));
+				}
+			}
+			return text;
+		}
+		catch (Exception ex)
+		{
+			return "why: could not tell (" + ex.Message + ")";
+		}
+	}
+
+	/// The last remote step that applied differently here.
+	public static string LastApplyProblem;
+
+	/// Server-made moves the game refused here and the mod placed anyway.
+	public static int PlacedAnyway;
+
+	/// A whole item to a cell of an inventory with none of the game's "may it leave" questions.
+	private static bool PlaceAnyway(GameItem item, GameInventory to, GridShape shape)
+	{
+		try
+		{
+			if (item == null || to == null || shape == null)
+			{
+				return false;
+			}
+			GameInventory from = item.parentInventory;
+			if (from != null && !from.Expel(item))
+			{
+				return false;
+			}
+			if (item.parentInventory != null)
+			{
+				return false;
+			}
+			item.modifiedShape = new GridShapeBuilder(item.modifiedShape).SetTransform(shape);
+			return to.UncheckedAccept(item);
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("items: placing #" + Ids.Of(item) + " anyway threw: " + ex.Message);
+			return false;
 		}
 	}
 
@@ -1547,9 +1622,19 @@ public static class ItemsMove
 				numTransfer = op.n
 			};
 			int num = val5.TryAcceptOnce(op.n);
+			if (num != op.n && num == 0 && op.nw == 0L && op.n >= val.unitCount && PlaceAnyway(val, val4, val5.itemGridShape))
+			{
+				// A server-made move refused by a game rule on this copy only: place it anyway; the action's digest still checks agreement.
+				PlacedAnyway++;
+				if (Log.Allow("items|placeAnyway", 10000L, out var skippedPlace))
+				{
+					Log.Warn("items: the game refused #" + op.i + " -> " + op.to?.ToString() + " here although the server made the move; placed anyway" + Log.More(skippedPlace));
+				}
+				num = op.n;
+			}
 			if (num != op.n)
 			{
-				return "place: moved " + num + " of " + op.n + " (#" + op.i + " -> " + op.to?.ToString() + ")";
+				return "place: moved " + num + " of " + op.n + " (#" + op.i + " -> " + op.to?.ToString() + "); " + WhyRefused(val);
 			}
 			if (op.nw != 0L)
 			{
@@ -1674,6 +1759,7 @@ public static class ItemsMove
 			{
 				return "sub: #" + op.i + " not placed in " + op.to;
 			}
+			Systems.Bays.OpenTree(val3);
 			return null;
 		}
 		default:
