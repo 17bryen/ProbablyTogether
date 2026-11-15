@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.8.1 - 2026-11-15
+
+Same protocol (17).
+
+### Fixed
+- Layout fixes on the new host screens: overlapping and clipped text, and the "Start Game" button now reads "Continue".
+- Continue on the trade screen looks disabled while waiting for the shop.
+
 ## 0.8.0 - 2026-11-15
 
 Protocol 17. Every player needs it.

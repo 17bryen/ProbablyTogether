@@ -112,7 +112,7 @@ public static class LoadingScreen
 			ClientState.Connecting => Lang.Trf("Connecting to {0}...", Kit.Name(Net.ServerAddress)), 
 			ClientState.Handshake => Lang.Trf("Joining {0}...", Kit.Name(n)), 
 			ClientState.AwaitSnapshot => Lang.Trf("Joined {0}. Getting the shop...", Kit.Name(n)), 
-			_ => wasLiveThisSession ? Lang.Tr("Catching up with the shop...") : Lang.Trf("Loading {0}'s shop...", Kit.Name(n)), 
+			_ => wasLiveThisSession ? Lang.Tr("Catching up with the shop...") : Lang.Trf("Loading {0}...", Kit.Name(n)), 
 		}, t: title);
 		int num2 = Mathf.FloorToInt(Time.realtimeSinceStartup - since);
 		string text = ((num2 >= 3) ? (num2.ToString(CultureInfo.InvariantCulture) + " s") : "");

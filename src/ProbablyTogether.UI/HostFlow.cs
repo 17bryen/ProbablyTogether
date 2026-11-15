@@ -238,7 +238,7 @@ internal static class HostFlow
 			{
 				RectTransform rectTransform = loadGameFrame.panel;
 				float num = ((Object)(object)rectTransform != (Object)null) ? rectTransform.rect.width : 1110f;
-				NewGameCommonButton newGameCommonButton = NewGameCommonButton.Build(loadGameFrame, ((Object)(object)rectTransform != (Object)null) ? rectTransform : (RectTransform)customUIWindow.root.transform, "bellun_probably_together_new_shop", num - 330f, 28f, 260f, 48f, Lang.Tr("New shop"), NewShop);
+				NewGameCommonButton newGameCommonButton = NewGameCommonButton.Build(loadGameFrame, ((Object)(object)rectTransform != (Object)null) ? rectTransform : (RectTransform)customUIWindow.root.transform, "bellun_probably_together_new_shop", num - 420f, 28f, 260f, 48f, Lang.Tr("New shop"), NewShop);
 			}
 		}
 		catch (Exception ex)
@@ -370,6 +370,21 @@ internal static class HostFlow
 		{
 			End("left the menu");
 			return;
+		}
+		if (last != DifficultyWindow)
+		{
+			try
+			{
+				CustomUIWindow customUIWindow = Window(DifficultyWindow);
+				NewGameDifficultyFrame newGameDifficultyFrame = (customUIWindow != null) ? customUIWindow.root.GetComponent<NewGameDifficultyFrame>() : null;
+				if ((Object)(object)newGameDifficultyFrame != (Object)null && (Object)(object)newGameDifficultyFrame.continueLabel != (Object)null)
+				{
+					newGameDifficultyFrame.continueLabel.text = LocHelper.GetLocalizedMainMenu("new_continue");
+				}
+			}
+			catch
+			{
+			}
 		}
 		string text = (Window(ListWindow) != null) ? ListWindow : ((Window(SpecWindow) != null) ? SpecWindow : ((Window(PerkWindow) != null) ? PerkWindow : ((Window(DifficultyWindow) != null) ? DifficultyWindow : (HostMenu.DialogOpen ? "settings" : null))));
 		if (text != null)

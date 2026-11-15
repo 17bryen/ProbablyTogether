@@ -210,6 +210,7 @@ public static class Ui
 		Kit.Tick();
 		JoinMenu.Tick();
 		HostFlow.Tick();
+		ShotTour.Tick();
 		UpdateNotice.Tick();
 		LoadingScreen.Tick();
 		Overlay.Tick();

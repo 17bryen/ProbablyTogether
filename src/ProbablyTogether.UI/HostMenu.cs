@@ -322,7 +322,7 @@ internal static class HostMenu
 			scenarioLabels.Add(scenario.Value);
 		}
 		string initialName = (NewSelected ? ((slots.Count == 0) ? Str(existing, "name", defaultName) : defaultName) : (slots[slotIndex].Name ?? Str(existing, "name", defaultName)));
-		CustomUIBuilder b = instance.CreateWindow("bellun_probably_together.host", Lang.Tr("Host a shop"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 900f);
+		CustomUIBuilder b = instance.CreateWindow("bellun_probably_together.host", Lang.Tr("Host a shop"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(800f, 900f);
 		b.AddLabel(Lang.Tr("Shop to open"), "slotlabel")
 			.AddDropdown((IList<string>)slotLabels, slotIndex, (Action<int>)OnSlotChanged, "slot")
 			.AddLabel(Lang.Tr("Shop name"), (string)null)
@@ -458,6 +458,11 @@ internal static class HostMenu
 			instance.CloseWindow("bellun_probably_together.host");
 		}
 		window = null;
+	}
+
+	internal static void PressHost()
+	{
+		Start();
 	}
 
 	private static void Start()

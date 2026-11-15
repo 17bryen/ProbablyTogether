@@ -89,13 +89,14 @@ public static class PerkScreens
 			cover.AddComponent<GraphicRaycaster>();
 			Image image = Kit.Box(cover.transform, "dim", new Color(Kit.PlateColor.r * 0.55f, Kit.PlateColor.g * 0.55f, Kit.PlateColor.b * 0.55f, 1f), raycast: true);
 			Kit.Stretch(image.rectTransform);
-			label = Kit.Label(cover.transform, "title", 24f, Kit.Dim, 1400f, (TextAlignmentOptions)514);
+			// The game's panel starts 67 units from the top; the line sits in that margin.
+			label = Kit.Label(cover.transform, "title", 20f, Kit.Dim, 1400f, (TextAlignmentOptions)514);
 			RectTransform rectTransform = label.rectTransform;
 			rectTransform.anchorMin = new Vector2(0.5f, 1f);
 			rectTransform.anchorMax = new Vector2(0.5f, 1f);
 			rectTransform.pivot = new Vector2(0.5f, 1f);
-			rectTransform.anchoredPosition = new Vector2(0f, -36f);
-			rectTransform.sizeDelta = new Vector2(1400f, 80f);
+			rectTransform.anchoredPosition = new Vector2(0f, -14f);
+			rectTransform.sizeDelta = new Vector2(1400f, 40f);
 		}
 		if (!cover.activeSelf)
 		{
@@ -243,6 +244,7 @@ public static class PerkScreens
 			component.warning.text = Lang.Tr(refusal);
 		}
 		component.continueButton.interactable = flag && !waiting && selected.CanStart();
+		NewGameUIElements.RefreshContinueLook(component, hovered: false);
 	}
 
 	private static readonly FieldInfo firstRunField = AccessTools.Field(typeof(NewGamePerksUI), "firstRun");
