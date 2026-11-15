@@ -276,30 +276,18 @@ internal static class HostPanels
 			SetupContinue(onContinue);
 		});
 		setup = p;
-		Label(p, "intro", 132f, Lang.Tr("Your friends join with your address and this port. Choose them once; every shop you host uses them."), 20f, dim: true, 60f, wrap: true);
-		Rule(p, "rule1", 204f);
-		Label(p, "pwlabel", 226f, Lang.Tr("Password"));
-		Label(p, "pwhint", 226f, Lang.Tr("Leave it empty and anyone with the address can join."), 18f, dim: true, 30f, wrap: false, Left + 150f, Width - 150f);
-		Input(p, "password", Left, 262f, Width, password, 128, password: true);
-		Label(p, "portlabel", 336f, Lang.Tr("Port"));
-		Input(p, "port", Left, 372f, 200f, port.ToString(CultureInfo.InvariantCulture), 5);
-		Label(p, "porthint", 372f, Lang.Tr("For friends outside your home, forward this port (TCP) on your router to this PC."), 18f, dim: true, 46f, wrap: true, Left + 224f, Width - 224f);
-		Rule(p, "rule2", 446f);
+		// Read-only: the server listens on every address; this is the one LAN friends type in.
 		string text = LanAddress();
-		Label(p, "addrlabel", 468f, Lang.Tr("Your address"));
-		TextMeshProUGUI lan = Label(p, "lan", 504f, "", 20f, dim: false, 30f);
-		Label(p, "wan", 538f, Lang.Tr("From anywhere else: your public IP address and the same port."), 20f, dim: true, 30f);
-		Label(p, "noip", 588f, Lang.Tr("There is no address to enter here: the shop listens on every network address this PC has."), 18f, dim: true, 52f, wrap: true);
-		Action refresh = delegate
-		{
-			string text2 = Text(p, "port").Trim();
-			lan.text = (text == null) ? Lang.Tr("On your own network: this PC's local address and the port.") : Lang.Trf("On your own network: {0}:{1}", text, text2);
-		};
-		refresh();
-		p.Inputs["port"].onValueChanged.AddListener(delegate
-		{
-			refresh();
-		});
+		Label(p, "iplabel", 132f, Lang.Tr("IP Address"));
+		TMP_InputField tMP_InputField = Input(p, "ip", Left, 168f, Width, text ?? Lang.Tr("(no local network address found)"), 64);
+		tMP_InputField.readOnly = true;
+		tMP_InputField.textComponent.color = NewGameStyle.DESCRIPTION;
+		Label(p, "pwlabel", 240f, Lang.Tr("Password"));
+		Label(p, "pwhint", 240f, Lang.Tr("Leave it empty and anyone with the address can join."), 18f, dim: true, 30f, wrap: false, Left + 150f, Width - 150f);
+		Input(p, "password", Left, 276f, Width, password, 128, password: true);
+		Label(p, "portlabel", 350f, Lang.Tr("Port"));
+		Input(p, "port", Left, 386f, 200f, port.ToString(CultureInfo.InvariantCulture), 5);
+		Label(p, "porthint", 386f, Lang.Tr("Port forward this port (TCP) on your router"), 18f, dim: true, 46f, wrap: false, Left + 224f, Width - 224f);
 		p.Window.Show();
 	}
 

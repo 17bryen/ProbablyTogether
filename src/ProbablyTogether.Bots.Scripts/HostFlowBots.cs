@@ -27,6 +27,7 @@ public sealed class HostFlowNew : HostFlowBotBase
 		WaitFor("the-gunsmith's-shop-from-the-trade-screen", 60f, () => Specs.Of(1) == "GUNSMITH" && DayNightBotBase.Ps.startType.ToString() == "GUNSMITH", () => State);
 		WaitFor("the-founder-has-the-perks-from-the-perk-screen", 30f, () => Perks.Picked(1) && Perks.Has(1, "saving") && Perks.Has(1, "illiterate") && !Perks.Has(1, "alert"), () => State);
 		Check("the-personal-one-is-not-in-the-shop's-list", () => DayNightBotBase.Ps.startingPerks.Any((StartingPerk p) => p.id == "saving") && !DayNightBotBase.Ps.startingPerks.Any((StartingPerk p) => p.id == "illiterate") && StartingPerk.IsIlliterate(), () => State);
+		Check("a-banned-founder-does-not-close-the-commissary-for-the-others", () => Perks.Has(1, "banned_commissary") && !Perks.CommissaryOpenFor(1) && Perks.CommissaryOpenFor(2) && DayNightBotBase.Ps.isStampIntroduced, () => "founder banned " + Perks.Has(1, "banned_commissary") + "; open to seat 1 " + Perks.CommissaryOpenFor(1) + ", to seat 2 " + Perks.CommissaryOpenFor(2) + "; the shop knows stamps " + DayNightBotBase.Ps.isStampIntroduced);
 		Check("the-shop's-name-is-on-its-save", () => (SaveFiles.IndexLoad<SavePreviewData>("preview_" + DayNightBotBase.Ps.saveSlotId, null)?.customName ?? "") == Net.ServerName && Net.ServerName.Length > 0, () => State);
 		Check("the-flow-got-there-through-the-game's-screens", () => ProbablyTogether.UI.HostFlow.Reached == 1 && !ProbablyTogether.UI.HostFlow.Active, () => State);
 	}

@@ -47,6 +47,19 @@ internal static class DnGameOverPatch
 				{
 					Perks.Died(num, ending);
 					skipped = true;
+					// The game checks augs last and saves only if the run goes on: make the save it left out,
+					// or the morning is never recorded.
+					if (ending == "aug" && Net.IsServer && DayNight.NightRunning)
+					{
+						try
+						{
+							PlayerStore.Instance.SaveGame();
+						}
+						catch (Exception ex2)
+						{
+							Log.Warn("perks: the save after a night the augs did not end threw: " + ex2.Message);
+						}
+					}
 					return false;
 				}
 			}

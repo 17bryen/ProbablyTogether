@@ -284,6 +284,13 @@ public static class Perks
 				using (Net.Apply())
 				{
 					list.RemoveAll((StartingPerk p) => p != null && KindOf(p.id) == Personal);
+					// The game's start code treats the founder's Commissary ban as the shop's; the ban is the founder's own.
+					PlayerStore store = Game.Store;
+					if (onMenu && list2.Contains("banned_commissary") && !store.isStampIntroduced && store.isAfterhoursIntroduced && store.isSecurityRecordIntroduced)
+					{
+						store.isStampIntroduced = true;
+						Log.Info("perks: the founder is banned from the Commissary; the shop itself knows food stamps");
+					}
 				}
 				Log.Info("perks: the shop's own perks (" + string.Join(", ", list2) + ") are now seat 1's");
 			}
@@ -508,7 +515,13 @@ public static class Perks
 		{
 			return Has(turnSeat, id);
 		}
-		if (nobody > 0)
+		// Lottery unlocks are the shop's; only the forced buying is the addict's (PerksGamblingPatch).
+		if (nobody > 0 || id == "gambling_addiction")
+		{
+			return ForTheShop(id);
+		}
+		// At night with nobody acting, every copy must give the same answer.
+		if (DayNight.NightRunning && !scope.Any((int s) => s > 0))
 		{
 			return ForTheShop(id);
 		}
@@ -755,7 +768,7 @@ public static class Perks
 		string text;
 		using (Replay.Client(m.seed ?? new Seed()))
 		{
-			text = Apply(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null);
+			text = Apply(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null, m.lab);
 		}
 		Log.Info("perks: " + Members.NameOf(m.seat) + " picked [" + string.Join(", ", list) + "]: " + text);
 		if (!DayLog.Replaying && list.Count > 0)
@@ -802,7 +815,8 @@ public static class Perks
 		}
 	}
 
-	private static string Apply(int seat, List<string> ids, GameItem bay)
+	/// Every copy, from the server's seed: applies these perks for one holder.
+	private static string Apply(int seat, List<string> ids, GameItem bay, bool merge = false)
 	{
 		PlayerStore store = Game.Store;
 		EmporiumEntry e = EmporiumEntry.Instance;
@@ -874,7 +888,7 @@ public static class Perks
 		Change(seat, delegate(Rec r)
 		{
 			r.Picked = true;
-			r.Ids = ids.ToList();
+			r.Ids = merge ? r.Ids.Union(ids).ToList() : ids.ToList();
 			if (ids.Contains("nicotine_addiction"))
 			{
 				r.B[BN] = 3;
@@ -1394,6 +1408,44 @@ public static class Perks
 		Log.Info("perks: " + text2);
 	}
 
+	/// Bots only: adds these perks, ignoring points, slots and locks.
+	public static void LabPick(IEnumerable<string> ids)
+	{
+		Net.ToServer("perks.labpick", new MsgPerksPick
+		{
+			ids = (ids ?? new string[0]).ToArray()
+		});
+	}
+
+	private static void ServerLabPick(MsgPerksPick m, int from)
+	{
+		if (m == null || !Bots.BotRunner.Enabled || !Game.ShopLoaded || !Enabled)
+		{
+			return;
+		}
+		int num = Members.SeatOf(from);
+		List<string> list = (m.ids ?? new string[0]).Where((string i) => KindOf(i) != 0 && Def(i) != null && !Has(num, i)).Distinct().ToList();
+		if (num <= 0)
+		{
+			return;
+		}
+		GameItem val = Bays.BayOf(num);
+		MsgPerksSet msgPerksSet = new MsgPerksSet
+		{
+			seat = num,
+			ids = list.ToArray(),
+			bay = (val != null) ? Ids.Of(val) : 0,
+			lab = true
+		};
+		string text;
+		using (Replay.Server(out msgPerksSet.seed))
+		{
+			text = Apply(num, list, val, merge: true);
+		}
+		Net.ToAll("perks.set", msgPerksSet);
+		Log.Info("perks: lab: " + Members.NameOf(num) + " (seat " + num + ") also has [" + string.Join(", ", list) + "]: " + text);
+	}
+
 	/// Bots only: sets one clock on every copy (0 nicotine, 1 alcohol, 2 narcotic, 3 relief,
 	/// 4 days since the sentinel's injection, 5 the sentinel's pool, 6 the day of the last outing).
 	internal static void LabClock(int seat, int index, int value)
@@ -1470,6 +1522,7 @@ public static class Perks
 		Net.On<MsgPerksPick>("perks.pick", ServerPick, null);
 		Net.On<MsgPerksSet>("perks.set", null, ClientSet);
 		Net.On<MsgPerksLab>("perks.lab", null, ApplyLab);
+		Net.On<MsgPerksPick>("perks.labpick", ServerLabPick, null);
 		Net.On<MsgPerksRefused>("perks.refused", null, delegate(MsgPerksRefused m)
 		{
 			LastRefusal = m?.why ?? "";
@@ -1538,6 +1591,8 @@ public sealed class MsgPerksSet
 	public string[] ids;
 
 	public long bay;
+
+	public bool lab;
 
 	public Seed seed;
 }

@@ -2,6 +2,21 @@
 
 All changes to Probably Together.
 
+## 0.8.3 - 2026-11-15
+
+Same protocol (17). The host needs it; players should take it.
+
+### Changed
+- "Host a shop" shows the PC's local IP address (read-only) and a reminder to port-forward the port (TCP).
+
+### Added
+- A test suite that checks all 48 perks in a shop of two.
+
+### Fixed
+- Aug Menace: when its holder dies at night, every player now gets the next morning.
+- A founder banned from the Commissary no longer closes it for the whole shop.
+- Gambling Addiction's lottery unlock and other personal-perk checks now give the same answer on every copy.
+
 ## 0.8.2 - 2026-11-15
 
 Same protocol (17). Only the host needs it.
