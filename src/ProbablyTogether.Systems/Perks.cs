@@ -140,6 +140,9 @@ public static class Perks
 
 	internal static int Deaths;
 
+	/// Server: the founder picked on the new game screens and is not asked again.
+	internal static bool FounderPickedOnMenu;
+
 	public static bool Enabled => Net.IsOnline && Bays.Enabled && Game.ShopLoaded && Game.Store != null && Game.Store.healthData != null;
 
 	public static string Raw
@@ -266,7 +269,9 @@ public static class Perks
 			Dictionary<int, Rec> dictionary = new Dictionary<int, Rec>();
 			List<StartingPerk> list = Game.Store.startingPerks ?? new List<StartingPerk>();
 			List<string> list2 = list.Where((StartingPerk p) => p != null && kinds.ContainsKey(p.id)).Select((StartingPerk p) => p.id).Distinct().ToList();
-			if (list2.Count > 0)
+			bool onMenu = FounderPickedOnMenu && Net.IsServer;
+			FounderPickedOnMenu = false;
+			if (list2.Count > 0 || onMenu)
 			{
 				Rec rec = new Rec
 				{

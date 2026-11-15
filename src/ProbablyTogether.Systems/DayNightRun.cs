@@ -295,7 +295,7 @@ public static class DayNightRun
 		};
 		Net.ToAll("dayNight.runEnded", msgDnRunEnded);
 		ServerMode.SetRunEnded(Ending);
-		Log.Info("dayNight: run over (" + Ending + ", day " + msgDnRunEnded.day + "); slot file " + ((text.Length > 0) ? ("renamed to " + text) : "not found") + "; a new run starts when every player votes for it, or from the panel");
+		Log.Info("dayNight: run over (" + Ending + ", day " + msgDnRunEnded.day + "); slot file " + ((text.Length > 0) ? ("kept as " + text) : "not found") + "; a new run starts when every player votes for it, or from the panel");
 		DayNight.Raise(DayNightRun.RunEnded, Ending, b: true);
 		BroadcastVotes(-1, "run ended");
 	}
@@ -316,11 +316,9 @@ public static class DayNightRun
 				Log.Warn("dayNight: no slot file to move aside at " + text2);
 				return "";
 			}
-			string text3 = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-			string text4 = "ended_" + text3 + "_" + Path.GetFileName(text);
-			File.Move(text2, Paths.Under(text4));
-			ServerMode.EndedStamp = text3;
-			return text4;
+			// The ended shop's file stays so it can be continued; a new run voted in place moves it aside (ServerMode.MoveRunAside).
+			ServerMode.WriteShopCard();
+			return Path.GetFileName(text);
 		}
 		catch (Exception ex)
 		{

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
@@ -94,7 +95,10 @@ internal static class HostMenu
 				catch
 				{
 				}
-				OpenDialog();
+				if (!HostFlow.Open())
+				{
+					OpenDialog();
+				}
 			});
 			MonoBehaviour[] componentsInChildren = val.GetComponentsInChildren<MonoBehaviour>(true);
 			foreach (MonoBehaviour val2 in componentsInChildren)
@@ -298,6 +302,13 @@ internal static class HostMenu
 		JObject existing = ReadJson(HostFolder + "/server.json");
 		LoadScenarios(existing);
 		LoadSlots(existing);
+		bool flow = HostFlow.Active && HostFlow.Slot != 0;
+		if (flow)
+		{
+			// The host flow's last step: the shop (or a new one) was chosen on the game's own screens.
+			int num0 = (HostFlow.Slot > 0) ? slots.FindIndex((Slot s) => s.N == HostFlow.Slot) : (-1);
+			slotIndex = (num0 >= 0) ? num0 : slots.Count;
+		}
 		string defaultName = (SteamName(out var persona) ? (persona + "'s shop") : "My shop");
 		List<string> slotLabels = new List<string>();
 		foreach (Slot slot in slots)
@@ -312,7 +323,7 @@ internal static class HostMenu
 		}
 		string initialName = (NewSelected ? ((slots.Count == 0) ? Str(existing, "name", defaultName) : defaultName) : (slots[slotIndex].Name ?? Str(existing, "name", defaultName)));
 		CustomUIBuilder b = instance.CreateWindow("bellun_probably_together.host", Lang.Tr("Host a shop"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 900f);
-		b.AddLabel(Lang.Tr("Shop to open"), (string)null)
+		b.AddLabel(Lang.Tr("Shop to open"), "slotlabel")
 			.AddDropdown((IList<string>)slotLabels, slotIndex, (Action<int>)OnSlotChanged, "slot")
 			.AddLabel(Lang.Tr("Shop name"), (string)null)
 			.AddInput("", initialName, (Action<string>)null, "name", (Action<string>)null)
@@ -334,7 +345,7 @@ internal static class HostMenu
 			.AddInput("", Str(existing, "customersPerPlayer", "2"), (Action<string>)null, "custper", (Action<string>)null)
 			.AddLabel(Lang.Tr("Rent increase for each added player (%)"), (string)null)
 			.AddInput("", Str(existing, "rentPercentPerPlayer", "50"), (Action<string>)null, "rentper", (Action<string>)null)
-			.AddSeparator((string)null, 4)
+			.AddSeparator("newsep", 4)
 			.AddLabel(Lang.Tr("New shop: scenario and difficulty"), "newlabel")
 			.AddDropdown((IList<string>)scenarioLabels, scenarioIndex, (Action<int>)delegate(int i)
 			{
@@ -380,6 +391,22 @@ internal static class HostMenu
 			}
 		}
 		ApplySlot(setName: false);
+		if (flow)
+		{
+			foreach (string id2 in new string[9] { "slotlabel", "slot", "newsep", "newlabel", "scenario", "difficulty", "skipintro", "endless", "newsep2" })
+			{
+				window.Get(id2)?.SetVisible(false);
+			}
+			if (NewSelected)
+			{
+				SetStatus(Lang.Tr("A new shop starts on day 1, with the trade, perks and difficulty you just chose."));
+			}
+			else if (HostFlow.MorningFile != null)
+			{
+				SetStatus(Lang.Tr("This shop continues from the earlier morning you chose. Its later days are replaced when it saves."));
+			}
+			JoinMenu.FitHeight(window, 300f, 900f, 44f);
+		}
 		Log.Info("ui: Host window opened (" + HostFolder + "; " + slots.Count + " shop(s), " + scenarios.Count + " scenario(s))");
 	}
 
@@ -492,6 +519,22 @@ internal static class HostMenu
 		}
 		string scenario = scenarios[Mathf.Clamp(scenarioIndex, 0, scenarios.Count - 1)].Key;
 		string difficulty = DifficultyIds[Mathf.Clamp(difficultyIndex, 0, DifficultyIds.Length - 1)];
+		bool flow = HostFlow.Active && HostFlow.Slot != 0;
+		bool skip = skipIntro;
+		bool endlessRun = endless;
+		if (flow && isNew)
+		{
+			NewGameData instance = NewGameData.Instance;
+			scenario = instance.startType.ToString();
+			difficulty = string.IsNullOrEmpty(instance.difficultyId) ? "normal" : instance.difficultyId;
+			skip = instance.skipIntro;
+			endlessRun = instance.endlessMode;
+			if (!scenarios.Any((KeyValuePair<string, string> s) => string.Equals(s.Key, scenario, StringComparison.OrdinalIgnoreCase)))
+			{
+				SetStatus(Lang.Tr("That trade cannot start a shared shop. Go back and pick another."));
+				return;
+			}
+		}
 		try
 		{
 			JObject cfg = ReadJson(folder + "/server.json") ?? new JObject();
@@ -509,9 +552,9 @@ internal static class HostMenu
 				JObject nr = new JObject();
 				nr["scenario"] = (JToken)new JValue(scenario);
 				nr["difficulty"] = (JToken)new JValue(difficulty);
-				nr["skipIntro"] = (JToken)new JValue(skipIntro);
+				nr["skipIntro"] = (JToken)new JValue(skip);
 				cfg["newRun"] = (JToken)nr;
-				cfg["endless"] = (JToken)new JValue(endless);
+				cfg["endless"] = (JToken)new JValue(endlessRun);
 			}
 			File.WriteAllText(folder + "/server.json", ((JToken)cfg).ToString((Newtonsoft.Json.Formatting)1, Array.Empty<Newtonsoft.Json.JsonConverter>()));
 		}
@@ -524,9 +567,90 @@ internal static class HostMenu
 		Net.Role = Role.Host;
 		Log.Info("host: starting from the menu: '" + name + "' on port " + port + ", " + max + " player(s), slot " + slotNumber + (isNew ? (" (new: " + scenario + ", " + difficulty + ")") : " (continue)") + ", folder " + folder);
 		LoadingScreen.HostStarting = true;
+		// A shop made on the game's own screens keeps their choices; the server does not overwrite them.
+		ServerMode.KeepMenuChoices = flow && isNew;
+		ProbablyTogether.Systems.Perks.FounderPickedOnMenu = flow && isNew;
+		ServerMode.MorningFile = (flow && !isNew) ? HostFlow.MorningFile : null;
+		if (flow)
+		{
+			HostFlow.Hosting();
+		}
 		ServerMode.Start();
 		ServerMode.SkipMenuWait();
 		CloseDialog();
+	}
+
+	/// Headless test: --br-ui-host --br-ui-hostflow walks the host flow; --br-ui-host-slot=new (--br-ui-host-scenario=<ID>,
+	/// --br-ui-host-perks=a,b) or =<n> (--br-ui-host-morning=<file>); --br-ui-host-go presses Host.
+	private static void FlowTest()
+	{
+		try
+		{
+			bool flag = HostFlow.Open();
+			List<string> list = new List<string>();
+			foreach (int orderedSlotId in SaveUIManager.GetOrderedSlotIds())
+			{
+				SavePreviewData preview = SaveUIManager.GetPreview(orderedSlotId);
+				list.Add(orderedSlotId + "=" + ((preview != null) ? (preview.GetDisplayName() + " day " + preview.dayCount) : "?"));
+			}
+			Log.Info("ui: host flow test: list " + (flag ? "up" : ("NOT up: " + HostFlow.LastProblem)) + "; shops [" + string.Join(" | ", list) + "]; load screen open " + LoadGameUI.IsOpen);
+			if (!flag)
+			{
+				return;
+			}
+			MainMenuUIController instance = MainMenuUIController.Instance;
+			NewGameData instance2 = NewGameData.Instance;
+			string text = Args.Get("--br-ui-host-slot") ?? "new";
+			if (text == "new")
+			{
+				HostFlow.NewShop();
+				string want = Args.Get("--br-ui-host-scenario") ?? "WATER_MERCHANT";
+				StartingScenario startingScenario = StartingScenario.GetVisible().FirstOrDefault((StartingScenario x) => string.Equals(x.startType.ToString(), want, StringComparison.OrdinalIgnoreCase));
+				CustomUIManager instance3 = CustomUIManager.Instance;
+				Log.Info("ui: host flow test: trade screen " + ((instance3.GetWindow("new_game_specialization") != null && instance3.GetWindow("new_game_specialization").IsAlive) ? "up" : "NOT up") + "; scenario " + ((startingScenario != null) ? startingScenario.id : "not found"));
+				if (startingScenario == null)
+				{
+					return;
+				}
+				instance2.startType = startingScenario.startType;
+				instance2.startScenarioId = startingScenario.id;
+				NewGameSpecializationUI.Close();
+				instance.OpenPerkInterface();
+				bool flag2 = instance3.GetWindow("new_game_perks") != null && instance3.GetWindow("new_game_perks").IsAlive;
+				foreach (string item in (Args.Get("--br-ui-host-perks") ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+				{
+					StartingPerk startingPerk = ProbablyTogether.Systems.Perks.Def(item.Trim());
+					if (startingPerk != null)
+					{
+						instance2.startingPerks.Add(startingPerk);
+					}
+				}
+				Log.Info("ui: host flow test: perk screen " + (flag2 ? "up" : "NOT up") + "; picked [" + string.Join(",", instance2.startingPerks.Select((StartingPerk q) => q.id)) + "]");
+				NewGamePerksUI.CloseWithoutReturning();
+				instance.OnPerksContinue();
+				bool flag3 = instance3.GetWindow("new_game_difficulty") != null && instance3.GetWindow("new_game_difficulty").IsAlive;
+				Log.Info("ui: host flow test: difficulty screen " + (flag3 ? "up" : "NOT up"));
+				instance2.difficultyId = "normal";
+				NewGameDifficultyUI.CloseWithoutReturning();
+				instance.OnPerkFinishedClick();
+			}
+			else
+			{
+				instance2.saveSlot = int.Parse(text, CultureInfo.InvariantCulture);
+				instance2.saveFile = Args.Get("--br-ui-host-morning");
+				LoadGameUI.Close();
+				instance.StartNewGameClick();
+			}
+			Log.Info("ui: host flow test: last step " + ((window != null) ? "up" : "NOT up") + "; flow slot " + HostFlow.Slot + "; name '" + (Field("name") ?? "") + "', port " + (Field("port") ?? "") + "; reached " + HostFlow.Reached);
+			if (window != null && Args.Has("--br-ui-host-go"))
+			{
+				Start();
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Error("ui: host flow test threw: " + ex);
+		}
 	}
 
 	/// Headless test: --br-ui-host opens the window, --br-ui-host-slot=new|<n> and --br-ui-host-scenario=<ID> choose,
@@ -535,6 +659,11 @@ internal static class HostMenu
 	{
 		if (!Args.Has("--br-ui-host"))
 		{
+			return;
+		}
+		if (Args.Has("--br-ui-hostflow"))
+		{
+			FlowTest();
 			return;
 		}
 		try

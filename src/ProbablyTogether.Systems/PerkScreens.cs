@@ -325,6 +325,28 @@ public static class PerkScreens
 		}
 	}
 
+	/// The perk screen that is up lets its player choose, whatever the game's "first run" rule says.
+	internal static void Unlock()
+	{
+		try
+		{
+			CustomUIWindow customUIWindow = Window(PerkWindow);
+			NewGamePerksFrame newGamePerksFrame = (customUIWindow != null) ? customUIWindow.root.GetComponent<NewGamePerksFrame>() : null;
+			if ((Object)(object)newGamePerksFrame == (Object)null)
+			{
+				return;
+			}
+			firstRunField?.SetValue(null, false);
+			newGamePerksFrame.instruction.text = LocHelper.GetLocalizedMainMenu("new_perk_instruction");
+			newGamePerksFrame.instruction.color = NewGameStyle.DESCRIPTION;
+			Rebuild();
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("ui: lifting the first-run lock of the perk screen threw: " + ex.Message);
+		}
+	}
+
 	internal static List<string> Selected()
 	{
 		List<StartingPerk> list = NewGameData.Instance?.startingPerks;

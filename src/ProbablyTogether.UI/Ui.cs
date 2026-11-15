@@ -209,6 +209,7 @@ public static class Ui
 		}
 		Kit.Tick();
 		JoinMenu.Tick();
+		HostFlow.Tick();
 		UpdateNotice.Tick();
 		LoadingScreen.Tick();
 		Overlay.Tick();

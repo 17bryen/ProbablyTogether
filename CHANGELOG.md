@@ -2,6 +2,22 @@
 
 All changes to Probably Together.
 
+## 0.8.0 - 2026-11-15
+
+Protocol 17. Every player needs it.
+
+### Added
+- Every player picks their own starting perks once. Each perk is unique to the shop, stacking per holder, or personal, as decided perk by perk; `/perks` lists who has what.
+- A perk that would end the run ends its holder instead: they start over in their seat, or leave the shop if away.
+- New players go through the game's own trade and perk screens; in older shops everybody picks perks at their next join.
+- Hosting uses the game's own Load Game and New Game screens, with rename, duplicate, delete and earlier mornings to continue from.
+- A shop whose run ended stays in the list and can be continued from its last or an earlier morning.
+
+### Fixed
+- The founder of a new shop no longer gets two fanny packs.
+- The items every shop gets when skipping the intro now stay in the shop's storage instead of the founder's bay.
+- A customer's own item can no longer be put into a player's storage bay.
+
 ## 0.7.6 - 2026-11-15
 
 Protocol 16. Every player needs it.

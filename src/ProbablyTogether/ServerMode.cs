@@ -60,6 +60,12 @@ internal static class ServerMode
 
 	internal static string EndedStamp;
 
+	/// The new shop was made on the game's new-game screens; keep NewGameData as they left it.
+	internal static bool KeepMenuChoices;
+
+	/// Continue once from this earlier morning file of the shop.
+	internal static string MorningFile;
+
 	internal static int savesSeen;
 
 	internal static ServerConfig Config => cfg;
@@ -281,7 +287,11 @@ internal static class ServerMode
 		string text2 = Paths.Under(text);
 		newRun = !File.Exists(text2);
 		inPlace = false;
-		instance.saveFile = null;
+		string morning = MorningFile;
+		MorningFile = null;
+		bool keep = KeepMenuChoices;
+		KeepMenuChoices = false;
+		instance.saveFile = (!newRun && !string.IsNullOrEmpty(morning) && File.Exists(Paths.Under(morning))) ? morning : null;
 		instance.isLoadFromMainMenu = false;
 		if (!newRun)
 		{
@@ -294,7 +304,7 @@ internal static class ServerMode
 				return;
 			}
 			instance.saveSlot = cfg.saveSlot;
-			Log.Info("server: loading save slot " + cfg.saveSlot + " (" + text2 + ", " + new FileInfo(text2).Length / 1024 + " KB)");
+			Log.Info("server: loading save slot " + cfg.saveSlot + " (" + text2 + ", " + new FileInfo(text2).Length / 1024 + " KB)" + ((instance.saveFile != null) ? ("; from its earlier morning " + instance.saveFile) : ""));
 			try
 			{
 				PanelLink.NoteSavedAt(File.GetLastWriteTimeUtc(text2));
@@ -313,7 +323,17 @@ internal static class ServerMode
 				BeginStop("could not open the save");
 				return;
 			}
-			ConfigureNewRun(instance);
+			if (keep && (int)instance.startType != 0)
+			{
+				// Trade, perks, difficulty, skip intro and endless are already in NewGameData.
+				instance.saveSlot = -1;
+				instance.disableTutorialHint = true;
+				NewRunPending = true;
+			}
+			else
+			{
+				ConfigureNewRun(instance);
+			}
 			Log.Info("server: no save in slot " + cfg.saveSlot + "; starting a new run (" + instance.startType.ToString() + ", " + instance.difficultyId + ", skip intro " + instance.skipIntro + ")");
 		}
 		BeginLoad();
@@ -390,7 +410,24 @@ internal static class ServerMode
 			o["cash"] = new Newtonsoft.Json.Linq.JValue((long)store.playerCash);
 			o["scenario"] = new Newtonsoft.Json.Linq.JValue(store.startType.ToString());
 			o["saved"] = new Newtonsoft.Json.Linq.JValue(DateTime.UtcNow.ToString("o"));
+			if (Systems.DayNightRun.RunOver)
+			{
+				o["ended"] = new Newtonsoft.Json.Linq.JValue(Systems.DayNightRun.Ending ?? "");
+				o["endedDay"] = new Newtonsoft.Json.Linq.JValue((long)Game.Day);
+			}
 			File.WriteAllText(Paths.Under("shop_" + cfg.saveSlot + ".json"), o.ToString());
+			// The game's save list loses a run's custom name at every save, so put the shop's name back.
+			try
+			{
+				if (!Systems.DayNightRun.RunOver)
+				{
+					SaveFiles.RenameSlot(cfg.saveSlot, cfg.name);
+				}
+			}
+			catch (Exception ex2)
+			{
+				Log.Warn("server: the shop's name was not put on its save: " + ex2.Message);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -447,6 +484,8 @@ internal static class ServerMode
 
 	private static void ConfigureNewRun(NewGameData ngd)
 	{
+		// A run set up by the server starts with no perks (each player picks their own), not the old run's list.
+		ngd.startingPerks = new System.Collections.Generic.List<StartingPerk>();
 		ngd.saveFile = null;
 		ngd.isLoadFromMainMenu = false;
 		ngd.saveSlot = -1;
