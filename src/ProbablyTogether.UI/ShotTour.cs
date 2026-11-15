@@ -98,7 +98,7 @@ internal static class ShotTour
 	{
 		MainMenuUIController instance = MainMenuUIController.Instance;
 		NewGameData instance2 = NewGameData.Instance;
-		if (step <= 11 && (!Ui.AtMenu || (Object)(object)instance == (Object)null || (Object)(object)instance2 == (Object)null))
+		if (step <= 13 && (!Ui.AtMenu || (Object)(object)instance == (Object)null || (Object)(object)instance2 == (Object)null))
 		{
 			menuSince = -1f;
 			return;
@@ -120,11 +120,28 @@ internal static class ShotTour
 			if (Since > 1f)
 			{
 				bool flag = HostFlow.Open();
-				Log.Info("shots: host list " + (flag ? "up" : ("NOT up: " + HostFlow.LastProblem)));
+				Log.Info("shots: setup screen " + (flag ? "up" : ("NOT up: " + HostFlow.LastProblem)));
 				Next();
 			}
 			break;
 		case 2:
+			if (Since > 2f)
+			{
+				Shot("host-setup");
+				Next();
+			}
+			break;
+		case 3:
+			if (Since > 1f)
+			{
+				HostPanels.SetupContinue(delegate(string pw, int port)
+				{
+					Flow("SetupDone", pw, port);
+				});
+				Next();
+			}
+			break;
+		case 4:
 			if (Since > 2f)
 			{
 				Shot((mode == "list") ? "host-list-with-a-shop" : "host-list-empty");
@@ -135,21 +152,39 @@ internal static class ShotTour
 				}
 			}
 			break;
-		case 3:
+		case 5:
 			if (Since > 1f)
 			{
 				HostFlow.NewShop();
 				Next();
 			}
 			break;
-		case 4:
+		case 6:
+			if (Since > 2f)
+			{
+				Shot("new-shop-rules");
+				Next();
+			}
+			break;
+		case 7:
+			if (Since > 1f)
+			{
+				HostPanels.SetField("name", "The Corner Shop");
+				HostPanels.RulesContinue(delegate(HostPanels.Rules r)
+				{
+					Flow("RulesDone", r);
+				});
+				Next();
+			}
+			break;
+		case 8:
 			if (Since > 2f)
 			{
 				Shot("new-shop-trade");
 				Next();
 			}
 			break;
-		case 5:
+		case 9:
 			if (Since > 1f)
 			{
 				string want = Args.Get("--br-ui-host-scenario") ?? "GUNSMITH";
@@ -170,14 +205,14 @@ internal static class ShotTour
 				Next();
 			}
 			break;
-		case 6:
+		case 10:
 			if (Since > 2f)
 			{
 				Shot("new-shop-perks");
 				Next();
 			}
 			break;
-		case 7:
+		case 11:
 			if (Since > 1f)
 			{
 				NewGamePerksUI.CloseWithoutReturning();
@@ -185,14 +220,14 @@ internal static class ShotTour
 				Next();
 			}
 			break;
-		case 8:
+		case 12:
 			if (Since > 2f)
 			{
 				Shot("new-shop-difficulty");
 				Next();
 			}
 			break;
-		case 9:
+		case 13:
 			if (Since > 1f)
 			{
 				instance2.difficultyId = "normal";
@@ -201,27 +236,13 @@ internal static class ShotTour
 				Next();
 			}
 			break;
-		case 10:
-			if (Since > 2f)
-			{
-				Shot("host-last-step");
-				Next();
-			}
-			break;
-		case 11:
-			if (Since > 1f)
-			{
-				HostMenu.PressHost();
-				Next();
-			}
-			break;
-		case 12:
+		case 14:
 			if (Net.IsHost && Net.IsLive && Game.ShopLoaded)
 			{
 				Next();
 			}
 			break;
-		case 13:
+		case 15:
 			if (Since > 6f)
 			{
 				Shot("host-in-the-shop");
@@ -229,6 +250,11 @@ internal static class ShotTour
 			}
 			break;
 		}
+	}
+
+	private static void Flow(string method, params object[] args)
+	{
+		typeof(HostFlow).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
 	}
 
 	private static void SelectScenario(string startType)

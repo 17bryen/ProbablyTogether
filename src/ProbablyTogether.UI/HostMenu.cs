@@ -460,6 +460,12 @@ internal static class HostMenu
 		window = null;
 	}
 
+	internal static string DefaultShopName()
+	{
+		string name;
+		return SteamName(out name) ? (name + "'s shop") : "My shop";
+	}
+
 	internal static void PressHost()
 	{
 		Start();
@@ -576,10 +582,6 @@ internal static class HostMenu
 		ServerMode.KeepMenuChoices = flow && isNew;
 		ProbablyTogether.Systems.Perks.FounderPickedOnMenu = flow && isNew;
 		ServerMode.MorningFile = (flow && !isNew) ? HostFlow.MorningFile : null;
-		if (flow)
-		{
-			HostFlow.Hosting();
-		}
 		ServerMode.Start();
 		ServerMode.SkipMenuWait();
 		CloseDialog();
@@ -592,26 +594,41 @@ internal static class HostMenu
 		try
 		{
 			bool flag = HostFlow.Open();
+			Log.Info("ui: host flow test: setup screen " + ((flag && HostPanels.SetupOpen) ? "up" : ("NOT up: " + HostFlow.LastProblem)));
+			if (!flag)
+			{
+				return;
+			}
+			HostPanels.SetupContinue(delegate(string pw, int port)
+			{
+				typeof(HostFlow).GetMethod("SetupDone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, new object[2] { pw, port });
+			});
 			List<string> list = new List<string>();
 			foreach (int orderedSlotId in SaveUIManager.GetOrderedSlotIds())
 			{
 				SavePreviewData preview = SaveUIManager.GetPreview(orderedSlotId);
 				list.Add(orderedSlotId + "=" + ((preview != null) ? (preview.GetDisplayName() + " day " + preview.dayCount) : "?"));
 			}
-			Log.Info("ui: host flow test: list " + (flag ? "up" : ("NOT up: " + HostFlow.LastProblem)) + "; shops [" + string.Join(" | ", list) + "]; load screen open " + LoadGameUI.IsOpen);
-			if (!flag)
-			{
-				return;
-			}
+			Log.Info("ui: host flow test: list " + (LoadGameUI.IsOpen ? "up" : "NOT up") + "; shops [" + string.Join(" | ", list) + "]");
 			MainMenuUIController instance = MainMenuUIController.Instance;
 			NewGameData instance2 = NewGameData.Instance;
+			CustomUIManager instance3 = CustomUIManager.Instance;
 			string text = Args.Get("--br-ui-host-slot") ?? "new";
 			if (text == "new")
 			{
 				HostFlow.NewShop();
+				Log.Info("ui: host flow test: rules screen " + (HostPanels.RulesOpen ? "up" : "NOT up"));
+				string text2 = Args.Get("--br-ui-host-name");
+				if (!string.IsNullOrEmpty(text2))
+				{
+					HostPanels.SetField("name", text2);
+				}
+				HostPanels.RulesContinue(delegate(HostPanels.Rules r)
+				{
+					typeof(HostFlow).GetMethod("RulesDone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, new object[1] { r });
+				});
 				string want = Args.Get("--br-ui-host-scenario") ?? "WATER_MERCHANT";
 				StartingScenario startingScenario = StartingScenario.GetVisible().FirstOrDefault((StartingScenario x) => string.Equals(x.startType.ToString(), want, StringComparison.OrdinalIgnoreCase));
-				CustomUIManager instance3 = CustomUIManager.Instance;
 				Log.Info("ui: host flow test: trade screen " + ((instance3.GetWindow("new_game_specialization") != null && instance3.GetWindow("new_game_specialization").IsAlive) ? "up" : "NOT up") + "; scenario " + ((startingScenario != null) ? startingScenario.id : "not found"));
 				if (startingScenario == null)
 				{
@@ -634,7 +651,7 @@ internal static class HostMenu
 				NewGamePerksUI.CloseWithoutReturning();
 				instance.OnPerksContinue();
 				bool flag3 = instance3.GetWindow("new_game_difficulty") != null && instance3.GetWindow("new_game_difficulty").IsAlive;
-				Log.Info("ui: host flow test: difficulty screen " + (flag3 ? "up" : "NOT up"));
+				Log.Info("ui: host flow test: difficulty screen " + (flag3 ? "up" : "NOT up") + "; its Start hosts the shop");
 				instance2.difficultyId = "normal";
 				NewGameDifficultyUI.CloseWithoutReturning();
 				instance.OnPerkFinishedClick();
@@ -646,11 +663,7 @@ internal static class HostMenu
 				LoadGameUI.Close();
 				instance.StartNewGameClick();
 			}
-			Log.Info("ui: host flow test: last step " + ((window != null) ? "up" : "NOT up") + "; flow slot " + HostFlow.Slot + "; name '" + (Field("name") ?? "") + "', port " + (Field("port") ?? "") + "; reached " + HostFlow.Reached);
-			if (window != null && Args.Has("--br-ui-host-go"))
-			{
-				Start();
-			}
+			Log.Info("ui: host flow test: hosted " + HostFlow.Reached + " time(s) from the flow; role " + Net.Role);
 		}
 		catch (Exception ex)
 		{

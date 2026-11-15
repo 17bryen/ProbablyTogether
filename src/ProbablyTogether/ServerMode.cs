@@ -410,6 +410,12 @@ internal static class ServerMode
 			o["cash"] = new Newtonsoft.Json.Linq.JValue((long)store.playerCash);
 			o["scenario"] = new Newtonsoft.Json.Linq.JValue(store.startType.ToString());
 			o["saved"] = new Newtonsoft.Json.Linq.JValue(DateTime.UtcNow.ToString("o"));
+			// The rules the host's list starts this shop with next time.
+			o["maxPlayers"] = new Newtonsoft.Json.Linq.JValue((long)cfg.maxPlayers);
+			o["individualOutings"] = new Newtonsoft.Json.Linq.JValue(cfg.individualOutings);
+			o["playerOwnership"] = new Newtonsoft.Json.Linq.JValue(cfg.playerOwnership);
+			o["customersPerPlayer"] = new Newtonsoft.Json.Linq.JValue(cfg.customersPerPlayer);
+			o["rentPercentPerPlayer"] = new Newtonsoft.Json.Linq.JValue((long)cfg.rentPercentPerPlayer);
 			if (Systems.DayNightRun.RunOver)
 			{
 				o["ended"] = new Newtonsoft.Json.Linq.JValue(Systems.DayNightRun.Ending ?? "");

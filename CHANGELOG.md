@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.8.2 - 2026-11-15
+
+Same protocol (17). Only the host needs it.
+
+### Changed
+- Hosting runs in a new order, all in the game's style: host settings, then "Your shops", then "New shop" with the per-player rules, then the game's own new-game screens. Loading a shop hosts it at once, and Back goes one screen back.
+- A shop keeps the rules it was made with; older shops use the rules last used.
+
 ## 0.8.1 - 2026-11-15
 
 Same protocol (17).

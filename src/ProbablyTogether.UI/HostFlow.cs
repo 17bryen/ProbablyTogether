@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using ProbablyTogether.Systems;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
@@ -28,7 +30,10 @@ internal static class HostFlow
 	/// 0 none chosen, -1 a new shop, above 0 the shop in that slot.
 	internal static int Slot;
 
+	/// An earlier morning's save to continue from, or null for the latest.
 	internal static string MorningFile;
+
+	private static HostPanels.Rules pending;
 
 	private static bool syncing;
 
@@ -58,6 +63,25 @@ internal static class HostFlow
 		}
 	}
 
+	private static string ConfigPath => HostMenu.HostFolder + "/server.json";
+
+	private static JObject Config()
+	{
+		try
+		{
+			return File.Exists(ConfigPath) ? JObject.Parse(File.ReadAllText(ConfigPath)) : new JObject();
+		}
+		catch
+		{
+			return new JObject();
+		}
+	}
+
+	private static void WriteConfig(JObject cfg)
+	{
+		File.WriteAllText(ConfigPath, cfg.ToString());
+	}
+
 	private static string CardPath(int slot)
 	{
 		return HostMenu.HostFolder + "/shop_" + slot + ".json";
@@ -74,13 +98,6 @@ internal static class HostFlow
 		{
 			return null;
 		}
-	}
-
-	internal static string CardName(int slot)
-	{
-		JObject jObject = Card(slot);
-		string text = (jObject != null) ? (string)jObject["name"] : null;
-		return string.IsNullOrWhiteSpace(text) ? null : text;
 	}
 
 	private static string EndedNote(JObject card)
@@ -181,7 +198,8 @@ internal static class HostFlow
 	/// False if the game's screens could not be used; the old window opens instead.
 	internal static bool Open()
 	{
-		if (!Ui.AtMenu || Net.IsOnline || (Object)(object)CustomUIManager.Instance == (Object)null || (Object)(object)CustomUIManager.Instance.loadGamePrefab == (Object)null)
+		CustomUIManager instance = CustomUIManager.Instance;
+		if (!Ui.AtMenu || Net.IsOnline || (Object)(object)instance == (Object)null || (Object)(object)instance.loadGamePrefab == (Object)null || (Object)(object)instance.newGameDifficultyPrefab == (Object)null)
 		{
 			return false;
 		}
@@ -197,23 +215,58 @@ internal static class HostFlow
 			Active = true;
 			Slot = 0;
 			MorningFile = null;
-			SyncNames();
-			SaveUIManager.InvalidateCache();
-			ShowList();
-			if (Window(ListWindow) == null)
+			pending = null;
+			ShowSetup();
+			if (!HostPanels.SetupOpen)
 			{
-				throw new InvalidOperationException("the game's load screen did not open");
+				throw new InvalidOperationException("the setup screen did not open");
 			}
 			Opened++;
-			Log.Info("host: the list of hosted shops is up (the game's load screen over " + HostMenu.HostFolder + ", " + SaveUIManager.GetOrderedSlotIds().Count + " shop(s))");
+			Log.Info("host: the host flow is on (hosted shops in " + HostMenu.HostFolder + ")");
 			return true;
 		}
 		catch (Exception ex)
 		{
-			LastProblem = "list: " + ex.Message;
-			Log.Warn("host: the game's load screen could not be used for the hosted shops, the old window comes instead: " + ex.Message);
-			End("the list could not open");
+			LastProblem = "setup: " + ex.Message;
+			Log.Warn("host: the game's screens could not be used for hosting, the old window comes instead: " + ex.Message);
+			End("the setup screen could not open");
 			return false;
+		}
+	}
+
+	private static void ShowSetup()
+	{
+		JObject jObject = Config();
+		int result;
+		int port = (int.TryParse((string)jObject["port"], NumberStyles.Integer, CultureInfo.InvariantCulture, out result) && result >= 1024 && result <= 65535) ? result : 27700;
+		HostPanels.OpenSetup(((string)jObject["password"]) ?? "", port, SetupDone);
+		last = HostPanels.SetupWindow;
+		idleSince = -1f;
+	}
+
+	private static void SetupDone(string password, int port)
+	{
+		moving = true;
+		try
+		{
+			JObject jObject = Config();
+			jObject["password"] = new JValue(password ?? "");
+			jObject["port"] = new JValue(port);
+			WriteConfig(jObject);
+			HostPanels.CloseSetup();
+			SyncNames();
+			SaveUIManager.InvalidateCache();
+			ShowList();
+			Log.Info("host: port " + port + ", " + (string.IsNullOrEmpty(password) ? "no password" : "with a password") + "; the list of hosted shops is up (" + SaveUIManager.GetOrderedSlotIds().Count + " shop(s))");
+		}
+		catch (Exception ex)
+		{
+			LastProblem = "list: " + ex.Message;
+			Log.Error("host: the list of hosted shops did not open: " + ex);
+		}
+		finally
+		{
+			moving = false;
 		}
 	}
 
@@ -232,42 +285,19 @@ internal static class HostFlow
 		{
 			if ((Object)(object)loadGameFrame.headerTitle != (Object)null)
 			{
-				loadGameFrame.headerTitle.text = Lang.Tr("Host a shop");
+				loadGameFrame.headerTitle.text = Lang.Tr("Your shops");
 			}
-			if (customUIWindow.root.transform.Find("bellun_probably_together_new_shop") == null && !NewShopOnContinue(loadGameFrame))
+			if (customUIWindow.root.transform.Find("bellun_probably_together_new_shop") == null && loadGameFrame.panel.Find("bellun_probably_together_new_shop") == null)
 			{
-				RectTransform rectTransform = loadGameFrame.panel;
-				float num = ((Object)(object)rectTransform != (Object)null) ? rectTransform.rect.width : 1110f;
-				NewGameCommonButton newGameCommonButton = NewGameCommonButton.Build(loadGameFrame, ((Object)(object)rectTransform != (Object)null) ? rectTransform : (RectTransform)customUIWindow.root.transform, "bellun_probably_together_new_shop", num - 420f, 28f, 260f, 48f, Lang.Tr("New shop"), NewShop);
+				RectTransform panel = loadGameFrame.panel;
+				float num = ((Object)(object)panel != (Object)null) ? panel.rect.width : 1110f;
+				NewGameCommonButton.Build(loadGameFrame, ((Object)(object)panel != (Object)null) ? panel : (RectTransform)customUIWindow.root.transform, "bellun_probably_together_new_shop", num - 420f, 28f, 260f, 48f, Lang.Tr("New shop"), NewShop);
 			}
 		}
 		catch (Exception ex)
 		{
 			Log.Warn("host: dressing the list threw (it works without): " + ex.Message);
 		}
-	}
-
-	private static bool NewShopOnContinue(LoadGameFrame frame)
-	{
-		if ((Object)(object)frame.continueButton == (Object)null || ((Component)frame.continueButton).gameObject.activeInHierarchy)
-		{
-			return false;
-		}
-		((Component)frame.continueButton).gameObject.SetActive(true);
-		if (!((Component)frame.continueButton).gameObject.activeInHierarchy)
-		{
-			((Component)frame.continueButton).gameObject.SetActive(false);
-			return false;
-		}
-		frame.continueButton.onClick.RemoveAllListeners();
-		frame.continueButton.onClick.AddListener(NewShop);
-		frame.continueButton.interactable = true;
-		if ((Object)(object)frame.continueLabel != (Object)null)
-		{
-			frame.continueLabel.text = Lang.Tr("New shop");
-		}
-		NewGameUIElements.RefreshContinueLook(frame, hovered: false);
-		return true;
 	}
 
 	internal static void NewShop()
@@ -284,10 +314,54 @@ internal static class HostFlow
 			NewGameData.Instance.saveSlot = -1;
 			NewGameData.Instance.saveFile = null;
 			LoadGameUI.Close();
+			ShowRules(null);
+			Log.Info("host: a new shop: its rules first");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: the rules screen did not open: " + ex.Message);
+		}
+		finally
+		{
+			moving = false;
+		}
+	}
+
+	private static void ShowRules(string note)
+	{
+		if (pending == null)
+		{
+			JObject jObject = Config();
+			pending = new HostPanels.Rules
+			{
+				Name = HostMenu.DefaultShopName(),
+				Players = Mathf.Clamp(((int?)jObject["maxPlayers"]) ?? 4, 1, 4),
+				OwnTrades = ((bool?)jObject["playerOwnership"]) ?? true,
+				SoloTrips = ((bool?)jObject["individualOutings"]) ?? false,
+				CustomersPerPlayer = ((double?)jObject["customersPerPlayer"]) ?? 2.0,
+				RentPercentPerPlayer = ((int?)jObject["rentPercentPerPlayer"]) ?? 50
+			};
+		}
+		HostPanels.OpenRules(pending, RulesDone);
+		if (!string.IsNullOrEmpty(note))
+		{
+			HostPanels.RulesNote(note);
+		}
+		last = HostPanels.RulesWindow;
+		idleSince = -1f;
+	}
+
+	private static void RulesDone(HostPanels.Rules r)
+	{
+		moving = true;
+		try
+		{
+			pending = r;
+			HostPanels.CloseRules();
 			NewGameSpecializationUI.Open();
 			last = SpecWindow;
 			idleSince = -1f;
-			Log.Info("host: a new shop: the game's new game screens");
+			Log.Info("host: a new shop '" + r.Name + "': " + r.Players + " player(s), own trades " + r.OwnTrades + ", solo trips " + r.SoloTrips + ", +" + r.CustomersPerPlayer.ToString(CultureInfo.InvariantCulture) + " customer(s) and +" + r.RentPercentPerPlayer + "% rent per added player; the game's new game screens");
 		}
 		catch (Exception ex)
 		{
@@ -313,25 +387,133 @@ internal static class HostFlow
 			instance.skipIntro = instance.skipIntro || ((Object)(object)menu.skipIntroLock != (Object)null && menu.skipIntroLock.activeSelf) || ((Object)(object)menu.skipToggle != (Object)null && menu.skipToggle.isOn);
 			Slot = (instance.saveSlot > 0) ? instance.saveSlot : (-1);
 			MorningFile = (Slot > 0) ? instance.saveFile : null;
-			Reached++;
-			Log.Info("host: " + ((Slot > 0) ? ("shop " + Slot + ((MorningFile != null) ? (" from its earlier morning " + MorningFile) : " from its latest morning")) : ("a new shop: " + instance.startType.ToString() + ", " + instance.difficultyId + ", " + ((instance.startingPerks != null) ? instance.startingPerks.Count : 0) + " perk(s), skip intro " + instance.skipIntro + ", endless " + instance.endlessMode)) + "; asking for the server settings");
-			last = "settings";
-			idleSince = -1f;
-			HostMenu.OpenDialog();
+			string text = Launch();
+			if (text != null)
+			{
+				Log.Warn("host: not hosted: " + text);
+				if (Slot < 0)
+				{
+					ShowRules(text);
+				}
+				else
+				{
+					ShowList();
+				}
+			}
 		}
 		catch (Exception ex)
 		{
-			Log.Error("host: the last step did not open: " + ex);
+			Log.Error("host: hosting from the flow threw: " + ex);
 		}
 		return false;
 	}
 
-	internal static void Hosting()
+	private static int NextSlot()
 	{
+		int num = 0;
+		try
+		{
+			foreach (string file in System.IO.Directory.GetFiles(HostMenu.HostFolder, "save_*.es3"))
+			{
+				Match match = Regex.Match(Path.GetFileName(file), "^save_(\\d+)(_day\\d+_.*)?\\.es3$");
+				if (match.Success && int.TryParse(match.Groups[1].Value, out var result))
+				{
+					num = Math.Max(num, result);
+				}
+			}
+			foreach (int item in SaveFiles.IndexLoad("activeSaveSlotId", new List<int>()))
+			{
+				num = Math.Max(num, item);
+			}
+		}
+		catch
+		{
+		}
+		return num + 1;
+	}
+
+	/// Null when under way; else the reason it failed.
+	private static string Launch()
+	{
+		bool flag = Slot < 0;
+		NewGameData instance = NewGameData.Instance;
+		JObject jObject = Config();
+		int num;
+		string text;
+		HostPanels.Rules rules;
+		if (flag)
+		{
+			rules = pending ?? new HostPanels.Rules
+			{
+				Name = HostMenu.DefaultShopName()
+			};
+			string scenario = instance.startType.ToString();
+			if (!ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, scenario, StringComparison.OrdinalIgnoreCase)))
+			{
+				return Lang.Tr("That trade cannot start a shared shop. Pick another.");
+			}
+			num = NextSlot();
+			text = rules.Name;
+			JObject jObject2 = new JObject();
+			jObject2["scenario"] = new JValue(scenario);
+			jObject2["difficulty"] = new JValue(string.IsNullOrEmpty(instance.difficultyId) ? "normal" : instance.difficultyId);
+			jObject2["skipIntro"] = new JValue(instance.skipIntro);
+			jObject["newRun"] = jObject2;
+			jObject["endless"] = new JValue(instance.endlessMode);
+		}
+		else
+		{
+			num = Slot;
+			// The rules from the shop's card; without a card, the last ones used.
+			JObject jObject3 = Card(num) ?? new JObject();
+			text = ((string)jObject3["name"]) ?? ((string)jObject["name"]) ?? HostMenu.DefaultShopName();
+			rules = new HostPanels.Rules
+			{
+				Name = text,
+				Players = Mathf.Clamp(((int?)jObject3["maxPlayers"]) ?? ((int?)jObject["maxPlayers"]) ?? 4, 1, 4),
+				OwnTrades = ((bool?)jObject3["playerOwnership"]) ?? ((bool?)jObject["playerOwnership"]) ?? true,
+				SoloTrips = ((bool?)jObject3["individualOutings"]) ?? ((bool?)jObject["individualOutings"]) ?? false,
+				CustomersPerPlayer = ((double?)jObject3["customersPerPlayer"]) ?? ((double?)jObject["customersPerPlayer"]) ?? 2.0,
+				RentPercentPerPlayer = ((int?)jObject3["rentPercentPerPlayer"]) ?? ((int?)jObject["rentPercentPerPlayer"]) ?? 50
+			};
+		}
+		int port = ((int?)jObject["port"]) ?? 27700;
+		if (!HostPanels.PortFree(port))
+		{
+			return Lang.Trf("Port {0} is already in use on this PC.", port.ToString(CultureInfo.InvariantCulture));
+		}
+		jObject["name"] = new JValue(text);
+		jObject["maxPlayers"] = new JValue(rules.Players);
+		jObject["saveSlot"] = new JValue(num);
+		jObject["individualOutings"] = new JValue(rules.SoloTrips);
+		jObject["playerOwnership"] = new JValue(rules.OwnTrades);
+		jObject["customersPerPlayer"] = new JValue(rules.CustomersPerPlayer);
+		jObject["rentPercentPerPlayer"] = new JValue(rules.RentPercentPerPlayer);
+		try
+		{
+			WriteConfig(jObject);
+		}
+		catch (Exception ex)
+		{
+			return Lang.Tr("Could not write the shop settings: ") + ex.Message;
+		}
+		Reached++;
+		Paths.KeepSettings = true;
+		Net.Role = Role.Host;
+		Log.Info("host: starting from the flow: '" + text + "' on port " + port + ", " + rules.Players + " player(s), slot " + num + (flag ? (" (new: " + instance.startType.ToString() + ", " + instance.difficultyId + ", " + ((instance.startingPerks != null) ? instance.startingPerks.Count : 0) + " perk(s))") : ((MorningFile != null) ? (" (continue from " + MorningFile + ")") : " (continue)")) + ", own trades " + rules.OwnTrades + ", solo trips " + rules.SoloTrips);
+		LoadingScreen.HostStarting = true;
+		// Keep the menu's choices (founder's perks, a mod's difficulty) instead of the server's defaults.
+		ServerMode.KeepMenuChoices = flag;
+		Perks.FounderPickedOnMenu = flag;
+		ServerMode.MorningFile = flag ? null : MorningFile;
 		Active = false;
 		Slot = 0;
+		pending = null;
 		last = "";
 		idleSince = -1f;
+		ServerMode.Start();
+		ServerMode.SkipMenuWait();
+		return null;
 	}
 
 	private static void End(string why)
@@ -343,8 +525,11 @@ internal static class HostFlow
 		Active = false;
 		Slot = 0;
 		MorningFile = null;
+		pending = null;
 		last = "";
 		idleSince = -1f;
+		HostPanels.CloseSetup();
+		HostPanels.CloseRules();
 		if (!Net.IsOnline && Net.Role != Role.Host)
 		{
 			Paths.ClearOverride();
@@ -371,22 +556,7 @@ internal static class HostFlow
 			End("left the menu");
 			return;
 		}
-		if (last != DifficultyWindow)
-		{
-			try
-			{
-				CustomUIWindow customUIWindow = Window(DifficultyWindow);
-				NewGameDifficultyFrame newGameDifficultyFrame = (customUIWindow != null) ? customUIWindow.root.GetComponent<NewGameDifficultyFrame>() : null;
-				if ((Object)(object)newGameDifficultyFrame != (Object)null && (Object)(object)newGameDifficultyFrame.continueLabel != (Object)null)
-				{
-					newGameDifficultyFrame.continueLabel.text = LocHelper.GetLocalizedMainMenu("new_continue");
-				}
-			}
-			catch
-			{
-			}
-		}
-		string text = (Window(ListWindow) != null) ? ListWindow : ((Window(SpecWindow) != null) ? SpecWindow : ((Window(PerkWindow) != null) ? PerkWindow : ((Window(DifficultyWindow) != null) ? DifficultyWindow : (HostMenu.DialogOpen ? "settings" : null))));
+		string text = HostPanels.SetupOpen ? HostPanels.SetupWindow : ((Window(ListWindow) != null) ? ListWindow : (HostPanels.RulesOpen ? HostPanels.RulesWindow : ((Window(SpecWindow) != null) ? SpecWindow : ((Window(PerkWindow) != null) ? PerkWindow : ((Window(DifficultyWindow) != null) ? DifficultyWindow : null)))));
 		if (text != null)
 		{
 			last = text;
@@ -404,19 +574,30 @@ internal static class HostFlow
 		{
 			return;
 		}
-		if (last == SpecWindow || last == "settings")
+		try
 		{
-			try
+			if (last == SpecWindow)
 			{
+				ShowRules(null);
+			}
+			else if (last == HostPanels.RulesWindow)
+			{
+				pending = null;
 				ShowList();
 			}
-			catch (Exception ex)
+			else if (last == ListWindow)
 			{
-				End("the list could not reopen: " + ex.Message);
+				ShowSetup();
 			}
-			return;
+			else
+			{
+				End("closed");
+			}
 		}
-		End("closed");
+		catch (Exception ex)
+		{
+			End("a step back could not open: " + ex.Message);
+		}
 	}
 }
 
