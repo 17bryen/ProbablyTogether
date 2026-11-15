@@ -38,10 +38,7 @@ public sealed class RegularsH : StandingBotBase
 		Do("they-are-well-known-everywhere", delegate
 		{
 			Regulars.Chance = 100;
-			foreach (StoreReputation storeReputation in DayNightBotBase.Ps.storeReputations)
-			{
-				Standing.LabGrant(OtherSeat, storeReputation.factionId, 5.0);
-			}
+			Regulars.Gap = 0;
 			LabKit.Do("give", "flashlight", "1");
 			DayNightBotBase.Ps.isBargainIntroduced = true;
 			return Ledger;
@@ -66,8 +63,22 @@ public sealed class RegularsH : StandingBotBase
 		Do("a-merchant-and-a-look-at-the-queue", delegate
 		{
 			string text = Customers.BotDo("add", "merchant");
+			// Credit the other player with thirty sales of what this buyer comes for.
+			StoreClient c = DayNightBotBase.Ps.storeClientManager.clientStack.FirstOrDefault((StoreClient x) => x != null && x.identifier == "merchant");
+			string keys = "";
+			if (c != null)
+			{
+				List<string> list = new List<string> { c.clientFaction + "/*" };
+				list.AddRange((c.clientBuyingTagList ?? new List<string>()).Where((string t) => !string.IsNullOrEmpty(t) && !t.StartsWith("ALL_TYPE", StringComparison.Ordinal)).Select((string t) => c.clientFaction + "/" + t));
+				list.AddRange((c.clientBuyingIdList ?? new List<string>()).Where((string t) => !string.IsNullOrEmpty(t)).Select((string t) => c.clientFaction + "/#" + t));
+				foreach (string item in list.Distinct())
+				{
+					Standing.LabGoods(OtherSeat, item, 30, "flashlight");
+				}
+				keys = "; buys [" + string.Join(",", c.clientBuyingTagList ?? new List<string>()) + "] ids [" + string.Join(",", c.clientBuyingIdList ?? new List<string>()) + "] faction " + c.clientFaction + " intent " + c.clientIntent;
+			}
 			Regulars.LabRetag();
-			return text + "; " + Tags;
+			return text + keys + "; " + Tags;
 		});
 		Check("the-merchant-brings-an-offer-only-for-them", () => Regulars.KindOf("merchant") == Regulars.Offer && Regulars.SeatOf("merchant") == OtherSeat && Regulars.LinesOf("merchant").Contains(Members.NameOf(OtherSeat)), () => Tags);
 		float lastRing = -100f;
@@ -152,6 +163,7 @@ public sealed class RegularsB : StandingBotBase
 		Do("same-odds-here", delegate
 		{
 			Regulars.Chance = 100;
+			Regulars.Gap = 0;
 			return "every customer who could, does (as on the founder's game)";
 		});
 		WaitFor("the-merchant-brings-an-offer-only-for-me-here-too", 240f, () => Regulars.KindOf("merchant") == Regulars.Offer && Regulars.SeatOf("merchant") == Members.LocalSeat && Regulars.LinesOf("merchant").Contains(Members.NameOf(Members.LocalSeat)), () => "merchant: " + Regulars.Word(Regulars.KindOf("merchant")) + " seat " + Regulars.SeatOf("merchant") + " [" + Regulars.LinesOf("merchant") + "]; " + Ledger);

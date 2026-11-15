@@ -20,63 +20,87 @@ public static class Regulars
 
 	public const int Offer = 3;
 
-	public const int Dislike = 4;
+	public static int RemarkAt = 8;
 
-	public static double RemarkAt = 0.5;
+	public static int AsksAt = 16;
 
-	public static double AsksAt = 1.5;
+	public static int OfferAt = 30;
 
-	public static double OfferAt = 4.0;
+	public static int Gap = 3;
 
-	public static double DislikeAt = -0.5;
-
-	public static int Chance = 35;
+	/// Chance in a hundred that such a customer comes on a day one could.
+	public static int Chance = 50;
 
 	private sealed class Tag
 	{
+		public StoreClient Client;
+
+		public string Id = "";
+
 		public int Seat;
 
 		public int Kind;
 
 		public string Lines = "";
+
+		public Dialogue Head;
+
+		public Dialogue Original;
+
+		public int Cash;
+
+		public double RepFactor;
 	}
 
-	private static readonly Dictionary<string, Tag> today = new Dictionary<string, Tag>(StringComparer.Ordinal);
+	private static Tag today;
 
-	private static int forDay = -1;
+	private const string Key = "regular";
 
+	/// Customers re-labelled, and such lines begun at the counter.
 	internal static int Tagged;
+
+	internal static int Spoken;
 
 	internal static string LastTagged = "";
 
+	/// The day the shop's last such customer was queued (saved, compared between copies).
+	public static string Raw
+	{
+		get
+		{
+			try
+			{
+				return ModHelper.GetModData("bellun_probably_together", Key, (string)null) ?? "";
+			}
+			catch
+			{
+				return "";
+			}
+		}
+	}
+
+	private static int LastDay => int.TryParse(Raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) ? result : (-1000);
+
 	public static int KindOf(string identifier)
 	{
-		Tag value;
-		return (!string.IsNullOrEmpty(identifier) && today.TryGetValue(identifier, out value)) ? value.Kind : 0;
+		return (today != null && !string.IsNullOrEmpty(identifier) && today.Id == identifier) ? today.Kind : 0;
 	}
 
 	public static int SeatOf(string identifier)
 	{
-		Tag value;
-		return (!string.IsNullOrEmpty(identifier) && today.TryGetValue(identifier, out value)) ? value.Seat : 0;
+		return (today != null && !string.IsNullOrEmpty(identifier) && today.Id == identifier) ? today.Seat : 0;
 	}
 
 	public static string LinesOf(string identifier)
 	{
-		Tag value;
-		return (!string.IsNullOrEmpty(identifier) && today.TryGetValue(identifier, out value)) ? value.Lines : "";
+		return (today != null && !string.IsNullOrEmpty(identifier) && today.Id == identifier) ? today.Lines : "";
 	}
 
-	private static string CurrentId()
+	private static StoreClient Current()
 	{
 		try
 		{
-			PlayerStore store = Game.Store;
-			if (store == null || store.currentClientInstance == null)
-			{
-				return null;
-			}
-			return store.currentClientInstance.GetClientBlueprint()?.identifier;
+			return Game.Store?.currentClientInstance?.GetClientBlueprint();
 		}
 		catch
 		{
@@ -88,13 +112,11 @@ public static class Regulars
 	/// in the game: an offer nobody can take would only block the counter.
 	public static int OnlyNow()
 	{
-		string text = CurrentId();
-		if (text == null || KindOf(text) != Offer)
+		if (today == null || today.Kind != Offer || Current() != today.Client)
 		{
 			return 0;
 		}
-		int num = SeatOf(text);
-		return (Members.BySeat(num) != null && Members.Online(num)) ? num : 0;
+		return (Members.BySeat(today.Seat) != null && Members.Online(today.Seat)) ? today.Seat : 0;
 	}
 
 	/// Server: why this player cannot close a deal with the customer at the counter (null: they can).
@@ -124,36 +146,71 @@ public static class Regulars
 	// {0} the player, {1} the goods.
 	private static readonly string[][] remarks = new string[3][]
 	{
-		new string[1] { "Give {0} my regards. People down my way speak well of this shop because of them." },
-		new string[1] { "I hear {0} is the one to thank for how this place treats us." },
-		new string[1] { "Tell {0} we remember who does right by us." }
+		new string[1] { "Give {0} my regards. The {1} from this shop gets talked about where I live." },
+		new string[1] { "I hear {0} is the one to thank for the {1} here." },
+		new string[1] { "Tell {0} the {1} did right by us." }
 	};
 
 	private static readonly string[][] asks = new string[3][]
 	{
-		new string[2] { "Is {0} in?", "I'd rather deal with somebody my people know." },
-		new string[2] { "I'm looking for {0}.", "A friend said to ask for them." },
-		new string[2] { "Which one of you is {0}?", "I was told they are the one to see here." }
+		new string[2] { "Is {0} in?", "My people say the {1} here is their doing." },
+		new string[2] { "I'm looking for {0}.", "A friend said to ask them about the {1}." },
+		new string[2] { "Which one of you is {0}?", "I was told they are the one to see for the {1}." }
 	};
 
 	private static readonly string[][] offers = new string[2][]
 	{
-		new string[2] { "I'm here for {0}, and only {0}.", "What I've brought is for them. A thank-you, call it." },
-		new string[2] { "This one is between me and {0}.", "My people asked me to see them right. Nobody else." }
+		new string[2] { "I'm here for {0}, and only {0}.", "My people want more of that {1}, and they sent me with money." },
+		new string[2] { "This one is between me and {0}.", "It's their {1} we are after. Nobody else's." }
 	};
 
-	private static readonly string[][] dislikes = new string[3][]
+	private static string GoodsName(string id)
 	{
-		new string[1] { "{0} works here, right? We haven't forgotten." },
-		new string[1] { "I know about {0}. Just so that is said." },
-		new string[1] { "My people have a long memory for what {0} sold us." }
-	};
+		try
+		{
+			string text = string.IsNullOrEmpty(id) ? null : GeneralHelper.GetDisplayNameFromID(id);
+			if (!string.IsNullOrEmpty(text) && !text.StartsWith("[", StringComparison.Ordinal))
+			{
+				return text;
+			}
+		}
+		catch
+		{
+		}
+		return UI.Lang.Tr("goods");
+	}
+
+	/// Undoes the last look-over for customers not yet at the counter.
+	private static void Undo()
+	{
+		Tag tag = today;
+		today = null;
+		if (tag?.Client == null)
+		{
+			return;
+		}
+		try
+		{
+			if (tag.Client.mainDialogue == tag.Head)
+			{
+				tag.Client.mainDialogue = tag.Original;
+			}
+			if (tag.Kind == Offer)
+			{
+				tag.Client.clientCash = tag.Cash;
+				tag.Client.tradeReputationMultiplier = tag.RepFactor;
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("regulars: taking back a customer's lines threw: " + ex.Message);
+		}
+	}
 
 	/// Every copy, right after the game made up the day's queue.
 	internal static void AfterQueue(StoreClientManager mgr)
 	{
-		today.Clear();
-		forDay = Game.Day;
+		Undo();
 		if (!Standing.Active || mgr?.clientStack == null)
 		{
 			return;
@@ -163,77 +220,74 @@ public static class Regulars
 		{
 			return;
 		}
-		int num = (list.Count + 1) / 2;
-		HashSet<int> hashSet = new HashSet<int>();
 		int day = Game.Day;
+		int lastDay = LastDay;
+		if (lastDay != day && (day - lastDay < Gap || Hash("shop", day, 3) >= Chance))
+		{
+			return;
+		}
+		// The buyer whose faction knows one player best, among the buyers who came for what that player sells.
+		StoreClient who = null;
+		int seat = 0;
+		KeyValuePair<string, Standing.Good> best = default(KeyValuePair<string, Standing.Good>);
 		foreach (StoreClient item in mgr.clientStack.ToList())
 		{
-			if (hashSet.Count >= num)
-			{
-				break;
-			}
-			if (item == null || string.IsNullOrEmpty(item.identifier) || string.IsNullOrEmpty(item.clientFaction) || item.mainDialogue == null || today.ContainsKey(item.identifier) || TradeVisits.SeatFor(item.identifier) != 0)
+			if (item == null || string.IsNullOrEmpty(item.identifier) || string.IsNullOrEmpty(item.clientFaction) || item.mainDialogue == null || !item.IsClientBuying() || item.isSecurity || TradeVisits.SeatFor(item.identifier) != 0)
 			{
 				continue;
 			}
-			int seat = 0;
-			double num2 = 0.0;
-			int seat2 = 0;
-			double num3 = 0.0;
 			foreach (Member item2 in list)
 			{
-				double num4 = Standing.RepOf(item2.s, item.clientFaction);
-				if (num4 > num2)
+				KeyValuePair<string, Standing.Good>? keyValuePair = Standing.BestFor(item2.s, item);
+				if (keyValuePair.HasValue && keyValuePair.Value.Value.N >= RemarkAt && (who == null || keyValuePair.Value.Value.N > best.Value.N))
 				{
-					num2 = num4;
+					who = item;
 					seat = item2.s;
-				}
-				if (num4 < num3)
-				{
-					num3 = num4;
-					seat2 = item2.s;
+					best = keyValuePair.Value;
 				}
 			}
-			int num5 = 0;
-			int num6 = 0;
-			bool flag = item.clientIntent == StoreClient.ClientIntent.BUY || item.clientIntent == StoreClient.ClientIntent.SELL || item.clientIntent == StoreClient.ClientIntent.SELLNBUY || item.clientIntent == StoreClient.ClientIntent.BARTER;
-			if (seat > 0 && num2 >= RemarkAt && !hashSet.Contains(seat))
+		}
+		if (who == null)
+		{
+			return;
+		}
+		int num = (best.Value.N >= OfferAt) ? Offer : ((best.Value.N >= AsksAt) ? Asks : Remark);
+		string[][] array = (num == Offer) ? offers : ((num == Asks) ? asks : remarks);
+		string[] array2 = array[Hash(who.identifier, day, 2) % array.Length];
+		string name = Members.NameOf(seat);
+		string goods = GoodsName(best.Value.Last);
+		List<string> list2 = array2.Select((string s) => UI.Lang.Trf(s, name, goods)).ToList();
+		Tag tag = new Tag
+		{
+			Client = who,
+			Id = who.identifier,
+			Seat = seat,
+			Kind = num,
+			Lines = string.Join(" / ", list2),
+			Original = who.mainDialogue,
+			Cash = who.clientCash,
+			RepFactor = who.tradeReputationMultiplier
+		};
+		tag.Head = Prepend(who, list2, tag);
+		if (num == Offer)
+		{
+			// They brought more money, and the deal weighs more with their faction.
+			who.clientCash = (int)Math.Min(int.MaxValue, (long)who.clientCash * 5 / 4);
+			who.tradeReputationMultiplier *= 1.5;
+		}
+		today = tag;
+		if (lastDay != day)
+		{
+			using (Net.Apply())
 			{
-				num6 = seat;
-				num5 = (num2 >= OfferAt && flag) ? Offer : ((num2 >= AsksAt && flag) ? Asks : Remark);
+				ModHelper.SetModData("bellun_probably_together", Key, day.ToString(CultureInfo.InvariantCulture));
 			}
-			else if (seat2 > 0 && num3 <= DislikeAt && !hashSet.Contains(seat2))
-			{
-				num6 = seat2;
-				num5 = Dislike;
-			}
-			if (num5 == 0 || Hash(item.identifier, day, 1) >= Chance)
-			{
-				continue;
-			}
-			string[][] array = (num5 == Offer) ? offers : ((num5 == Asks) ? asks : ((num5 == Remark) ? remarks : dislikes));
-			string[] array2 = array[Hash(item.identifier, day, 2) % array.Length];
-			string name = Members.NameOf(num6);
-			List<string> list2 = array2.Select((string s) => UI.Lang.Trf(s, name)).ToList();
-			Prepend(item, list2);
-			if (num5 == Offer)
-			{
-				item.buyPriceModifier = Math.Min(item.buyPriceModifier, -15);
-				item.tradeReputationMultiplier *= 1.5;
-			}
-			today[item.identifier] = new Tag
-			{
-				Seat = num6,
-				Kind = num5,
-				Lines = string.Join(" / ", list2)
-			};
-			hashSet.Add(num6);
-			Tagged++;
-			LastTagged = item.identifier + " " + Word(num5) + " seat " + num6;
-			if (!DayLog.Replaying)
-			{
-				Log.Info("regulars: day " + day + ": " + item.identifier + " (" + Standing.FactionName(item.clientFaction) + ") " + Word(num5) + " " + name + " (their own standing there " + ((num5 == Dislike) ? num3 : num2).ToString("0.00", CultureInfo.InvariantCulture) + ")");
-			}
+		}
+		Tagged++;
+		LastTagged = who.identifier + " " + Word(num) + " seat " + seat;
+		if (!DayLog.Replaying)
+		{
+			Log.Info("regulars: day " + day + ": " + who.identifier + " (" + Standing.FactionName(who.clientFaction) + ") " + Word(num) + " " + name + ": " + best.Value.N + " sale(s) of " + best.Key + ", last " + best.Value.Last + "; the shop's last such customer was on day " + lastDay);
 		}
 	}
 
@@ -247,20 +301,15 @@ public static class Regulars
 			return "asks for";
 		case Offer:
 			return "brings an offer only for";
-		case Dislike:
-			return "has not forgotten";
 		default:
 			return "-";
 		}
 	}
 
-	internal static void Prepend(StoreClient c, List<string> lines)
+	/// Adds the customer's own lines before their first, once; later returns go straight to their first line.
+	private static Dialogue Prepend(StoreClient c, List<string> lines, Tag tag)
 	{
 		Dialogue mainDialogue = c.mainDialogue;
-		if (mainDialogue == null || lines == null || lines.Count == 0)
-		{
-			return;
-		}
 		Dialogue dialogue = null;
 		Dialogue dialogue2 = null;
 		foreach (string line in lines)
@@ -280,17 +329,22 @@ public static class Regulars
 			dialogue2 = dialogue3;
 		}
 		dialogue2.SetNextDialogue(mainDialogue);
-		Action startAction = mainDialogue.startAction;
-		mainDialogue.startAction = delegate
+		Dialogue head = dialogue;
+		head.startAction = delegate
 		{
-			if (c.mainDialogue == dialogue)
+			if (c.mainDialogue == head)
 			{
 				c.mainDialogue = mainDialogue;
 			}
-			startAction?.Invoke();
+			Spoken++;
+			if (!DayLog.Replaying)
+			{
+				Log.Info("regulars: " + c.identifier + " begins \"" + tag.Lines + "\" (" + Spoken + " such line(s) begun since the game started, day " + Game.Day + ")");
+			}
 		};
-		dialogue.isMainDialog = mainDialogue.isMainDialog;
-		c.mainDialogue = dialogue;
+		head.isMainDialog = mainDialogue.isMainDialog;
+		c.mainDialogue = head;
+		return head;
 	}
 
 	/// Every copy looks over the queue as it stands now (after the lab added a customer).
@@ -316,13 +370,12 @@ public static class Regulars
 	internal static void Init()
 	{
 		Net.On<MsgRegularsLab>("regulars.lab", null, ApplyLab);
-		Digest.AddExplain("standing.today", () => string.Join(";", today.OrderBy((KeyValuePair<string, Tag> p) => p.Key).Select((KeyValuePair<string, Tag> p) => p.Key + "=" + p.Value.Kind + "/" + p.Value.Seat)));
+		Digest.AddExplain("standing.today", () => ((today == null) ? "" : (today.Id + "=" + today.Kind + "/" + today.Seat)) + "; last day " + Raw);
 		Snapshot.Loaded += delegate
 		{
-			if (Game.ShopLoaded && Game.Day != forDay)
-			{
-				today.Clear();
-			}
+			// A scene loaded in the morning has no queue yet; one loaded during the day gets its queue from the replay
+			// of the opening, which runs AfterQueue again. Either way the customers of the old scene are gone.
+			today = null;
 		};
 	}
 }

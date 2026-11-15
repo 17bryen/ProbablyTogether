@@ -28,6 +28,8 @@ public static class TradeVisits
 
 	internal static int Added;
 
+	internal static int Greeted;
+
 	internal static string LastAdded = "";
 
 	private static readonly Dictionary<string, string> startPredicates = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -162,7 +164,10 @@ public static class TradeVisits
 						forSeat[item3.identifier ?? ""] = item.s;
 						try
 						{
-							Greet(item3, item.n, item2.Key, dayCounter);
+							if (num == 1)
+							{
+								Greet(item3, item.n, item2.Key, dayCounter);
+							}
 						}
 						catch (Exception ex2)
 						{
@@ -233,7 +238,6 @@ public static class TradeVisits
 				continue;
 			}
 			forSeat[item.identifier] = num;
-			Greet(item, member.n, value, day);
 			Added++;
 			LastAdded = item.identifier + " for seat " + num;
 			Log.Info("trade visits: " + item.identifier + " comes for " + member.n + " (the shop's " + Word(value) + ")");
@@ -290,15 +294,21 @@ public static class TradeVisits
 		{
 			return;
 		}
+		// Said once: from the moment the first line starts, it is the customer's first line again.
 		dialogue2.SetNextDialogue(mainDialogue);
-		Action startAction = mainDialogue.startAction;
-		mainDialogue.startAction = delegate
+		Dialogue head = dialogue;
+		string said = string.Join(" / ", list);
+		head.startAction = delegate
 		{
-			if (c.mainDialogue == dialogue)
+			if (c.mainDialogue == head)
 			{
 				c.mainDialogue = mainDialogue;
 			}
-			startAction?.Invoke();
+			Greeted++;
+			if (!DayLog.Replaying)
+			{
+				Log.Info("trade visits: " + c.identifier + " begins \"" + said + "\" (" + Greeted + " such greeting(s) begun since the game started)");
+			}
 		};
 		dialogue.isMainDialog = mainDialogue.isMainDialog;
 		c.mainDialogue = dialogue;

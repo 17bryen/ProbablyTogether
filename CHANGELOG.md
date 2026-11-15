@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.7.5 - 2026-11-15
+
+Protocol 15. Every player needs it.
+
+### Changed
+- A trade's visitors no longer ask for its player by name, except on the trade's first day.
+- Customers who know a player are rarer: at most one a day for the shop, only buyers of goods that player has sold to their faction, and only after many such sales. Their private offer no longer gives a discount.
+- Added lines are said once for certain and are written to the log.
+
 ## 0.7.4 - 2026-11-13
 
 Same protocol (14). Every player needs it.

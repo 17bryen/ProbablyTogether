@@ -21,10 +21,24 @@ public static class Standing
 
 		public int Bought;
 
+		/// Faction -> standing earned, in ten-thousandths of a point so sums match on every copy.
 		public readonly SortedDictionary<string, long> Rep = new SortedDictionary<string, long>(StringComparer.Ordinal);
+
+		/// "FACTION/TAG" (a kind asked for), "FACTION/#id" (an item asked for) or "FACTION/*" -> count and last item.
+		public readonly SortedDictionary<string, Good> Goods = new SortedDictionary<string, Good>(StringComparer.Ordinal);
 
 		public int Net => Earned - Spent;
 	}
+
+	public sealed class Good
+	{
+		public int N;
+
+		public string Last = "";
+	}
+
+	/// The most goods kinds kept per player; the least sold go first.
+	private const int GoodsKept = 40;
 
 	private const string Key = "ledger";
 
@@ -81,6 +95,26 @@ public static class Standing
 					}
 				}
 			}
+			if (array.Length > 6)
+			{
+				foreach (string item3 in array[6].Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+				{
+					int num2 = item3.IndexOf('=');
+					if (num2 <= 0)
+					{
+						continue;
+					}
+					string[] array2 = item3.Substring(num2 + 1).Split('~');
+					if (int.TryParse(array2[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var result3) && result3 > 0)
+					{
+						row.Goods[item3.Substring(0, num2)] = new Good
+						{
+							N = result3,
+							Last = (array2.Length > 1) ? array2[1] : ""
+						};
+					}
+				}
+			}
 			dictionary[result] = row;
 		}
 		return dictionary;
@@ -104,6 +138,10 @@ public static class Standing
 				.Append(value.Bought.ToString(CultureInfo.InvariantCulture))
 				.Append(':')
 				.Append(string.Join(",", value.Rep.Where((KeyValuePair<string, long> r) => r.Value != 0).Select((KeyValuePair<string, long> r) => r.Key + "=" + r.Value.ToString(CultureInfo.InvariantCulture))));
+			if (value.Goods.Count > 0)
+			{
+				stringBuilder.Append(':').Append(string.Join(",", value.Goods.Select((KeyValuePair<string, Good> g) => g.Key + "=" + g.Value.N.ToString(CultureInfo.InvariantCulture) + "~" + g.Value.Last)));
+			}
 		}
 		return stringBuilder.ToString();
 	}
@@ -254,11 +292,122 @@ public static class Standing
 		}
 		int num = PlacedBy(item);
 		Count(num);
+		List<string> kinds = (num > 0) ? KindsFor(item) : null;
+		string id = Clean(item.identifier);
 		Change(num, delegate(Row r)
 		{
 			r.Sold++;
 			r.Earned = Crew.Cap((long)r.Earned + cost);
+			if (kinds != null)
+			{
+				foreach (string kind in kinds)
+				{
+					if (!r.Goods.TryGetValue(kind, out var value))
+					{
+						value = (r.Goods[kind] = new Good());
+					}
+					value.N++;
+					value.Last = id;
+				}
+				while (r.Goods.Count > GoodsKept)
+				{
+					r.Goods.Remove(r.Goods.OrderBy((KeyValuePair<string, Good> g) => g.Value.N).ThenBy((KeyValuePair<string, Good> g) => g.Key, StringComparer.Ordinal).First().Key);
+				}
+			}
 		});
+	}
+
+	private static string Clean(string s)
+	{
+		return (s ?? "").Replace(':', '_').Replace(';', '_').Replace(',', '_').Replace('=', '_').Replace('~', '_').Replace('/', '_');
+	}
+
+	/// Keys a sale is remembered under: what the customer came for that this item is, plus "anything" for the faction.
+	private static List<string> KindsFor(GameItem item)
+	{
+		try
+		{
+			StoreClient c = Game.Store?.currentClientInstance?.GetClientBlueprint();
+			if (c == null || string.IsNullOrEmpty(c.clientFaction) || c.clientFaction == "NONE")
+			{
+				return null;
+			}
+			string faction = Clean(c.clientFaction);
+			List<string> list = new List<string> { faction + "/*" };
+			if (c.clientBuyingIdList != null && c.clientBuyingIdList.Contains(item.identifier))
+			{
+				list.Add(faction + "/#" + Clean(item.identifier));
+			}
+			if (c.clientBuyingTagList != null)
+			{
+				foreach (string tag in c.clientBuyingTagList)
+				{
+					if (!string.IsNullOrEmpty(tag) && !tag.StartsWith("ALL_TYPE", StringComparison.Ordinal) && item.IsTag(tag) && !list.Contains(faction + "/" + Clean(tag)))
+					{
+						list.Add(faction + "/" + Clean(tag));
+					}
+				}
+			}
+			return list;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	public static Good GoodsOf(int seat, string key)
+	{
+		Good value;
+		return Of(seat).Goods.TryGetValue(key, out value) ? value : null;
+	}
+
+	/// The customer wish this player has served most often, and how often (null: none).
+	public static KeyValuePair<string, Good>? BestFor(int seat, StoreClient c)
+	{
+		if (c == null || string.IsNullOrEmpty(c.clientFaction))
+		{
+			return null;
+		}
+		string faction = Clean(c.clientFaction);
+		Row row = Of(seat);
+		KeyValuePair<string, Good>? best = null;
+		List<string> keys = new List<string>();
+		bool any = false;
+		if (c.clientBuyingIdList != null)
+		{
+			keys.AddRange(c.clientBuyingIdList.Where((string i) => !string.IsNullOrEmpty(i)).Select((string i) => faction + "/#" + Clean(i)));
+		}
+		if (c.clientBuyingTagList != null)
+		{
+			foreach (string tag in c.clientBuyingTagList)
+			{
+				if (string.IsNullOrEmpty(tag))
+				{
+					continue;
+				}
+				if (tag.StartsWith("ALL_TYPE", StringComparison.Ordinal))
+				{
+					any = true;
+				}
+				else
+				{
+					keys.Add(faction + "/" + Clean(tag));
+				}
+			}
+		}
+		if (any)
+		{
+			keys.Add(faction + "/*");
+		}
+		foreach (string key in keys.Distinct().OrderBy((string k) => k, StringComparer.Ordinal))
+		{
+			if (row.Goods.TryGetValue(key, out var value) && (best == null || value.N > best.Value.Value.N))
+			{
+				best = new KeyValuePair<string, Good>(key, value);
+			}
+		}
+		return best;
 	}
 
 	internal static void Bought(GameItem item, int cost)
@@ -482,6 +631,23 @@ public static class Standing
 		Net.ToAll("standing.lab", msgStandingLab);
 	}
 
+	internal static void LabGoods(int seat, string key, int n, string last)
+	{
+		if (!Net.IsServer || !Bots.BotRunner.Enabled)
+		{
+			return;
+		}
+		MsgStandingLab msgStandingLab = new MsgStandingLab
+		{
+			seat = seat,
+			f = key,
+			v = n,
+			g = last ?? ""
+		};
+		ApplyLab(msgStandingLab);
+		Net.ToAll("standing.lab", msgStandingLab);
+	}
+
 	private static void ApplyLab(MsgStandingLab m)
 	{
 		if (m == null || !Bots.BotRunner.Enabled || string.IsNullOrEmpty(m.f))
@@ -490,7 +656,18 @@ public static class Standing
 		}
 		Change(m.seat, delegate(Row r)
 		{
-			r.Rep[m.f] = (long)Math.Round(m.v * 10000.0);
+			if (m.g != null)
+			{
+				r.Goods[m.f] = new Good
+				{
+					N = (int)m.v,
+					Last = m.g
+				};
+			}
+			else
+			{
+				r.Rep[m.f] = (long)Math.Round(m.v * 10000.0);
+			}
 		});
 	}
 
@@ -498,7 +675,7 @@ public static class Standing
 	internal static void Init()
 	{
 		Net.On<MsgStandingLab>("standing.lab", null, ApplyLab);
-		Digest.AddPart("standing", () => Active ? Raw : "");
+		Digest.AddPart("standing", () => Active ? (Raw + "|" + Regulars.Raw) : "");
 		Digest.AddExplain("standing", () => Active ? string.Join(";", Members.State.list.OrderBy((Member m) => m.s).Select((Member m) => Line(m.n.Replace(';', ' '), Of(m.s)))) : "");
 		Snapshot.Loaded += delegate
 		{
@@ -519,6 +696,9 @@ public sealed class MsgStandingLab
 	public string f;
 
 	public double v;
+
+	/// Set: f is a goods key, v how many, g the last item.
+	public string g;
 }
 
 [HarmonyPatch(typeof(StoreReputation), "OnItemTraded")]
