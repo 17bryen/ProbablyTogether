@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using ProbablyTogether.UI;
 using HarmonyLib;
 using UnityEngine;
@@ -243,7 +244,8 @@ public static class Bays
 			return;
 		}
 		GameItem self = bay;
-		val2.mayInventoryAddItemFunc = (GameItem added, GameInventory inv) => added != null && added != self && !GraphUtils.FindParentEquals((GraphNodeStorage)(object)self, (GraphNodeStorage)(object)added);
+		// Like the game's own containers: only what the shop owns.
+		val2.mayInventoryAddItemFunc = (GameItem added, GameInventory inv) => added != null && added != self && GeneralHelper.IsItemOwned(added) && !GraphUtils.FindParentEquals((GraphNodeStorage)(object)self, (GraphNodeStorage)(object)added);
 	}
 
 	/// Sets the rule now on owned bays under root; the timed look-over does not run while a shop loads.
@@ -427,9 +429,18 @@ public static class Bays
 					return;
 				}
 				Ids.Assign(val);
+				// A fanny pack in the bay, except for a new shop's founder: the game's own pack goes there (Specs.ServerStock).
+				bool gamesOwnPack = false;
 				try
 				{
-					GameItem val3 = DirectoryMaster.Item("fanny_pack");
+					gamesOwnPack = m.seat == 1 && Game.Day == 1 && ((GameInventory)instance.invElement).childItems.Any((GameItem i) => i != null && i.identifier == "fanny_pack" && GeneralHelper.IsItemOwned(i));
+				}
+				catch
+				{
+				}
+				try
+				{
+					GameItem val3 = gamesOwnPack ? null : DirectoryMaster.Item("fanny_pack");
 					PixelWindow contentWindow = val.contentWindow;
 					GraphNodeStorage val4 = ((contentWindow != null) ? contentWindow.child : null);
 					if (val3 != null && val4 != null)

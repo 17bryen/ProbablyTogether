@@ -199,6 +199,14 @@ public static class Chat
 			});
 			return;
 		}
+		if (text.StartsWith("/perks", StringComparison.OrdinalIgnoreCase))
+		{
+			Net.ToPlayer(from, "chat.notice", new MsgChatNotice
+			{
+				text = ProbablyTogether.Systems.Perks.ChatCommand(from, text.Substring(6))
+			});
+			return;
+		}
 		if (text.StartsWith("/retrade", StringComparison.OrdinalIgnoreCase) || text.StartsWith("/remove", StringComparison.OrdinalIgnoreCase))
 		{
 			bool flag = text.StartsWith("/remove", StringComparison.OrdinalIgnoreCase);

@@ -54,6 +54,7 @@ public sealed class MsgOutReturn
 
 	public bool fresh;
 
+	/// Only read when every player has a wound of their own.
 	public bool stable = true;
 
 	public int waste;
@@ -223,6 +224,7 @@ public static class Outings
 
 	internal static bool DropsWhilePrivate(string kind)
 	{
+		// The shop stays live under a player's trip (HostTrip), so nothing is dropped.
 		return false;
 	}
 
@@ -735,6 +737,7 @@ public static class Outings
 			return;
 		}
 		outPlayers.Add(m.by);
+		Perks.WentOut(m.by, m.day);
 		using (Net.Apply())
 		{
 			store.visitLeftTonight = m.visits;
@@ -760,6 +763,7 @@ public static class Outings
 		Standing.Cash(m.by, m.cash);
 		if (m.by == Net.LocalPlayer && !DayLog.Replaying)
 		{
+			// This game's cash already has its own trip's spending.
 			return;
 		}
 		using (Net.Apply())
@@ -941,6 +945,7 @@ public static class Outings
 				pack.Destroy();
 			}, from);
 		}
+		Perks.WentOut(from, StoreStation.Instance.dayCounter);
 		using (Net.Apply())
 		{
 			store.visitLeftTonight--;
@@ -1092,7 +1097,7 @@ public static class Outings
 			}
 		}
 		Log.Info("outing: " + value.Name + (m.went ? (" came back from " + string.Join(",", list)) : " cancelled the trip") + " with " + num + " item(s)" + ((num2 > 0) ? (", " + num2 + " could not be brought in") : "") + "; visits left tonight " + store.visitLeftTonight + "; " + away.Count + " player(s) still out");
-	// No snapshot for the traveller: its game kept the shop live while out.
+		// No snapshot for the traveller: its game kept the shop live while out.
 	}
 
 	/// Gives an item and everything in it new numbers from this copy's counter (the trip's own range while travelling).

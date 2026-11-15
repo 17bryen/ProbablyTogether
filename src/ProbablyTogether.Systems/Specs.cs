@@ -407,6 +407,7 @@ public static class Specs
 		{
 			LastRefusal = m?.why ?? "";
 			Notices.Show(Lang.Tr(LastRefusal), "spec");
+			PerkScreens.Refused(LastRefusal);
 		});
 		ItemsUse.RegisterValidator("owned", (UseContext ctx) => (ctx == null || ctx.Player <= 0 || !ctx.OnServer) ? null : Bays.Refusal(ctx.Player, (GraphNodeStorage)(object)ctx.Source, (GraphNodeStorage)(object)ctx.Target));
 	}
@@ -718,6 +719,7 @@ public static class Specs
 		{
 			Notices.Show(Lang.Trf("{0} is now the shop's {1}.", Kit.Name(Members.NameOf(m.seat)), Label(m.id)), "spec");
 		}
+		PerkScreens.TradePicked(m.seat);
 		if (m.seat == Members.LocalSeat)
 		{
 			CloseWindow();
@@ -919,14 +921,31 @@ public static class Specs
 		Bays.TakeAnything(bay);
 		PixelWindow contentWindow = bay.contentWindow;
 		GraphNodeStorage inside = ((contentWindow != null) ? contentWindow.child : null);
+		// Items every intro-skipping shop gets stay in storage; the game's fanny pack goes to the founder unless the bay has one.
+		HashSet<string> theShops = store.skipIntro ? new HashSet<string>(StringComparer.Ordinal) { "magnifier", "labeler", "topical_bandage_item" } : new HashSet<string>(StringComparer.Ordinal);
+		bool pack = GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)bay, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null).Any((GameItem i) => i != null && i.identifier == "fanny_pack");
 		if (inside != null)
 		{
 			ItemsMove.RunServerAction("spec.stock", delegate
 			{
-				foreach (GameItem childItem in ((GameInventory)e.invElement).childItems)
+				foreach (GameItem childItem in ((GameInventory)e.invElement).childItems.ToList())
 				{
 					if (childItem != bay && Bays.TagOwner(childItem) == 0 && GeneralHelper.IsItemOwned(childItem))
 					{
+						if (theShops.Remove(childItem.identifier ?? ""))
+						{
+							stayed++;
+							continue;
+						}
+						if (childItem.identifier == "fanny_pack")
+						{
+							if (pack)
+							{
+								stayed++;
+								continue;
+							}
+							pack = true;
+						}
 						GraphUtils.TryAcceptAll(inside, childItem, -1);
 						if ((object)childItem.parentInventory != e.invElement)
 						{
@@ -995,7 +1014,7 @@ public static class Specs
 			nextPrompt = realtimeSinceStartup + 20f;
 			Pick(text);
 		}
-		else if ((Args.Bot == null || Args.Has("--br-spec-window")) && !WindowUp && realtimeSinceStartup >= holdUntil)
+		else if ((Args.Bot == null || Args.Has("--br-spec-window")) && !WindowUp && realtimeSinceStartup >= holdUntil && !PerkScreens.HandlesTrade)
 		{
 			// Fallback for when the game's own trade screen cannot be used.
 			window = null;

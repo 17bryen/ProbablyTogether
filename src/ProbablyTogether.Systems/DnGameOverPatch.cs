@@ -25,6 +25,36 @@ internal static class DnGameOverPatch
 	private static bool Prefix(string ending)
 	{
 		skipped = false;
+		// A run that would end because of ONE player's perk does not end: that player is taken out (Systems.Perks).
+		try
+		{
+			if (Perks.Enabled)
+			{
+				int num = 0;
+				if (ending == "sentinel")
+				{
+					num = Perks.Actor;
+					if (!Perks.Has(num, "sentinel"))
+					{
+						num = Perks.HolderOf("sentinel");
+					}
+				}
+				else if (ending == "aug" && !Difficulty.Rules.augGameOverAtFullPresence)
+				{
+					num = Perks.HolderOf("aug_menace");
+				}
+				if (num > 0)
+				{
+					Perks.Died(num, ending);
+					skipped = true;
+					return false;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("perks: looking at an ending (" + ending + ") threw: " + ex.Message);
+		}
 		if (!Net.IsRemote)
 		{
 			return true;

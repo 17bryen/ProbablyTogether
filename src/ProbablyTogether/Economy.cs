@@ -931,9 +931,9 @@ public static class Economy
 			return "The run has ended.";
 		}
 		PlayerStore store = Game.Store;
-		if (store.commissaryData == null || !store.isStampIntroduced || StartingPerk.IsBannedCommissary())
+		if (store.commissaryData == null || !Systems.Perks.CommissaryOpenFor((by > 0) ? Systems.Members.SeatOf(by) : Systems.Perks.Actor))
 		{
-			return "the commissary is not open to this shop";
+			return "the commissary is not open to you";
 		}
 		if (by > 0)
 		{

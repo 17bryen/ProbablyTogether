@@ -220,6 +220,8 @@ public static class Wounds
 	/// Until Leave, the game's wound fields hold this player's wound.
 	internal static void Enter(int player)
 	{
+		// Perks follow the same player (pushed and popped with this).
+		Perks.Enter(player);
 		int num = 0;
 		try
 		{
@@ -252,6 +254,7 @@ public static class Wounds
 		{
 			return;
 		}
+		Perks.Leave();
 		int num = seats.Pop();
 		if (num <= 0)
 		{
@@ -335,6 +338,11 @@ public static class Wounds
 	/// Runs the game's nightly heal or worsen once per player, in seat order.
 	internal static bool Nightly()
 	{
+		// The per-player clock pass of the night (Perks.Night) skips wounds; the shop's pass did them.
+		if (Perks.PlayerPassOfNight)
+		{
+			return false;
+		}
 		if (nightly || !Active)
 		{
 			return true;

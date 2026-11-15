@@ -615,6 +615,25 @@ public static class Standing
 		return (factionId ?? "").Replace("FACTION_", "").Replace('_', ' ').ToLowerInvariant();
 	}
 
+	/// Credits a standing change outside a deal (a perk) to that player's row.
+	internal static void Credit(int seat, string factionId, double delta)
+	{
+		if (!Active || seat <= 0 || string.IsNullOrEmpty(factionId) || double.IsNaN(delta) || double.IsInfinity(delta))
+		{
+			return;
+		}
+		long num = (long)Math.Round(delta * 10000.0);
+		if (num == 0L)
+		{
+			return;
+		}
+		Change(seat, delegate(Row r)
+		{
+			r.Rep.TryGetValue(factionId, out var value);
+			r.Rep[factionId] = value + num;
+		});
+	}
+
 	internal static void LabGrant(int seat, string faction, double points)
 	{
 		if (!Net.IsServer || !Bots.BotRunner.Enabled)

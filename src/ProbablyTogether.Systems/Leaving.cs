@@ -12,7 +12,11 @@ public sealed class MsgLeave
 {
 	public int seat;
 
+	/// True: the player leaves for good (bay and seat too). False: only their trade goes.
 	public bool whole;
+
+	/// Set (the cause): a perk killed the player; their perks go too.
+	public string died;
 
 	public Seed seed;
 }
@@ -158,19 +162,26 @@ public static class Leaving
 		return null;
 	}
 
-	private static string ServerLeave(int seat, bool whole)
+	/// Server: a perk killed this player. Away, they leave for good; in the game, they start over in their seat.
+	internal static string Death(int seat, string cause)
+	{
+		return ServerLeave(seat, !Members.Online(seat), cause ?? "");
+	}
+
+	private static string ServerLeave(int seat, bool whole, string died = null)
 	{
 		string text = Members.NameOf(seat);
 		string text2 = string.Join(", ", TradesOf(seat).Select(Specs.Label));
 		MsgLeave msgLeave = new MsgLeave
 		{
 			seat = seat,
-			whole = whole
+			whole = whole,
+			died = died
 		};
 		string text3;
 		using (Replay.Server(out msgLeave.seed))
 		{
-			text3 = Run(seat, whole);
+			text3 = Run(seat, whole, died != null);
 		}
 		Net.ToAll("members.leave", msgLeave);
 		// The record changes after the step: every copy needs the old record to do the same work.
@@ -184,7 +195,11 @@ public static class Leaving
 		}
 		Done++;
 		LastResult = text3;
-		Log.Info("leaving: " + text + " (seat " + seat + ") " + (whole ? "left the shop for good" : "gave up their trade") + ((text2.Length > 0) ? (" (" + text2 + ")") : "") + ": " + text3);
+		Log.Info("leaving: " + text + " (seat " + seat + ") " + ((died != null) ? ("did not survive (" + died + "), and ") : "") + (whole ? "left the shop for good" : "gave up their trade") + ((text2.Length > 0) ? (" (" + text2 + ")") : "") + ": " + text3);
+		if (died != null)
+		{
+			return text + " did not survive " + Perks.CauseText(died) + (whole ? " and is no longer part of this shop. " : " and starts over. ") + text3 + ".";
+		}
 		return whole ? (text + " is no longer part of this shop. " + text3 + ".") : (text + " gave up " + ((text2.Length > 0) ? text2 : "their trade") + " and can pick a new trade. " + text3 + ".");
 	}
 
@@ -199,18 +214,22 @@ public static class Leaving
 		string text3;
 		using (Replay.Client(m.seed ?? new Seed()))
 		{
-			text3 = Run(m.seat, m.whole);
+			text3 = Run(m.seat, m.whole, m.died != null);
 		}
 		Done++;
 		LastResult = text3;
 		Log.Info("leaving: " + text + " (seat " + m.seat + ") " + (m.whole ? "left the shop for good" : "gave up their trade") + ((text2.Length > 0) ? (" (" + text2 + ")") : "") + ": " + text3);
-		if (!DayLog.Replaying)
+		if (!DayLog.Replaying && m.died != null)
+		{
+			Notices.Show(Lang.Trf(m.whole ? "{0} did not survive {1} and is no longer part of this shop." : "{0} did not survive {1}. They start over: a new trade, new perks.", Kit.Name(text), Lang.Tr(Perks.CauseText(m.died))), "perks");
+		}
+		else if (!DayLog.Replaying)
 		{
 			Notices.Show(m.whole ? Lang.Trf("{0} is no longer part of this shop.", Kit.Name(text)) : Lang.Trf("{0} gave up their trade ({1}).", Kit.Name(text), text2), "spec");
 		}
 	}
 
-	private static string Run(int seat, bool whole)
+	private static string Run(int seat, bool whole, bool perksToo = false)
 	{
 		PlayerStore store = Game.Store;
 		EmporiumEntry instance = EmporiumEntry.Instance;
@@ -278,6 +297,10 @@ public static class Leaving
 			{
 				Wounds.Drop(seat);
 				Standing.Drop(seat);
+			}
+			if (whole || perksToo)
+			{
+				Perks.Forget(seat);
 			}
 			if (refund > 0)
 			{
