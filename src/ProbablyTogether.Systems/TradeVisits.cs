@@ -164,10 +164,7 @@ public static class TradeVisits
 						forSeat[item3.identifier ?? ""] = item.s;
 						try
 						{
-							if (num == 1)
-							{
-								Greet(item3, item.n, item2.Key, dayCounter);
-							}
+							Greet(item3, item.n, item2.Key, dayCounter, (num == 1) ? news : visitors);
 						}
 						catch (Exception ex2)
 						{
@@ -238,23 +235,89 @@ public static class TradeVisits
 				continue;
 			}
 			forSeat[item.identifier] = num;
+			try
+			{
+				bool flag = Met(num, item.identifier);
+				Greet(item, member.n, value, day, flag ? returning : firstMeeting);
+				if (!flag)
+				{
+					NoteMet(num, item.identifier);
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Warn("trade visits: giving " + item.identifier + " its opening line threw: " + ex.Message);
+			}
 			Added++;
 			LastAdded = item.identifier + " for seat " + num;
 			Log.Info("trade visits: " + item.identifier + " comes for " + member.n + " (the shop's " + Word(value) + ")");
 		}
 	}
 
-	private static readonly string[][] openers = new string[4][]
+	// {0} the player, {1} their trade. Each line is said on its own, before the customer's first line.
+	private static readonly string[][] news = new string[2][]
 	{
 		new string[2] { "I'm here to see {0}.", "Word is this shop has a {1} now." },
+		new string[2] { "Which one of you is {0}?", "I hear this shop has a {1} now." }
+	};
+
+	private static readonly string[][] visitors = new string[3][]
+	{
 		new string[2] { "Which one of you is {0}?", "I was told to ask for the {1}." },
 		new string[2] { "I'm looking for {0}.", "The {1}, right?" },
 		new string[2] { "Is {0} in?", "My business is with the {1}." }
 	};
 
+	private static readonly string[][] firstMeeting = new string[2][]
+	{
+		new string[2] { "I'm here to see {0}.", "I'm told I should be dealing with the {1}." },
+		new string[2] { "Is {0} in?", "My business is with the {1}." }
+	};
+
+	private static readonly string[][] returning = new string[3][]
+	{
+		new string[2] { "Is {0} in?", "It's me again. Business for the {1}." },
+		new string[2] { "Back again for {0}.", "Same as always: it's the {1} I deal with." },
+		new string[2] { "{0} around?", "You know me by now. I come for the {1}." }
+	};
+
+	private const string MetKey = "tradevisits.met";
+
+	/// "seat/customer" for every weekly caller that has come for a player before (saved).
+	private static HashSet<string> MetSet()
+	{
+		string text = null;
+		try
+		{
+			text = ModHelper.GetModData("bellun_probably_together", MetKey, (string)null);
+		}
+		catch
+		{
+		}
+		return new HashSet<string>((text ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
+	}
+
+	private static bool Met(int seat, string identifier)
+	{
+		return MetSet().Contains(seat.ToString(CultureInfo.InvariantCulture) + "/" + identifier);
+	}
+
+	private static void NoteMet(int seat, string identifier)
+	{
+		HashSet<string> hashSet = MetSet();
+		if (hashSet.Add(seat.ToString(CultureInfo.InvariantCulture) + "/" + identifier))
+		{
+			using (Net.Apply())
+			{
+				ModHelper.SetModData("bellun_probably_together", MetKey, string.Join(",", hashSet.OrderBy((string s) => s, StringComparer.Ordinal)));
+			}
+		}
+	}
+
 	internal static readonly Dictionary<string, string> Openers = new Dictionary<string, string>(StringComparer.Ordinal);
 
-	private static void Greet(StoreClient c, string player, string spec, int day)
+	/// Same words on every copy: picked from the customer's name and the day, nothing random.
+	private static void Greet(StoreClient c, string player, string spec, int day, string[][] openers)
 	{
 		Dialogue mainDialogue = c.mainDialogue;
 		if (mainDialogue == null || string.IsNullOrEmpty(player))

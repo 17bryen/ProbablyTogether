@@ -94,7 +94,7 @@ public sealed class TradeVisitsH : TradeVisitsBotBase
 		WaitFor("opened-next-day", 30f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Check("the-cartels-man-is-in-todays-queue-for-b", () => InQueue("cartelIntro") && TradeVisits.SeatFor("cartelIntro") == Specs.TakenBy("DRUG_DEALER") && KnowsCartel, () => Where);
 		Check("he-says-who-he-came-for", () => FirstLine("cartelIntro").Contains(Members.NameOf(Specs.TakenBy("DRUG_DEALER"))) && FirstLine("cartelIntro").Contains("chemist"), () => "his first line: '" + FirstLine("cartelIntro") + "'");
-		Check("the-chemists-supplier-comes-for-b-too-without-asking-by-name", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Specs.TakenBy("DRUG_DEALER") && !FirstLine("retired_chemist").Contains(Members.NameOf(Specs.TakenBy("DRUG_DEALER"))), () => "in the queue " + InQueue("retired_chemist") + ", for seat " + TradeVisits.SeatFor("retired_chemist") + ", referral bought " + NetworkUpgrade.IsRetiredChemistUnlocked() + "; his first line: '" + FirstLine("retired_chemist") + "'");
+		Check("the-chemists-supplier-comes-for-b-too", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Specs.TakenBy("DRUG_DEALER") && FirstLine("retired_chemist").Contains(Members.NameOf(Specs.TakenBy("DRUG_DEALER"))) && !FirstLine("retired_chemist").Contains("again"), () => "in the queue " + InQueue("retired_chemist") + ", for seat " + TradeVisits.SeatFor("retired_chemist") + ", referral bought " + NetworkUpgrade.IsRetiredChemistUnlocked() + "; his first line: '" + FirstLine("retired_chemist") + "'");
 		Check("the-shop-is-what-it-was", () => DayNightBotBase.Ps.startType != NewGameData.StartType.DRUG_DEALER && StoreStation.Instance.dayCounter == day0 + 1, () => Where + "; day counter " + StoreStation.Instance.dayCounter);
 		Do("my-queue-next-day", () => Customers.DigestText());
 		Delay("b-compares-the-queue", 30f);
@@ -136,7 +136,7 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		Delay("the-opening-lands", 2f);
 		Check("the-cartels-man-is-in-my-queue-for-me", () => InQueue("cartelIntro") && TradeVisits.SeatFor("cartelIntro") == Members.LocalSeat && KnowsCartel, () => Where);
 		Check("he-says-he-came-for-me", () => FirstLine("cartelIntro").Contains(Members.NameOf(Members.LocalSeat)) && TradeVisits.Openers.ContainsKey("cartelIntro"), () => "his first line here: '" + FirstLine("cartelIntro") + "'");
-		Check("the-chemists-supplier-comes-for-me-without-asking-by-name", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Members.LocalSeat && !FirstLine("retired_chemist").Contains(Members.NameOf(Members.LocalSeat)), () => "his first line here: '" + FirstLine("retired_chemist") + "'");
+		Check("the-chemists-supplier-asks-for-me", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Members.LocalSeat && FirstLine("retired_chemist").Contains(Members.NameOf(Members.LocalSeat)), () => "his first line here: '" + FirstLine("retired_chemist") + "'");
 		WaitServer("the-hosts-queue", 20f, delegate(IReadOnlyDictionary<string, string> v)
 		{
 			theirs = DayNightBotBase.V(v, "cust.text");

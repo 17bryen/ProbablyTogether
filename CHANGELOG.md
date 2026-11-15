@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.7.6 - 2026-11-15
+
+Protocol 16. Every player needs it.
+
+### Changed
+- A trade's visitors and weekly callers ask for its player by name again, with lines that fit the visit (news on the first day, "It's me again" on repeat visits).
+- A random customer names a player only when the shop and that player have real standing with the customer's faction (10, 20 and 35 points for a remark, a request and a private offer).
+
 ## 0.7.5 - 2026-11-15
 
 Protocol 15. Every player needs it.

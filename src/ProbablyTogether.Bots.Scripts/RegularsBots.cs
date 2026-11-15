@@ -39,6 +39,11 @@ public sealed class RegularsH : StandingBotBase
 		{
 			Regulars.Chance = 100;
 			Regulars.Gap = 0;
+			Regulars.ShopAt = -1000.0;
+			foreach (StoreReputation storeReputation in DayNightBotBase.Ps.storeReputations)
+			{
+				Standing.LabGrant(OtherSeat, storeReputation.factionId, 40.0);
+			}
 			LabKit.Do("give", "flashlight", "1");
 			DayNightBotBase.Ps.isBargainIntroduced = true;
 			return Ledger;
@@ -164,6 +169,7 @@ public sealed class RegularsB : StandingBotBase
 		{
 			Regulars.Chance = 100;
 			Regulars.Gap = 0;
+			Regulars.ShopAt = -1000.0;
 			return "every customer who could, does (as on the founder's game)";
 		});
 		WaitFor("the-merchant-brings-an-offer-only-for-me-here-too", 240f, () => Regulars.KindOf("merchant") == Regulars.Offer && Regulars.SeatOf("merchant") == Members.LocalSeat && Regulars.LinesOf("merchant").Contains(Members.NameOf(Members.LocalSeat)), () => "merchant: " + Regulars.Word(Regulars.KindOf("merchant")) + " seat " + Regulars.SeatOf("merchant") + " [" + Regulars.LinesOf("merchant") + "]; " + Ledger);

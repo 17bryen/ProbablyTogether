@@ -20,13 +20,21 @@ public static class Regulars
 
 	public const int Offer = 3;
 
-	public static int RemarkAt = 8;
+	/// The player's own standing with the buyer's faction needed for a remark (the game's scale).
+	public static double RemarkAt = 10.0;
 
-	public static int AsksAt = 16;
+	public static double AsksAt = 20.0;
 
-	public static int OfferAt = 30;
+	public static double OfferAt = 35.0;
 
-	public static int Gap = 3;
+	/// The shop's own standing with that faction, at the least.
+	public static double ShopAt = 10.0;
+
+	/// How many times the player must have sold that kind of goods to that faction, at the least.
+	public static int Sales = 3;
+
+	/// Days from one such customer to the next one in a shop, at the least.
+	public static int Gap = 2;
 
 	/// Chance in a hundred that such a customer comes on a day one could.
 	public static int Chance = 50;
@@ -229,6 +237,7 @@ public static class Regulars
 		// The buyer whose faction knows one player best, among the buyers who came for what that player sells.
 		StoreClient who = null;
 		int seat = 0;
+		double standing = 0.0;
 		KeyValuePair<string, Standing.Good> best = default(KeyValuePair<string, Standing.Good>);
 		foreach (StoreClient item in mgr.clientStack.ToList())
 		{
@@ -236,13 +245,23 @@ public static class Regulars
 			{
 				continue;
 			}
+			if (Standing.RepNow(item.clientFaction) < ShopAt)
+			{
+				continue;
+			}
 			foreach (Member item2 in list)
 			{
+				double num2 = Standing.RepOf(item2.s, item.clientFaction);
+				if (num2 < RemarkAt)
+				{
+					continue;
+				}
 				KeyValuePair<string, Standing.Good>? keyValuePair = Standing.BestFor(item2.s, item);
-				if (keyValuePair.HasValue && keyValuePair.Value.Value.N >= RemarkAt && (who == null || keyValuePair.Value.Value.N > best.Value.N))
+				if (keyValuePair.HasValue && keyValuePair.Value.Value.N >= Sales && (who == null || num2 > standing))
 				{
 					who = item;
 					seat = item2.s;
+					standing = num2;
 					best = keyValuePair.Value;
 				}
 			}
@@ -251,7 +270,7 @@ public static class Regulars
 		{
 			return;
 		}
-		int num = (best.Value.N >= OfferAt) ? Offer : ((best.Value.N >= AsksAt) ? Asks : Remark);
+		int num = (standing >= OfferAt) ? Offer : ((standing >= AsksAt) ? Asks : Remark);
 		string[][] array = (num == Offer) ? offers : ((num == Asks) ? asks : remarks);
 		string[] array2 = array[Hash(who.identifier, day, 2) % array.Length];
 		string name = Members.NameOf(seat);
@@ -287,7 +306,7 @@ public static class Regulars
 		LastTagged = who.identifier + " " + Word(num) + " seat " + seat;
 		if (!DayLog.Replaying)
 		{
-			Log.Info("regulars: day " + day + ": " + who.identifier + " (" + Standing.FactionName(who.clientFaction) + ") " + Word(num) + " " + name + ": " + best.Value.N + " sale(s) of " + best.Key + ", last " + best.Value.Last + "; the shop's last such customer was on day " + lastDay);
+			Log.Info("regulars: day " + day + ": " + who.identifier + " (" + Standing.FactionName(who.clientFaction) + ") " + Word(num) + " " + name + ": their own standing there " + standing.ToString("0.0", CultureInfo.InvariantCulture) + " (the shop's " + Standing.RepNow(who.clientFaction).ToString("0.0", CultureInfo.InvariantCulture) + "), " + best.Value.N + " sale(s) of " + best.Key + ", last " + best.Value.Last + "; the shop's last such customer was on day " + lastDay);
 		}
 	}
 
