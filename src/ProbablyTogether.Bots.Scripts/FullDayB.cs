@@ -454,15 +454,11 @@ public sealed class FullDayB : FullDayBot
 		Do("rejoin", delegate
 		{
 			JoinMenu.OpenDialog();
-			CustomUIWindow window = CustomUIManager.Instance.GetWindow("bellun_probably_together.join");
-			if (window == null)
+			if (!JoinMenu.LabFill(address, name, pw))
 			{
 				Net.Connect(address, pw, name);
 				return "no Join window: Net.Connect(" + address + ")";
 			}
-			window.Get("address").SetString(address, true);
-			window.Get("name").SetString(name, true);
-			window.Get("password").SetString(pw, true);
 			JoinMenu.Join();
 			return "Join window: " + address + " as " + name;
 		});

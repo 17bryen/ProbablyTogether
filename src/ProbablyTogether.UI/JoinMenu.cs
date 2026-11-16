@@ -887,6 +887,37 @@ public static class JoinMenu
 		});
 	}
 
+	/// Types into whichever Join window is open. False if none is.
+	internal static bool LabFill(string address, string name, string password)
+	{
+		if (panel && HostPanels.JoinOpen)
+		{
+			int num = (address ?? "").LastIndexOf(':');
+			bool flag = num > 0 && address.IndexOf(':') == num;
+			HostPanels.JoinSet("address", flag ? address.Substring(0, num) : address);
+			HostPanels.JoinSet("port", flag ? address.Substring(num + 1) : DefaultPort.ToString(CultureInfo.InvariantCulture));
+			if (!NameReadOnly && name != null)
+			{
+				HostPanels.JoinSet("name", name);
+			}
+			HostPanels.JoinSet("password", password ?? "");
+			return true;
+		}
+		if (window == null || !window.IsAlive)
+		{
+			return false;
+		}
+		window.Get("address").SetString(address, true);
+		if (name != null)
+		{
+			window.Get("name").SetString(name, true);
+		}
+		window.Get("password").SetString(password ?? "", true);
+		return true;
+	}
+
+	internal static bool OnGamePanel => panel && HostPanels.JoinOpen;
+
 	internal static void LabCloseAll()
 	{
 		HostPanels.CloseMessage("bellun_probably_together.notice");

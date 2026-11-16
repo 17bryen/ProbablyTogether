@@ -76,10 +76,7 @@ public sealed class ModSyncJoin : BotScript
 			WaitFor("window", 10f, () => JoinMenu.DialogOpen);
 			Do("fill", delegate
 			{
-				CustomUIWindow window = CustomUIManager.Instance.GetWindow("bellun_probably_together.join");
-				window.Get("address").SetString(address, true);
-				window.Get("name").SetString("botm", true);
-				window.Get("password").SetString(Args.Get("--br-ms-pw") ?? "", true);
+				JoinMenu.LabFill(address, "botm", Args.Get("--br-ms-pw") ?? "");
 				return "address " + address + ", name botm";
 			});
 			Do("join", delegate
