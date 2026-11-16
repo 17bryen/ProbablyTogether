@@ -163,17 +163,52 @@ internal static partial class HostPanels
 	{
 		TextMeshProUGUI textMeshProUGUI = NewGameUIElements.NewText(p.Frame, p.Body, name, Left, y, Width, 30f, FontLoader.FontRole.Noto_Sans, size, color, TextAlignmentOptions.TopLeft, wrap: true);
 		textMeshProUGUI.text = text ?? "";
-		float num = 30f;
-		try
-		{
-			num = Mathf.Max(30f, Mathf.Ceil(textMeshProUGUI.GetPreferredValues(textMeshProUGUI.text, Width, 0f).y));
-		}
-		catch
-		{
-		}
+		float num = Guess(textMeshProUGUI.text, size);
 		WildNetworkUI.SetRect(textMeshProUGUI.rectTransform, Left, y, Width, num);
 		y += num + gap;
 		return textMeshProUGUI;
+	}
+
+	/// Estimates a paragraph's height before it is on screen, while its wrapped height still reads as one line.
+	/// A letter of the game's text font is a little over half its size wide; a line is 1.36 of it high.
+	private static float Guess(string text, float size)
+	{
+		float num = Width / (size * 0.56f) * 0.92f;
+		int num2 = 0;
+		foreach (string item in (text ?? "").Split('\n'))
+		{
+			num2 += Mathf.Max(1, Mathf.CeilToInt((float)item.Length / num));
+		}
+		return Mathf.Ceil((float)num2 * size * 1.36f);
+	}
+
+	/// Once the panel is shown: every paragraph as high as its text really is, one under the other.
+	private static void Stack(IList<TextMeshProUGUI> texts, float y, float gap)
+	{
+		foreach (TextMeshProUGUI text in texts)
+		{
+			if ((Object)(object)text == (Object)null)
+			{
+				continue;
+			}
+			float num = text.rectTransform.sizeDelta.y;
+			try
+			{
+				text.ForceMeshUpdate();
+				float preferredHeight = text.preferredHeight;
+				int lineCount = text.textInfo.lineCount;
+				// Trust only a height that fits the drawn line count.
+				if (lineCount > 0 && preferredHeight >= (float)lineCount * text.fontSize * 1.1f)
+				{
+					num = Mathf.Ceil(preferredHeight);
+				}
+			}
+			catch
+			{
+			}
+			WildNetworkUI.SetRect(text.rectTransform, Left, y, Width, num);
+			y += num + gap;
+		}
 	}
 
 	private static void ContinueSays(Panel p, string label)
@@ -350,6 +385,7 @@ internal static partial class HostPanels
 			onClosed?.Invoke();
 		};
 		p.Window.Show();
+		Stack(array, 150f, 22f);
 		return array;
 	}
 

@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.8.7 - 2026-11-15
+
+Same protocol (17).
+
+### Fixed
+- The About window's paragraphs no longer overlap.
+
 ## 0.8.6 - 2026-11-15
 
 Same protocol (17).
