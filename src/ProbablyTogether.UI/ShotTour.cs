@@ -85,6 +85,10 @@ internal static class ShotTour
 			else
 			{
 				Menu();
+				if (mode == "host")
+				{
+					HostHelp();
+				}
 			}
 		}
 		catch (Exception ex)
@@ -371,6 +375,116 @@ internal static class ShotTour
 			{
 				Shot("join-in-the-shop");
 				Next();
+			}
+			break;
+		// The founder lets this player choose again (the host copy's HostHelp types the commands).
+		case 13:
+			if (Repick.Mine == Repick.Trade && PerkScreens.SpecOpen && Since > 2f)
+			{
+				SelectScenario(Specs.Of(Members.LocalSeat) ?? "DRUG_DEALER");
+				Next();
+			}
+			break;
+		// A picture is taken at the end of the frame, so screen changes show a step later.
+		case 14:
+			if (Since > 2f)
+			{
+				Shot("join-retrade-own-trade");
+				Next();
+			}
+			break;
+		case 15:
+			if (Since > 1f)
+			{
+				SelectScenario("FARMER");
+				Next();
+			}
+			break;
+		case 16:
+			if (Since > 1.5f)
+			{
+				Shot("join-retrade-another-trade");
+				Next();
+			}
+			break;
+		case 17:
+			if (Since > 1f)
+			{
+				PerkScreens.Back();
+				Next();
+			}
+			break;
+		case 18:
+			if (Repick.Mine == Repick.PerksKind && PerkScreens.PerksOpen)
+			{
+				Next();
+			}
+			break;
+		case 19:
+			if (Since > 2.5f)
+			{
+				Shot("join-reperk-screen");
+				Next();
+			}
+			break;
+		case 20:
+			if (Since > 1f)
+			{
+				PerkScreens.Back();
+				Next();
+			}
+			break;
+		case 21:
+			if (Since > 2.5f)
+			{
+				Shot("join-back-in-the-shop");
+				Next();
+			}
+			break;
+		}
+	}
+
+	private static int helped;
+
+	private static float helpAt;
+
+	/// Host copy, after its tour: offers the joining player another trade, then their perks, for the joining copy's pictures.
+	private static void HostHelp()
+	{
+		if (!Net.IsHost || !Net.IsLive || !Game.ShopLoaded)
+		{
+			return;
+		}
+		float realtimeSinceStartup = Time.realtimeSinceStartup;
+		bool flag = Specs.Of(2) != null && Perks.Picked(2) && Members.Online(2);
+		switch (helped)
+		{
+		case 0:
+			if (flag)
+			{
+				helped = 1;
+				helpAt = realtimeSinceStartup;
+			}
+			break;
+		case 1:
+			if (realtimeSinceStartup - helpAt > 9f)
+			{
+				Log.Info("shots: /retrade -> " + Leaving.ChatCommand(Net.LocalPlayer, whole: false, Members.NameOf(2)));
+				helped = 2;
+			}
+			break;
+		case 2:
+			if (Repick.Cancelled >= 1)
+			{
+				helped = 3;
+				helpAt = realtimeSinceStartup;
+			}
+			break;
+		case 3:
+			if (realtimeSinceStartup - helpAt > 2f)
+			{
+				Log.Info("shots: /reperk -> " + Repick.ChatCommand(Net.LocalPlayer, Repick.PerksKind, Members.NameOf(2)));
+				helped = 4;
 			}
 			break;
 		}

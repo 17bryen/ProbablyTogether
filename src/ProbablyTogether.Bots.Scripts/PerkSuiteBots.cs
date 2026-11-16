@@ -605,3 +605,98 @@ public sealed class PerkDeathB : PerkDeathBase
 		End(30f);
 	}
 }
+
+/// The Mind Reprogrammer: an added perk is its user's; a removed one comes off its user, or a unique one off its holder.
+public abstract class PerkReprogramBase : PerkSuiteBase
+{
+	protected static readonly string[] Founder = new string[1] { "alert" };
+
+	protected static readonly string[] Friend = new string[1] { "illiterate" };
+
+	protected static List<GameItem> Devices => (from i in Items.All()
+		where i != null && i.identifier == "mind_reprogrammer" && GeneralHelper.IsItemOwned(i)
+		orderby Ids.Of(i)
+		select i).ToList();
+
+	protected static StartingPerk Editable(string id)
+	{
+		return MindReprogrammerHelper.GetEditablePerks().FirstOrDefault((StartingPerk p) => p.id == id);
+	}
+
+	protected static string Machines => string.Join(", ", Devices.Select((GameItem d) => "#" + Ids.Of(d) + " charge " + MindReprogrammerHelper.GetCharge(d) + " rest " + MindReprogrammerHelper.GetCooldown(d))) + "; electronics " + Count("hypertech_electronic") + "; " + State;
+}
+
+public sealed class PerkReprogramH : PerkReprogramBase
+{
+	public override string Name => "pc7-h";
+
+	public override BotRole Role => BotRole.Any;
+
+	public override float TimeoutSeconds => 600f;
+
+	protected override void Build()
+	{
+		HostStart(Founder, Friend);
+		Check("three-devices-in-the-shop", () => Devices.Count == 3, () => Machines);
+		WaitFor("they-added-short-sleeper-for-themselves", 180f, () => Perks.Has(OtherSeat, "short_sleeper"), () => Machines);
+		Check("it-is-theirs-alone", () => !Perks.Has(1, "short_sleeper") && !S.startingPerks.Any((StartingPerk p) => p.id == "short_sleeper") && !StartingPerk.IsShortSleeper(), () => "short sleeper here " + StartingPerk.IsShortSleeper() + "; " + State);
+		WaitFor("they-removed-their-own-illiterate", 120f, () => !Perks.Has(OtherSeat, "illiterate"), () => Machines);
+		WaitFor("they-removed-my-vigilant", 120f, () => !Perks.Has(1, "alert"), () => Machines);
+		Check("the-shop's-list-lost-it-too", () => !S.startingPerks.Any((StartingPerk p) => p.id == "alert") && !StartingPerk.IsAlert(), () => State);
+		End(30f);
+	}
+}
+
+public sealed class PerkReprogramB : PerkReprogramBase
+{
+	public override string Name => "pc7-b";
+
+	public override BotRole Role => BotRole.Client;
+
+	public override float TimeoutSeconds => 600f;
+
+	private void Use(int device, string id, bool adds)
+	{
+		// A device charges from electronics, one request each; it needs the perk's points.
+		for (int i = 0; i < 3; i++)
+		{
+			Do("charge-" + id + "-" + (i + 1), delegate
+			{
+				GameItem val = Devices[device];
+				int cost = MindReprogrammerHelper.GetCost(Editable(id));
+				if (MindReprogrammerHelper.GetCharge(val) >= cost)
+				{
+					return "charge " + MindReprogrammerHelper.GetCharge(val) + " is enough for " + cost;
+				}
+				GameItem val2 = Items.All().FirstOrDefault((GameItem e) => e != null && e.identifier == "hypertech_electronic" && GeneralHelper.IsItemOwned(e));
+				if (val2 == null)
+				{
+					return "NO ELECTRONIC LEFT";
+				}
+				val2.Target(val);
+				return "an electronic on device #" + Ids.Of(val) + " (charge " + MindReprogrammerHelper.GetCharge(val) + " of " + cost + ")";
+			});
+			Delay("the-shop-answers-" + id + "-" + (i + 1), 2.5f);
+		}
+		WaitFor("charged-for-" + id, 20f, () => Editable(id) != null && MindReprogrammerHelper.GetCharge(Devices[device]) >= MindReprogrammerHelper.GetCost(Editable(id)), () => Machines);
+		Do((adds ? "add-" : "remove-") + id, delegate
+		{
+			MindReprogrammerHelper.Apply(Devices[device], Editable(id));
+			return "asked on device #" + Ids.Of(Devices[device]);
+		});
+		WaitFor("the-device-rests-after-" + id, 30f, () => MindReprogrammerHelper.GetCooldown(Devices[device]) == MindReprogrammerHelper.GetCost(Editable(id)) * 5, () => Machines + "; last refusal '" + ItemsUse.LastRefusal + "'");
+	}
+
+	protected override void Build()
+	{
+		ClientStart(Friend, Founder);
+		Check("three-devices-in-the-shop", () => Devices.Count == 3, () => Machines);
+		Use(0, "short_sleeper", adds: true);
+		WaitFor("short-sleeper-is-mine-alone", 20f, () => Perks.Has(Me, "short_sleeper") && !Perks.Has(1, "short_sleeper") && StartingPerk.IsShortSleeper() && !S.startingPerks.Any((StartingPerk p) => p.id == "short_sleeper"), () => Machines);
+		Use(1, "illiterate", adds: false);
+		WaitFor("i-can-read-again", 20f, () => !Perks.Has(Me, "illiterate") && HealthData.CanRead() && Perks.Has(Me, "short_sleeper"), () => Machines);
+		Use(2, "alert", adds: false);
+		WaitFor("the-founder's-vigilant-is-gone", 20f, () => !Perks.Has(1, "alert") && !StartingPerk.IsAlert() && !S.startingPerks.Any((StartingPerk p) => p.id == "alert"), () => Machines);
+		End(30f);
+	}
+}

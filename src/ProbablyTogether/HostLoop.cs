@@ -23,7 +23,7 @@ internal static class HostLoop
 		"voice.frame", "voice.config", "crew.tally", "help.checked",
 		"customers.refused", "dayNight.refused", "dayNight.readyChanged", "dayNight.newRunVotes",
 		"dialogue.refused", "econ.refused", "production.refused", "sec.refused", "items.reject", "items.use.refused", "machine.reject",
-		"outing.go", "spec.refused"
+		"outing.go", "spec.refused", "perks.refused", "repick.offer"
 	};
 
 	internal static int Delivered;

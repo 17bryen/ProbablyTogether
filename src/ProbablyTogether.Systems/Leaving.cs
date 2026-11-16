@@ -98,6 +98,11 @@ public static class Leaving
 		{
 			return "The shop is not loaded.";
 		}
+		// A trade is given up on the trade screen (Systems.Repick); only bots without screens lose it at once.
+		if (!whole && (!Bots.BotRunner.Enabled || PerkScreens.LabOn))
+		{
+			return Repick.ChatCommand(from, Repick.Trade, who);
+		}
 		if (Members.SeatOf(from) != 1)
 		{
 			return "Only " + Members.NameOf(1) + ", who founded the shop, can do that.";
@@ -134,12 +139,12 @@ public static class Leaving
 		return ServerLeave(member.s, whole);
 	}
 
-	private static string Check(int seat, bool whole)
+	/// Why the shop cannot change who does what now (null: it can).
+	internal static string Busy()
 	{
 		PlayerStore store = Game.Store;
-		string text = Members.NameOf(seat);
-		string text2 = store.storeState.ToString();
-		if (text2 != "MORNING" && text2 != "CLOSED")
+		string text = store.storeState.ToString();
+		if (text != "MORNING" && text != "CLOSED")
 		{
 			return "Do that while the shop is closed: in the morning before opening, or at night.";
 		}
@@ -150,6 +155,23 @@ public static class Leaving
 		if (store.currentClientInstance != null)
 		{
 			return "Do that when nobody is at the counter.";
+		}
+		return null;
+	}
+
+	/// Server: this player's trades leave; they keep their seat and storage bay.
+	internal static string GiveUp(int seat)
+	{
+		return ServerLeave(seat, whole: false);
+	}
+
+	internal static string Check(int seat, bool whole)
+	{
+		string text = Members.NameOf(seat);
+		string text2 = Busy();
+		if (text2 != null)
+		{
+			return text2;
 		}
 		if (whole && Members.Online(seat))
 		{
@@ -407,6 +429,7 @@ public static class Leaving
 		{
 			if (item == null || gone.Contains(item) || doomed.Contains(item))
 			{
+				// Also going: it leaves with its container.
 				continue;
 			}
 			try

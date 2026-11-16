@@ -2,6 +2,21 @@
 
 All changes to Probably Together.
 
+## 0.8.4 - 2026-11-15
+
+Same protocol (17). Every player needs it for `/retrade` and `/reperk`.
+
+### Changed
+- `/retrade <player>` now offers the player the game's trade screen; nothing changes until they press Continue, and Back keeps everything.
+- Joining, loading and starting a shop show a full-screen loading screen in the game's style instead of the mod's small window.
+
+### Added
+- `/reperk <player>` lets the founder let a player pick their perks again on the game's perk screen. Kept perks are untouched, dropped perks stop working, and new ones act as a first pick.
+
+### Fixed
+- The host now sees why their own perk pick was refused.
+- The perk screen no longer opens empty for a player who has never finished a run.
+
 ## 0.8.3 - 2026-11-15
 
 Same protocol (17). The host needs it; players should take it.

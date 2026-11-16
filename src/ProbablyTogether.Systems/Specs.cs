@@ -733,6 +733,19 @@ public static class Specs
 		}
 	}
 
+	internal static void RefuseTo(int player, string why)
+	{
+		Refuse(player, why);
+	}
+
+	internal static void PickFor(int player, string id)
+	{
+		ServerPick(new MsgSpecPick
+		{
+			id = id
+		}, player);
+	}
+
 	private static void Refuse(int player, string why)
 	{
 		LastRefusal = why;
@@ -822,7 +835,7 @@ public static class Specs
 		}
 		if (num > 0 && Of(num) != null)
 		{
-			return "Your trade in this shop is " + Label(Of(num)) + ". Only " + Members.NameOf(1) + " can let you give it up (/retrade).";
+			return "Your trade in this shop is " + Label(Of(num)) + ". Only " + Members.NameOf(1) + " can let you choose another (/retrade).";
 		}
 		List<KeyValuePair<string, string>> list = Choices();
 		if (string.IsNullOrEmpty(what))

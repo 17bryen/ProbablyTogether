@@ -207,6 +207,14 @@ public static class Chat
 			});
 			return;
 		}
+		if (text.StartsWith("/reperk", StringComparison.OrdinalIgnoreCase))
+		{
+			Net.ToPlayer(from, "chat.notice", new MsgChatNotice
+			{
+				text = ProbablyTogether.Systems.Repick.ChatCommand(from, ProbablyTogether.Systems.Repick.PerksKind, text.Substring(7).Trim())
+			});
+			return;
+		}
 		if (text.StartsWith("/retrade", StringComparison.OrdinalIgnoreCase) || text.StartsWith("/remove", StringComparison.OrdinalIgnoreCase))
 		{
 			bool flag = text.StartsWith("/remove", StringComparison.OrdinalIgnoreCase);

@@ -650,7 +650,8 @@ public static class Perks
 		return null;
 	}
 
-	public static string Refusal(int seat, List<string> ids)
+	/// Why this set of perks cannot be this player's pick (null: it can).
+	public static string Refusal(int seat, List<string> ids, bool again = false)
 	{
 		if (!Enabled)
 		{
@@ -660,7 +661,7 @@ public static class Perks
 		{
 			return "Guests have no perks: join with your own account.";
 		}
-		if (Picked(seat))
+		if (Picked(seat) && !again)
 		{
 			return "You have already picked your perks in this shop.";
 		}
@@ -712,6 +713,11 @@ public static class Perks
 		{
 			ids = (ids ?? new string[0]).ToArray()
 		});
+	}
+
+	internal static void RefuseTo(int player, string why)
+	{
+		Refuse(player, why);
 	}
 
 	private static void Refuse(int player, string why)
@@ -768,10 +774,14 @@ public static class Perks
 		string text;
 		using (Replay.Client(m.seed ?? new Seed()))
 		{
-			text = Apply(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null, m.lab);
+			text = m.again ? Swap(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null) : Apply(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null, m.lab);
 		}
-		Log.Info("perks: " + Members.NameOf(m.seat) + " picked [" + string.Join(", ", list) + "]: " + text);
-		if (!DayLog.Replaying && list.Count > 0)
+		Log.Info("perks: " + Members.NameOf(m.seat) + (m.again ? " now has [" : " picked [") + string.Join(", ", list) + "]: " + text);
+		if (!DayLog.Replaying && m.again)
+		{
+			Notices.Show((list.Count > 0) ? Lang.Trf("{0} chose their perks again: {1}.", Kit.Name(Members.NameOf(m.seat)), string.Join(", ", list.Select(NameOfPerk))) : Lang.Trf("{0} chose their perks again: none.", Kit.Name(Members.NameOf(m.seat))), "perks");
+		}
+		else if (!DayLog.Replaying && list.Count > 0)
 		{
 			Notices.Show(Lang.Trf("{0} picked: {1}.", Kit.Name(Members.NameOf(m.seat)), string.Join(", ", list.Select(NameOfPerk))), "perks");
 		}
@@ -910,6 +920,99 @@ public static class Perks
 		Picks++;
 		LastApplied = seat + ":" + string.Join(",", ids);
 		return (notes.Count > 0) ? string.Join("; ", notes) : "nothing to hand out";
+	}
+
+	internal static string ServerSwap(int seat, List<string> ids)
+	{
+		GameItem val = Bays.BayOf(seat);
+		MsgPerksSet msgPerksSet = new MsgPerksSet
+		{
+			seat = seat,
+			ids = ids.ToArray(),
+			bay = (val != null) ? Ids.Of(val) : 0,
+			again = true
+		};
+		string text;
+		using (Replay.Server(out msgPerksSet.seed))
+		{
+			text = Swap(seat, ids, val);
+		}
+		Net.ToAll("perks.set", msgPerksSet);
+		Log.Info("perks: " + Members.NameOf(seat) + " (seat " + seat + ") chose again, now [" + string.Join(", ", ids) + "]: " + text);
+		return text;
+	}
+
+	/// Kept perks are untouched, dropped ones stop as if their holder left, new ones act as a first pick.
+	private static string Swap(int seat, List<string> ids, GameItem bay)
+	{
+		PlayerStore store = Game.Store;
+		if (store == null)
+		{
+			return "the shop is not loaded";
+		}
+		Keep();
+		List<string> old = Of(seat).Ids.ToList();
+		List<string> gone = old.Where((string i) => !ids.Contains(i)).ToList();
+		List<string> added = ids.Where((string i) => !old.Contains(i)).ToList();
+		if (gone.Count > 0)
+		{
+			Change(seat, delegate(Rec r)
+			{
+				r.Ids.RemoveAll((string i) => gone.Contains(i));
+			});
+			using (Net.Apply())
+			{
+				foreach (string item in gone)
+				{
+					Stop(store, item);
+				}
+			}
+		}
+		string text = (added.Count > 0) ? Apply(seat, added, bay, merge: true) : "nothing to hand out";
+		Change(seat, delegate(Rec r)
+		{
+			r.Picked = true;
+			r.Ids = ids.ToList();
+		});
+		Show(Actor);
+		return ((gone.Count > 0) ? ("gave up [" + string.Join(", ", gone) + "]; ") : "") + ((added.Count > 0) ? ("new [" + string.Join(", ", added) + "]: ") : "") + text;
+	}
+
+	/// Ends what a perk keeps doing for a holder who no longer has it.
+	private static void Stop(PlayerStore store, string id)
+	{
+		switch (id)
+		{
+		case "bad_lease":
+			store.rentValue = Math.Max(0, store.rentValue - 40);
+			break;
+		case "prime_real_estate":
+			store.rentValue = Math.Max(0, store.rentValue - 75);
+			break;
+		case "lucky":
+			store.healthData.luck -= 15;
+			break;
+		case "unlucky":
+			store.healthData.luck += 15;
+			break;
+		}
+		if (KindOf(id) != Personal && Count(id) == 0 && store.startingPerks != null)
+		{
+			store.startingPerks.RemoveAll((StartingPerk p) => p != null && p.id == id);
+			if (id == "minimalist" || id == "ascetic")
+			{
+				try
+				{
+					EmporiumEntry.Instance.invElement.SetShape(24, 10);
+					EmporiumEntry.Instance.invElement.Validate();
+					EmporiumEntry.Instance.invWindow.Validate();
+				}
+				catch (Exception ex)
+				{
+					Log.Warn("perks: giving the shop's storage its width back threw: " + ex.Message);
+				}
+			}
+		}
 	}
 
 	private static bool Place(GameItem item, GraphNodeStorage[] into)
@@ -1106,38 +1209,7 @@ public static class Perks
 		{
 			foreach (string id in rec.Ids)
 			{
-				switch (id)
-				{
-				case "bad_lease":
-					store.rentValue = Math.Max(0, store.rentValue - 40);
-					break;
-				case "prime_real_estate":
-					store.rentValue = Math.Max(0, store.rentValue - 75);
-					break;
-				case "lucky":
-					store.healthData.luck -= 15;
-					break;
-				case "unlucky":
-					store.healthData.luck += 15;
-					break;
-				}
-				if (KindOf(id) != Personal && Count(id) == 0 && store.startingPerks != null)
-				{
-					store.startingPerks.RemoveAll((StartingPerk p) => p != null && p.id == id);
-					if (id == "minimalist" || id == "ascetic")
-					{
-						try
-						{
-							EmporiumEntry.Instance.invElement.SetShape(24, 10);
-							EmporiumEntry.Instance.invElement.Validate();
-							EmporiumEntry.Instance.invWindow.Validate();
-						}
-						catch (Exception ex)
-						{
-							Log.Warn("perks: giving the shop's storage its width back threw: " + ex.Message);
-						}
-					}
-				}
+				Stop(store, id);
 			}
 		}
 		Show(Actor);
@@ -1592,7 +1664,11 @@ public sealed class MsgPerksSet
 
 	public long bay;
 
+	/// Bots: added to what the seat has.
 	public bool lab;
+
+	/// A repick: ids is the whole new pick.
+	public bool again;
 
 	public Seed seed;
 }

@@ -135,6 +135,31 @@ public static class PerkScreens
 		refusal = "";
 	}
 
+	private static bool AgainTrade => Repick.Mine == Repick.Trade && Specs.Of(Members.LocalSeat) != null;
+
+	private static bool AgainPerks => Repick.Mine == Repick.PerksKind && Perks.Picked(Members.LocalSeat);
+
+	/// The Back button of a screen that is up for choosing again: nothing changes.
+	internal static void Back()
+	{
+		try
+		{
+			NewGameUIElements.PlayClick();
+		}
+		catch
+		{
+		}
+		Repick.Cancel("back");
+		HideAll("kept what they had");
+	}
+
+	/// The server ended this player's offer: close the screens at once.
+	internal static void OfferChanged()
+	{
+		nextLook = 0f;
+		waiting = false;
+	}
+
 	private static bool Offered(StartingScenario s)
 	{
 		string key = s.startType.ToString();
@@ -156,17 +181,32 @@ public static class PerkScreens
 			{
 				throw new InvalidOperationException("the game's specialization screen did not open");
 			}
-			customUIWindow.closeOnEscape = false;
+			// When choosing again, Back and Escape keep what the player has.
+			bool again = AgainTrade;
+			customUIWindow.closeOnEscape = again;
 			customUIWindow.onClose = delegate
 			{
-				if (!closing)
+				if (closing)
+				{
+					return;
+				}
+				if (Repick.Mine.Length > 0)
+				{
+					Repick.Cancel("the trade screen was closed");
+				}
+				else
 				{
 					Log.Info("ui: the trade screen was closed before a trade was picked; it comes back");
 				}
 			};
 			if ((Object)(object)frame.backButton != (Object)null)
 			{
-				((Component)frame.backButton).gameObject.SetActive(false);
+				((Component)frame.backButton).gameObject.SetActive(again);
+				if (again)
+				{
+					frame.backButton.onClick.RemoveAllListeners();
+					frame.backButton.onClick.AddListener(Back);
+				}
 			}
 			frame.continueButton.onClick.RemoveAllListeners();
 			frame.continueButton.onClick.AddListener(SpecContinue);
@@ -205,7 +245,14 @@ public static class PerkScreens
 			waitingSince = Time.realtimeSinceStartup;
 			refusal = "";
 			Continued++;
-			Specs.Pick(selected.startType.ToString());
+			if (AgainTrade)
+			{
+				Repick.Confirm(Repick.Trade, selected.startType.ToString(), null);
+			}
+			else
+			{
+				Specs.Pick(selected.startType.ToString());
+			}
 			RefreshSpec();
 		}
 		catch (Exception ex)
@@ -233,7 +280,7 @@ public static class PerkScreens
 		int num = Specs.TakenBy(key.ToUpperInvariant());
 		if (!flag && (Object)(object)component.warning != (Object)null)
 		{
-			component.warning.text = (num > 0) ? Lang.Trf("{0} is this shop's {1}.", Members.NameOf(num), selected.GetTitle()) : Lang.Tr("Not a trade for a shared shop.");
+			component.warning.text = (num > 0 && num == Members.LocalSeat) ? Lang.Tr("This is your trade now. Pick another one, or go back to keep it.") : ((num > 0) ? Lang.Trf("{0} is this shop's {1}.", Members.NameOf(num), selected.GetTitle()) : Lang.Tr("Not a trade for a shared shop."));
 		}
 		else if (waiting && (Object)(object)component.warning != (Object)null)
 		{
@@ -274,7 +321,10 @@ public static class PerkScreens
 		}
 		try
 		{
-			NewGameData.Instance.startingPerks = new List<StartingPerk>();
+			// A list of its own: on the shop's founding machine the game's "new game" list is the shop's.
+			// Choosing again starts from what the player has.
+			bool again = AgainPerks;
+			NewGameData.Instance.startingPerks = again ? Perks.Of(Members.LocalSeat).Ids.Select(Perks.Def).Where((StartingPerk p) => p != null).ToList() : new List<StartingPerk>();
 			NewGamePerksUI.Open();
 			CustomUIWindow customUIWindow = Window(PerkWindow);
 			NewGamePerksFrame frame = (customUIWindow != null) ? customUIWindow.root.GetComponent<NewGamePerksFrame>() : null;
@@ -282,19 +332,40 @@ public static class PerkScreens
 			{
 				throw new InvalidOperationException("the game's perk screen did not open");
 			}
-			customUIWindow.closeOnEscape = false;
+			customUIWindow.closeOnEscape = again;
 			customUIWindow.onClose = delegate
 			{
-				if (!closing)
+				if (closing)
+				{
+					return;
+				}
+				if (Repick.Mine.Length > 0)
+				{
+					Repick.Cancel("the perk screen was closed");
+				}
+				else
 				{
 					Log.Info("ui: the perk screen was closed before perks were picked; it comes back");
 				}
 			};
 			if ((Object)(object)frame.backButton != (Object)null)
 			{
-				((Component)frame.backButton).gameObject.SetActive(false);
+				((Component)frame.backButton).gameObject.SetActive(again);
+				if (again)
+				{
+					frame.backButton.onClick.RemoveAllListeners();
+					frame.backButton.onClick.AddListener(Back);
+				}
 			}
+			// The game keeps perks from somebody who never finished a run of their own; a shop's players choose freely.
 			firstRunField?.SetValue(null, false);
+			if (again)
+			{
+				// The game has just emptied such a player's selection; what they have is added after it.
+				List<StartingPerk> list = NewGameData.Instance.startingPerks;
+				list.Clear();
+				list.AddRange(Perks.Of(Members.LocalSeat).Ids.Select(Perks.Def).Where((StartingPerk p) => p != null));
+			}
 			try
 			{
 				frame.instruction.text = LocHelper.GetLocalizedMainMenu("new_perk_instruction");
@@ -364,7 +435,8 @@ public static class PerkScreens
 				return;
 			}
 			List<string> list = Selected();
-			string text = Perks.Refusal(Members.LocalSeat, list);
+			bool again = AgainPerks;
+			string text = Perks.Refusal(Members.LocalSeat, list, again);
 			if (text != null)
 			{
 				Refused(text);
@@ -374,7 +446,14 @@ public static class PerkScreens
 			waitingSince = Time.realtimeSinceStartup;
 			refusal = "";
 			Continued++;
-			Perks.Pick(list);
+			if (again)
+			{
+				Repick.Confirm(Repick.PerksKind, null, list);
+			}
+			else
+			{
+				Perks.Pick(list);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -418,6 +497,8 @@ public static class PerkScreens
 			waiting = false;
 			return;
 		}
+		// Somebody else picked while this player is still choosing: what they took is locked here now, and comes
+		// off this player's own selection.
 		try
 		{
 			List<StartingPerk> list = NewGameData.Instance?.startingPerks;
@@ -518,6 +599,10 @@ public static class PerkScreens
 			int localSeat = Members.LocalSeat;
 			if (localSeat <= 0 || Outings.Private || HostTrip.Out)
 			{
+				if (Repick.Mine.Length > 0)
+				{
+					Repick.Cancel("away from the shop");
+				}
 				if (Covering)
 				{
 					HideAll("not a player of this shop right now");
@@ -530,6 +615,11 @@ public static class PerkScreens
 			bool flag3 = Perks.Enabled && !Perks.Picked(localSeat);
 			if (!flag && !flag3)
 			{
+				if (Repick.Mine.Length > 0)
+				{
+					Again(realtimeSinceStartup);
+					return;
+				}
 				if (Covering)
 				{
 					HideAll("trade and perks are picked");
@@ -563,6 +653,7 @@ public static class PerkScreens
 				OpenSpec();
 				if (specFailed)
 				{
+					// The mod's own trade window is a window of the shop's layer: the cover would hide it.
 					cover.SetActive(false);
 				}
 				return;
@@ -592,6 +683,55 @@ public static class PerkScreens
 			{
 				Log.Warn("ui: the setup screens' look-over threw" + Log.More(skipped) + ": " + ex);
 			}
+		}
+	}
+
+	/// The founder lets this player choose a trade, or their perks, again: the same screens, with a way back.
+	private static void Again(float now)
+	{
+		string text = Game.Store.storeState.ToString();
+		if ((text != "MORNING" && text != "CLOSED") || DayNight.NightRunning)
+		{
+			Repick.Cancel("the shop is no longer closed");
+			HideAll("the shop is no longer closed");
+			return;
+		}
+		if (waiting && now - waitingSince > 12f)
+		{
+			waiting = false;
+			RefreshSpec();
+		}
+		string text2 = (string.IsNullOrEmpty(Net.ServerName) ? Lang.Tr("This shop") : Net.ServerName);
+		bool flag = Repick.Mine == Repick.Trade;
+		string other = flag ? PerkWindow : SpecWindow;
+		if (Window(other) != null)
+		{
+			closing = true;
+			try
+			{
+				Window(other)?.Close();
+			}
+			finally
+			{
+				closing = false;
+			}
+		}
+		if (flag)
+		{
+			ShowCover(Lang.Trf("{0}: choose a new trade, or go back to keep yours", text2));
+			OpenSpec();
+		}
+		else
+		{
+			ShowCover(Lang.Trf("{0}: choose your perks again, or go back to keep them", text2));
+			OpenPerks();
+		}
+		if (flag ? specFailed : perksFailed)
+		{
+			// No screen, no choosing: nothing changes.
+			Repick.Cancel("the game's screen could not be opened");
+			HideAll("the game's screen could not be opened");
+			Notices.Show(Lang.Tr("The game's screen could not be opened. Nothing was changed."), flag ? "spec" : "perks");
 		}
 	}
 }
