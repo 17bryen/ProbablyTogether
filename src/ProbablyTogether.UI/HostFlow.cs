@@ -242,6 +242,7 @@ internal static class HostFlow
 		int port = (int.TryParse((string)jObject["port"], NumberStyles.Integer, CultureInfo.InvariantCulture, out result) && result >= 1024 && result <= 65535) ? result : 27700;
 		HostPanels.OpenSetup(((string)jObject["password"]) ?? "", port, SetupDone);
 		last = HostPanels.SetupWindow;
+		HookBack(HostPanels.SetupWindow);
 		idleSince = -1f;
 	}
 
@@ -273,6 +274,7 @@ internal static class HostFlow
 
 	private static void ShowList()
 	{
+		// Take in save files dropped into the folder, using the game's own orphan scan.
 		try
 		{
 			// Scan once per visit; Back also returns to the list.
@@ -295,6 +297,8 @@ internal static class HostFlow
 			return;
 		}
 		last = ListWindow;
+		HookBack(ListWindow);
+		BackArrow(loadGameFrame);
 		idleSince = -1f;
 		try
 		{
@@ -363,6 +367,7 @@ internal static class HostFlow
 			HostPanels.RulesNote(note);
 		}
 		last = HostPanels.RulesWindow;
+		HookBack(HostPanels.RulesWindow);
 		idleSince = -1f;
 	}
 
@@ -375,6 +380,7 @@ internal static class HostFlow
 			HostPanels.CloseRules();
 			NewGameSpecializationUI.Open();
 			last = SpecWindow;
+			HookBack(SpecWindow);
 			idleSince = -1f;
 			Log.Info("host: a new shop '" + r.Name + "': " + r.Players + " player(s), own trades " + r.OwnTrades + ", solo trips " + r.SoloTrips + ", +" + r.CustomersPerPlayer.ToString(CultureInfo.InvariantCulture) + " customer(s) and +" + r.RentPercentPerPlayer + "% rent per added player; the game's new game screens");
 		}
@@ -595,18 +601,23 @@ internal static class HostFlow
 		{
 			return;
 		}
+		StepBack(last);
+	}
+
+	private static void StepBack(string from)
+	{
 		try
 		{
-			if (last == SpecWindow)
+			if (from == SpecWindow)
 			{
 				ShowRules(null);
 			}
-			else if (last == HostPanels.RulesWindow)
+			else if (from == HostPanels.RulesWindow)
 			{
 				pending = null;
 				ShowList();
 			}
-			else if (last == ListWindow)
+			else if (from == ListWindow)
 			{
 				ShowSetup();
 			}
@@ -618,6 +629,93 @@ internal static class HostFlow
 		catch (Exception ex)
 		{
 			End("a step back could not open: " + ex.Message);
+		}
+	}
+
+	/// Opens the previous screen in the same frame a Back or Escape closes this one; other closes are left to Tick.
+	private static void HookBack(string id)
+	{
+		try
+		{
+			CustomUIWindow w = Window(id);
+			if (w == null || (Object)(object)w.root == (Object)null)
+			{
+				return;
+			}
+			NewGamePanelFrame frame = w.root.GetComponent<NewGamePanelFrame>();
+			Action before = w.onClose;
+			w.onClose = delegate
+			{
+				before?.Invoke();
+				try
+				{
+					if (Active && !moving && last == id && AskedToGoBack(frame))
+					{
+						StepBack(id);
+					}
+				}
+				catch (Exception ex)
+				{
+					Log.Warn("host: stepping back from " + id + " threw: " + ex.Message);
+				}
+			};
+		}
+		catch (Exception ex2)
+		{
+			Log.Warn("host: listening for Back on " + id + " threw: " + ex2.Message);
+		}
+	}
+
+	private static bool AskedToGoBack(NewGamePanelFrame frame)
+	{
+		if (Input.GetKeyDown(KeyCode.Escape))
+		{
+			return true;
+		}
+		if ((Object)(object)frame == (Object)null || (Object)(object)frame.backButton == (Object)null)
+		{
+			return false;
+		}
+		UnityEngine.EventSystems.EventSystem current = UnityEngine.EventSystems.EventSystem.current;
+		if ((Object)(object)current != (Object)null && (Object)(object)current.currentSelectedGameObject == (Object)(object)frame.backButton.gameObject)
+		{
+			return true;
+		}
+		// A click that did not select the button: the pointer is on it as the mouse button comes up.
+		return (Input.GetMouseButtonUp(0) || Input.GetMouseButton(0)) && RectTransformUtility.RectangleContainsScreenPoint((RectTransform)frame.backButton.transform, Input.mousePosition, null);
+	}
+
+	/// The Load screen's close cross leads back a screen here, so it gets the back arrow.
+	private static void BackArrow(LoadGameFrame frame)
+	{
+		try
+		{
+			CustomUIManager instance = CustomUIManager.Instance;
+			NewGamePanelFrame newGamePanelFrame = ((Object)(object)instance != (Object)null && (Object)(object)instance.newGameDifficultyPrefab != (Object)null) ? instance.newGameDifficultyPrefab.GetComponent<NewGamePanelFrame>() : null;
+			if ((Object)(object)newGamePanelFrame == (Object)null || (Object)(object)newGamePanelFrame.backButton == (Object)null || (Object)(object)frame.backButton == (Object)null)
+			{
+				return;
+			}
+			UnityEngine.UI.Button backButton = newGamePanelFrame.backButton;
+			UnityEngine.UI.Button backButton2 = frame.backButton;
+			UnityEngine.UI.Image image = backButton.targetGraphic as UnityEngine.UI.Image;
+			UnityEngine.UI.Image image2 = backButton2.targetGraphic as UnityEngine.UI.Image;
+			if ((Object)(object)image != (Object)null && (Object)(object)image2 != (Object)null)
+			{
+				image2.sprite = image.sprite;
+			}
+			backButton2.spriteState = backButton.spriteState;
+			// The image may be on a child.
+			UnityEngine.UI.Image[] componentsInChildren = backButton.GetComponentsInChildren<UnityEngine.UI.Image>(includeInactive: true);
+			UnityEngine.UI.Image[] componentsInChildren2 = backButton2.GetComponentsInChildren<UnityEngine.UI.Image>(includeInactive: true);
+			for (int i = 0; i < componentsInChildren.Length && i < componentsInChildren2.Length; i++)
+			{
+				componentsInChildren2[i].sprite = componentsInChildren[i].sprite;
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: the list's back arrow: " + ex.Message);
 		}
 	}
 }

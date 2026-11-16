@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.3 - 2026-11-16
+
+Same protocol (17).
+
+### Fixed
+- Going back on the host screens shows the previous screen at once, without a one-frame flash.
+- The corner button of "Your shops" is now a back arrow, not a cross.
+
 ## 0.9.2 - 2026-11-16
 
 Same protocol (17).
