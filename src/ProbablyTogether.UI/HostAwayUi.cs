@@ -27,7 +27,14 @@ internal static class HostAwayUi
 			{
 				try
 				{
-					HostPanels.OpenMessage("bellun_probably_together.leave", Lang.Tr("Leaving your shop"), new string[1] { Lang.Tr("You are hosting this shop. Step away and the others keep playing (you can rejoin at any time), or close the shop and everyone is disconnected.") }, -1, Lang.Tr("Keep playing"), null, Lang.Tr("Step away"), StepOut, Lang.Tr("Close the shop"), AskStop, null, "meta");
+					// The game's own panel, on the layer the plain window was on.
+					HostPanels.OpenMessage("bellun_probably_together.leave", Lang.Tr("Leaving your shop"), new string[1] { Lang.Tr("You are hosting this shop. Step away and the others keep playing (you can rejoin at any time), or close the shop and everyone is disconnected.") }, -1, new HostPanels.Choice[3]
+					{
+						// Ordered by how much each does.
+						new HostPanels.Choice(Lang.Tr("Keep playing")),
+						new HostPanels.Choice(Lang.Tr("Step away"), StepOut),
+						new HostPanels.Choice(Lang.Tr("Close the shop"), AskStop)
+					}, null, "meta");
 					return;
 				}
 				catch (Exception ex2)

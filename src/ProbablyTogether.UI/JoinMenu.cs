@@ -762,7 +762,7 @@ public static class JoinMenu
 		{
 			try
 			{
-				HostPanels.OpenMessage("bellun_probably_together.about", Mod.Name, array, -1, Lang.Tr("Back"), null);
+				HostPanels.OpenMessage("bellun_probably_together.about", Mod.Name, array, -1, new HostPanels.Choice[1] { new HostPanels.Choice(Lang.Tr("Back")) });
 				Log.Info("ui: About window opened on the game's panel");
 				return;
 			}
@@ -1414,7 +1414,11 @@ public static class JoinMenu
 					list.Add(Lang.Trf("From {0}:", Kit.Name(noticeServer)));
 				}
 				list.Add(Kit.Safe(text));
-				HostPanels.OpenMessage("bellun_probably_together.notice", Lang.Tr("Disconnected"), list, list.Count - 1, Lang.Tr("OK"), null, Lang.Tr("Join a shop"), OpenDialog);
+				HostPanels.OpenMessage("bellun_probably_together.notice", Lang.Tr("Disconnected"), list, list.Count - 1, new HostPanels.Choice[2]
+				{
+					new HostPanels.Choice(Lang.Tr("OK")),
+					new HostPanels.Choice(Lang.Tr("Join a shop"), OpenDialog)
+				});
 				Log.Info("ui: disconnected notice shown on the game's panel: " + text);
 				return;
 			}
@@ -1573,7 +1577,11 @@ public static class JoinMenu
 						OpenWorkshopPage(id2);
 					}) : null);
 				}
-				modsView = HostPanels.OpenMods("bellun_probably_together.mods", Lang.Tr("Mods for this shop"), Kit.Safe(Intro(list.Count, flag)), list2, list3, list4, Lang.Tr("Workshop page"), Steps(flag, list.Count), Lang.Tr("Open Mods"), OpenGameMods, Lang.Tr("Close"), delegate
+				modsView = HostPanels.OpenMods("bellun_probably_together.mods", Lang.Tr("Mods for this shop"), Kit.Safe(Intro(list.Count, flag)), list2, list3, list4, Lang.Tr("Workshop page"), Steps(flag, list.Count), new HostPanels.Choice[2]
+				{
+					new HostPanels.Choice(Lang.Tr("Close")),
+					new HostPanels.Choice(Lang.Tr("Open Mods"), OpenGameMods)
+				}, delegate
 				{
 					modsView = null;
 					OnModsClosed();

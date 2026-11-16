@@ -267,7 +267,7 @@ public static class UpdateNotice
 		{
 			try
 			{
-				HostPanels.OpenMessage("bellun_probably_together.update", Lang.Trf("{0} update", Mod.Name), new string[1] { Lang.Tr(Line) }, -1, Lang.Tr("OK"), null);
+				HostPanels.OpenMessage("bellun_probably_together.update", Lang.Trf("{0} update", Mod.Name), new string[1] { Lang.Tr(Line) }, -1, new HostPanels.Choice[1] { new HostPanels.Choice(Lang.Tr("OK")) });
 				Log.Info("ui: update notice shown on the game's panel: " + Line);
 				return;
 			}

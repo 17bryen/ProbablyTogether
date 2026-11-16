@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.8.6 - 2026-11-15
+
+Same protocol (17).
+
+### Fixed
+- Buttons in the new panels are the game's size, evenly spaced, centred, and ordered from least to most drastic action.
+
 ## 0.8.5 - 2026-11-15
 
 Same protocol (17).

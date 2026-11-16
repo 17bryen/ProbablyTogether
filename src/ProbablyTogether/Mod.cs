@@ -4,7 +4,7 @@ public sealed class Mod : IMod
 {
 	public const string Id = "bellun_probably_together";
 
-	public const string Version = "0.8.5";
+	public const string Version = "0.8.6";
 
 	public const string Name = "Probably Together";
 

@@ -16,11 +16,132 @@ internal static partial class HostPanels
 
 	private static readonly Dictionary<string, Panel> messages = new Dictionary<string, Panel>(StringComparer.Ordinal);
 
-	private const float ButtonRow = 888f;
+	/// A button of a panel: what it says, and what it does once the panel has closed (nothing: it only closes).
+	internal sealed class Choice
+	{
+		public readonly string Label;
 
-	private const float SideButton = 312f;
+		public readonly Action Do;
 
-	private const float RightButtonX = 706f;
+		public Choice(string label, Action act = null)
+		{
+			Label = label;
+			Do = act;
+		}
+	}
+
+	private const float ButtonGap = 40f;
+
+	/// Where the panel's own Continue button is, in the body's coordinates (x from the left, y from the top).
+	private static Rect ContinueRect(Panel p)
+	{
+		try
+		{
+			Component component = ((Object)(object)p.Frame.continueOuter != (Object)null) ? (Component)p.Frame.continueOuter : p.Frame.continueButton;
+			Vector3[] array = new Vector3[4];
+			((RectTransform)component.transform).GetWorldCorners(array);
+			Vector3 vector = p.Body.InverseTransformPoint(array[1]);
+			Vector3 vector2 = p.Body.InverseTransformPoint(array[3]);
+			Rect result = new Rect(vector.x, 0f - vector.y, vector2.x - vector.x, vector.y - vector2.y);
+			if (result.width > 60f && result.height > 16f)
+			{
+				return result;
+			}
+		}
+		catch
+		{
+		}
+		return new Rect(427f, 890f, 256f, 40f);
+	}
+
+	/// The middle of the panel's own line over its button row, in the body's coordinates.
+	private static float RowCentre(Panel p, Rect own)
+	{
+		try
+		{
+			RectTransform rectTransform = null;
+			float num = float.MaxValue;
+			foreach (Transform item in p.Frame.panel)
+			{
+				RectTransform rectTransform2 = item as RectTransform;
+				if ((Object)(object)rectTransform2 != (Object)null && item.gameObject.activeSelf && (Object)(object)item.GetComponent<Image>() != (Object)null && rectTransform2.rect.height <= 3f && rectTransform2.rect.width > 500f && rectTransform2.position.y < num)
+				{
+					num = rectTransform2.position.y;
+					rectTransform = rectTransform2;
+				}
+			}
+			if ((Object)(object)rectTransform != (Object)null)
+			{
+				Vector3[] array = new Vector3[4];
+				rectTransform.GetWorldCorners(array);
+				float x = p.Body.InverseTransformPoint(array[0]).x;
+				float x2 = p.Body.InverseTransformPoint(array[3]).x;
+				if (x2 - x > 300f)
+				{
+					return (x + x2) / 2f;
+				}
+			}
+		}
+		catch
+		{
+		}
+		return own.x + own.width / 2f;
+	}
+
+	private static void Shift(Transform t, float dx)
+	{
+		RectTransform rectTransform = t as RectTransform;
+		if ((Object)(object)rectTransform != (Object)null)
+		{
+			rectTransform.anchoredPosition += new Vector2(dx, 0f);
+		}
+	}
+
+	/// One to three buttons in a row, each the size of the game's Continue, centred where it is, ordered by how much each does.
+	/// The panel's own button is one of them, at index `own`.
+	private static void Buttons(Panel p, string id, IList<Choice> choices, int own)
+	{
+		Rect rect = ContinueRect(p);
+		int num = Mathf.Min(choices.Count, 3);
+		float num2 = (float)num * rect.width + (float)(num - 1) * ButtonGap;
+		// One button stays put; a row centres under the line over the buttons, as the cut corner narrows the right side.
+		float num3 = ((num > 1) ? RowCentre(p, rect) : (rect.x + rect.width / 2f)) - num2 / 2f;
+		for (int i = 0; i < num; i++)
+		{
+			float num4 = num3 + (float)i * (rect.width + ButtonGap);
+			Choice choice = choices[i];
+			if (i == own)
+			{
+				ContinueSays(p, choice.Label);
+				float num5 = num4 - rect.x;
+				if (Mathf.Abs(num5) > 0.5f)
+				{
+					Transform transform = p.Frame.continueButton.transform;
+					Shift(transform, num5);
+					foreach (Component item in new Component[3] { p.Frame.continueOuter, p.Frame.continueInner, p.Frame.continueLabel })
+					{
+						if ((Object)(object)item != (Object)null && !item.transform.IsChildOf(transform))
+						{
+							Shift(item.transform, num5);
+						}
+					}
+				}
+				continue;
+			}
+			NewGameCommonButton.Build(p.Frame, p.Body, "choice" + i, num4, rect.y, rect.width, rect.height, choice.Label, (UnityAction)delegate
+			{
+				NewGameUIElements.PlayClick();
+				CloseMessage(id);
+				choice.Do?.Invoke();
+			});
+		}
+	}
+
+	/// The place of the panel's own button among this many: the middle of three, else the first.
+	private static int Own(int count)
+	{
+		return (count >= 3) ? 1 : 0;
+	}
 
 	internal static bool Available
 	{
@@ -53,15 +174,6 @@ internal static partial class HostPanels
 		WildNetworkUI.SetRect(textMeshProUGUI.rectTransform, Left, y, Width, num);
 		y += num + gap;
 		return textMeshProUGUI;
-	}
-
-	private static NewGameCommonButton Extra(Panel p, string name, float x, float y, float width, string label, Action onClick)
-	{
-		return NewGameCommonButton.Build(p.Frame, p.Body, name, x, y, width, 44f, label, (UnityAction)delegate
-		{
-			NewGameUIElements.PlayClick();
-			onClick?.Invoke();
-		});
 	}
 
 	private static void ContinueSays(Panel p, string label)
@@ -209,39 +321,26 @@ internal static partial class HostPanels
 		}
 	}
 
-	internal static TextMeshProUGUI[] OpenMessage(string id, string title, IList<string> paragraphs, int warn, string ok, Action onOk, string left = null, Action onLeft = null, string right = null, Action onRight = null, Action onClosed = null, string layer = "menu")
+	/// Paragraph `warn` (-1: none) is in the warning colour; one to three buttons, each closing the panel first.
+	/// Returns the paragraphs' labels so a caller can change them later.
+	internal static TextMeshProUGUI[] OpenMessage(string id, string title, IList<string> paragraphs, int warn, IList<Choice> choices, Action onClosed = null, string layer = "menu")
 	{
 		CloseMessage(id);
+		int own = Own(choices.Count);
 		Panel p = null;
 		p = Open(id, title, delegate
 		{
 			CloseMessage(id);
-			onOk?.Invoke();
+			choices[own].Do?.Invoke();
 		}, layer);
 		messages[id] = p;
-		ContinueSays(p, ok);
 		float y = 150f;
 		TextMeshProUGUI[] array = new TextMeshProUGUI[paragraphs.Count];
 		for (int i = 0; i < paragraphs.Count; i++)
 		{
 			array[i] = Para(p, "p" + i, ref y, paragraphs[i], 24f, (i == warn) ? NewGameStyle.WARNING : NewGameStyle.START_WITH, 22f);
 		}
-		if (!string.IsNullOrEmpty(left))
-		{
-			Extra(p, "left", Left, ButtonRow, SideButton, left, delegate
-			{
-				CloseMessage(id);
-				onLeft?.Invoke();
-			});
-		}
-		if (!string.IsNullOrEmpty(right))
-		{
-			Extra(p, "right", RightButtonX, ButtonRow, SideButton, right, delegate
-			{
-				CloseMessage(id);
-				onRight?.Invoke();
-			});
-		}
+		Buttons(p, id, choices, own);
 		p.Window.onClose = delegate
 		{
 			if (messages.TryGetValue(id, out var value) && value == p)
@@ -265,16 +364,17 @@ internal static partial class HostPanels
 
 	private const int ModRows = 7;
 
-	internal static ModsView OpenMods(string id, string title, string intro, IList<string> names, IList<string> states, IList<Action> pages, string pageLabel, IList<string> steps, string leftLabel, Action onLeft, string closeLabel, Action onClosed)
+	internal static ModsView OpenMods(string id, string title, string intro, IList<string> names, IList<string> states, IList<Action> pages, string pageLabel, IList<string> steps, IList<Choice> choices, Action onClosed)
 	{
 		CloseMessage(id);
+		int own = Own(choices.Count);
 		Panel p = null;
 		p = Open(id, title, delegate
 		{
 			CloseMessage(id);
+			choices[own].Do?.Invoke();
 		});
 		messages[id] = p;
-		ContinueSays(p, closeLabel);
 		ModsView modsView = new ModsView
 		{
 			States = new TextMeshProUGUI[names.Count],
@@ -316,14 +416,7 @@ internal static partial class HostPanels
 		y += 8f;
 		modsView.Status = NewGameUIElements.NewText(p.Frame, p.Body, "modstatus", Left, Mathf.Max(y, 760f), Width, 60f, FontLoader.FontRole.Noto_Sans, 20f, NewGameStyle.DESCRIPTION, TextAlignmentOptions.Center, wrap: true);
 		modsView.Status.text = "";
-		if (!string.IsNullOrEmpty(leftLabel))
-		{
-			Extra(p, "left", Left, ButtonRow, SideButton, leftLabel, delegate
-			{
-				CloseMessage(id);
-				onLeft?.Invoke();
-			});
-		}
+		Buttons(p, id, choices, own);
 		p.Window.onClose = delegate
 		{
 			if (messages.TryGetValue(id, out var value) && value == p)
