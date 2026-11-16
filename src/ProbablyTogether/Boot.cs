@@ -44,6 +44,15 @@ internal static class Boot
 			Log.Info(Mod.Name + " " + Mod.Version + " (protocol " + Protocol.Version + ", based on the upstream mod 0.2.8) on game " + Application.version + "; switches: " + Args.Describe());
 			if (Paths.Redirecting)
 			{
+				// A copy with its own data folder keeps its options file there: set the save library's default file.
+				try
+				{
+					ES3Settings.defaultSettings.path = Paths.File("SaveFile.es3");
+				}
+				catch (System.Exception ex)
+				{
+					Log.Error("data folder: the options file could not be pointed at " + Paths.Root + ": " + ex.Message);
+				}
 				Log.Info("data folder: " + Paths.Root + " (saves, save index and settings; the account folder " + Paths.Original + " keeps only the mod list and the studio's trust records)");
 			}
 			GameObject val = new GameObject("ProbablyTogether.Driver");

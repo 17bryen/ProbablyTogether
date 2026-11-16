@@ -53,13 +53,44 @@ internal static class HostMenu
 
 	private static bool ownership = true;
 
+	private static bool movedOld;
+
+	/// Moves the old "probably-together-host" folder once, whole, when the new folder does not exist yet.
+	private static void MoveOldFolder(string from, string to)
+	{
+		if (movedOld)
+		{
+			return;
+		}
+		movedOld = true;
+		try
+		{
+			if (System.IO.Directory.Exists(from) && !System.IO.Directory.Exists(to))
+			{
+				System.IO.Directory.Move(from, to);
+				Log.Info("host: hosted shops moved from " + from + " to " + to);
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Error("host: the hosted shops could not be moved from " + from + " to " + to + " (they are still in the old folder): " + ex.Message);
+		}
+	}
+
 	/// Where hosted shops live; --br-host-folder=<path> overrides it.
 	internal static string HostFolder
 	{
 		get
 		{
 			string text = Args.Get("--br-host-folder");
-			return string.IsNullOrEmpty(text) ? (Paths.Original + "/probably-together-host") : text.Replace('\\', '/').TrimEnd('/');
+			if (!string.IsNullOrEmpty(text))
+			{
+				return text.Replace('\\', '/').TrimEnd('/');
+			}
+			// The game only lists save files directly in its folder, so a game without the mod never touches this subfolder.
+			string text2 = Paths.Original + "/ProbablyTogether";
+			MoveOldFolder(Paths.Original + "/probably-together-host", text2);
+			return text2;
 		}
 	}
 

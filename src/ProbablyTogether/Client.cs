@@ -78,7 +78,7 @@ internal static class Client
 		State = ClientState.Connecting;
 		int my = ++attempt;
 		Log.Info("client: connecting to " + Address + " as '" + wantName + "'");
-		Thread thread = new Thread((ThreadStart)delegate
+		Background.Run("connect", delegate
 		{
 			TcpClient tcpClient = new TcpClient();
 			try
@@ -116,9 +116,6 @@ internal static class Client
 				});
 			}
 		});
-		thread.IsBackground = true;
-		thread.Name = "ProbablyTogether connect";
-		thread.Start();
 	}
 
 	internal static void Disconnect(string why)

@@ -63,7 +63,6 @@ internal static class Server
 
 	private static TcpListener listener;
 
-	private static Thread acceptThread;
 
 	private static volatile bool listening;
 
@@ -124,12 +123,7 @@ internal static class Server
 			listener = new TcpListener(IPAddress.Any, cfg.port);
 			listener.Start(32);
 			listening = true;
-			acceptThread = new Thread(AcceptLoop)
-			{
-				IsBackground = true,
-				Name = "ProbablyTogether accept"
-			};
-			acceptThread.Start();
+			Background.Run("accept", AcceptLoop);
 			Log.Info("server: listening on TCP " + cfg.port);
 			return true;
 		}

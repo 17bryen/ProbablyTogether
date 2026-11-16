@@ -24,7 +24,7 @@ internal sealed class Conn
 	{
 		private static readonly ConcurrentDictionary<int, Conn> live = new ConcurrentDictionary<int, Conn>();
 
-		private static Thread thread;
+		private static bool started;
 
 		private static readonly object startGate = new object();
 
@@ -33,20 +33,16 @@ internal sealed class Conn
 		internal static void Add(Conn c)
 		{
 			live[c.Id] = c;
-			if (thread != null)
+			if (started)
 			{
 				return;
 			}
 			lock (startGate)
 			{
-				if (thread == null)
+				if (!started)
 				{
-					thread = new Thread(Loop)
-					{
-						IsBackground = true,
-						Name = "ProbablyTogether watchdog"
-					};
-					thread.Start();
+					started = true;
+					Background.Run("watchdog", Loop);
 				}
 			}
 		}
@@ -439,22 +435,12 @@ internal sealed class Conn
 			return;
 		}
 		Watchdog.Add(this);
-		Thread thread = new Thread(ReadLoop)
-		{
-			IsBackground = true,
-			Name = "ProbablyTogether read " + Id
-		};
-		Thread obj3 = new Thread(WriteLoop)
-		{
-			IsBackground = true,
-			Name = "ProbablyTogether write " + Id
-		};
 		if (!ServerSide)
 		{
 			Enqueue(Wire.Magic);
 		}
-		thread.Start();
-		obj3.Start();
+		Background.Run("read " + Id, ReadLoop);
+		Background.Run("write " + Id, WriteLoop);
 	}
 
 	internal void Send(byte[] frame)

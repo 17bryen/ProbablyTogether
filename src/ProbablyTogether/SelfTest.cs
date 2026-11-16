@@ -178,9 +178,9 @@ internal static class SelfTest
 		{
 			string text = (Args.Name ?? "copy") + "@" + DateTime.UtcNow.ToString("HH:mm:ss");
 			ES3.Save<string>("probablyTogetherSelfTest", text);
-			SaveFiles.IndexSave<string>("probablyTogetherSelfTest", text);
+			Paths.IndexSave<string>("probablyTogetherSelfTest", text);
 			ES3Settings val = new ES3Settings((string)null, (ES3Settings)null);
-			Log.Info("selftest paths: marker '" + text + "' written; ES3 settings file -> " + val.FullPath + "; save index -> " + new ES3Settings("saves_index.es3", (ES3Settings)null).FullPath + "; SaveFiles.AbsolutePath(save_1.es3) -> " + SaveFiles.AbsolutePath(SaveFiles.Slot(1)) + "; account folder " + Paths.Original + "; read back " + ES3.Load<string>("probablyTogetherSelfTest", new ES3Settings((string)null, (ES3Settings)null)));
+			Log.Info("selftest paths: marker '" + text + "' written; ES3 settings file -> " + val.FullPath + "; save index -> " + new ES3Settings(Paths.File("saves_index.es3"), (ES3Settings)null).FullPath + "; SaveFiles.AbsolutePath(save_1.es3) -> " + SaveFiles.AbsolutePath(SaveFiles.Slot(1)) + "; account folder " + Paths.Original + "; read back " + ES3.Load<string>("probablyTogetherSelfTest", new ES3Settings((string)null, (ES3Settings)null)));
 		}
 		catch (Exception ex)
 		{

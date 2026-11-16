@@ -231,10 +231,13 @@ internal sealed class PhoneChannel : DialogueChannel
 		if (currentDialog.endAction != null && server)
 		{
 			Dialogue node = currentDialog;
-			((MonoBehaviour)m).StartCoroutine(MetaHelper.WaitAndDo(1.1f, (Action)delegate
+			ModHelper.Delay(Mod.Id, 1.1f, (Action)delegate
 			{
-				DialogueSystem.ServerEndActionTimer(this, node);
-			}));
+				if ((UnityEngine.Object)(object)m != (UnityEngine.Object)null)
+				{
+					DialogueSystem.ServerEndActionTimer(this, node);
+				}
+			});
 		}
 		if (currentDialog.choices != null && currentDialog.choices.Count > 0)
 		{

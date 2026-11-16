@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.0 - 2026-11-15
+
+Same protocol (17). Follows the game's December 10, 2026 mod rules.
+
+### Changed
+- Hosted shops are now kept in a `ProbablyTogether` subfolder of the game's save folder, so the game without the mod never lists or loads them. They are moved there once, the first time "Host a shop" is opened.
+- The mod no longer patches the save library, runs threads of its own, starts coroutines on game objects, or patches Unity's audio.
+
 ## 0.8.7 - 2026-11-15
 
 Same protocol (17).

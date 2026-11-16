@@ -122,7 +122,7 @@ internal static class HostFlow
 		syncing = true;
 		try
 		{
-			foreach (int item in SaveFiles.IndexLoad("activeSaveSlotId", new List<int>()).ToList())
+			foreach (int item in Paths.IndexLoad("activeSaveSlotId", new List<int>()).ToList())
 			{
 				JObject jObject = Card(item);
 				string text = (jObject != null) ? (string)jObject["name"] : null;
@@ -131,7 +131,7 @@ internal static class HostFlow
 					continue;
 				}
 				string text2 = text + EndedNote(jObject);
-				SavePreviewData savePreviewData = SaveFiles.IndexLoad<SavePreviewData>("preview_" + item, null);
+				SavePreviewData savePreviewData = Paths.IndexLoad<SavePreviewData>("preview_" + item, null);
 				if (savePreviewData != null && savePreviewData.customName != text2)
 				{
 					SaveFiles.RenameSlot(item, text2);
@@ -421,7 +421,7 @@ internal static class HostFlow
 					num = Math.Max(num, result);
 				}
 			}
-			foreach (int item in SaveFiles.IndexLoad("activeSaveSlotId", new List<int>()))
+			foreach (int item in Paths.IndexLoad("activeSaveSlotId", new List<int>()))
 			{
 				num = Math.Max(num, item);
 			}

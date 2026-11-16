@@ -291,7 +291,7 @@ internal static class ServerMode
 		MorningFile = null;
 		bool keep = KeepMenuChoices;
 		KeepMenuChoices = false;
-		instance.saveFile = (!newRun && !string.IsNullOrEmpty(morning) && File.Exists(Paths.Under(morning))) ? morning : null;
+		instance.saveFile = (!newRun && !string.IsNullOrEmpty(morning) && System.IO.File.Exists(Paths.Under(morning))) ? morning : null;
 		instance.isLoadFromMainMenu = false;
 		if (!newRun)
 		{

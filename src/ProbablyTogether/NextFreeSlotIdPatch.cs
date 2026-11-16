@@ -12,9 +12,9 @@ internal static class NextFreeSlotIdPatch
 			return true;
 		}
 		__result = ServerMode.NewRunSlot();
-		if (SaveFiles.IndexLoad<int>("slotIdGenerator", 0) <= __result)
+		if (Paths.IndexLoad<int>("slotIdGenerator", 0) <= __result)
 		{
-			SaveFiles.IndexSave<int>("slotIdGenerator", __result + 1);
+			Paths.IndexSave<int>("slotIdGenerator", __result + 1);
 		}
 		return false;
 	}

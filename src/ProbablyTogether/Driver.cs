@@ -16,6 +16,7 @@ internal sealed class Driver : MonoBehaviour
 	{
 		try
 		{
+			Background.Tick();
 			Core.Tick();
 		}
 		catch (Exception ex)

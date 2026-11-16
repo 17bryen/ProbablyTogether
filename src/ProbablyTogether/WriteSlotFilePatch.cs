@@ -14,7 +14,7 @@ internal static class WriteSlotFilePatch
 		}
 		try
 		{
-			ES3Writer val = ES3Writer.Create(new ES3Settings("probably_together/snapshot.es3", (ES3Settings)null));
+			ES3Writer val = ES3Writer.Create(new ES3Settings(Paths.File("probably_together/snapshot.es3"), (ES3Settings)null));
 			try
 			{
 				val.Write<PlayerStore>("playerStore", (object)__instance);

@@ -252,10 +252,14 @@ internal sealed class CounterChannel : DialogueChannel
 			if (server)
 			{
 				Dialogue node = currentDialog;
-				((MonoBehaviour)m).StartCoroutine(MetaHelper.WaitAndDo(node.endActionDelay, (Action)delegate
+				// ModHelper.Delay does not end with the object, so check the object first.
+				ModHelper.Delay(Mod.Id, node.endActionDelay, (Action)delegate
 				{
-					DialogueSystem.ServerEndActionTimer(this, node);
-				}));
+					if ((UnityEngine.Object)(object)m != (UnityEngine.Object)null)
+					{
+						DialogueSystem.ServerEndActionTimer(this, node);
+					}
+				});
 			}
 		}
 		if (m.IsChoice())
