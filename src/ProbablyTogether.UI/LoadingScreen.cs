@@ -145,7 +145,7 @@ public static class LoadingScreen
 		{
 		case ClientState.Connecting:
 		case ClientState.Handshake:
-			num = ((!JoinMenu.DialogOpen) ? 1 : 0);
+			num = 1;
 			break;
 		default:
 			num = 0;

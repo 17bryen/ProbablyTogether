@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.8.5 - 2026-11-15
+
+Same protocol (17).
+
+### Changed
+- Join a shop, Disconnected, Mods for this shop, the update notice, About and Leaving your shop now use the game's own panel. Join a shop takes an address pasted with its port.
+- The upstream mod's name no longer appears in the game.
+
 ## 0.8.4 - 2026-11-15
 
 Same protocol (17). Every player needs it for `/retrade` and `/reperk`.

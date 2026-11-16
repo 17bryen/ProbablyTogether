@@ -82,6 +82,10 @@ internal static class ShotTour
 			{
 				Join();
 			}
+			else if (mode == "menus")
+			{
+				Menus();
+			}
 			else
 			{
 				Menu();
@@ -250,6 +254,112 @@ internal static class ShotTour
 			if (Since > 6f)
 			{
 				Shot("host-in-the-shop");
+				Next();
+			}
+			break;
+		// The host asks to leave.
+		case 16:
+			if (mode == "host" && Since > 1.5f)
+			{
+				HostAwayUi.AskLeave(StoreUIManager.Instance.confirmPanelUIManager);
+				Next();
+			}
+			break;
+		case 17:
+			if (Since > 2.5f)
+			{
+				Shot("host-leaving");
+				Next();
+			}
+			break;
+		case 18:
+			if (Since > 1f)
+			{
+				HostPanels.CloseMessage("bellun_probably_together.leave");
+				Next();
+			}
+			break;
+		}
+	}
+
+	/// The menu's other windows: the Join panel, a dropped player's notice, the mods a shop asks for.
+	private static void Menus()
+	{
+		if (!Ui.AtMenu || (Object)(object)MainMenuUIController.Instance == (Object)null)
+		{
+			menuSince = -1f;
+			return;
+		}
+		if (step == 0 && menuSince < 0f)
+		{
+			menuSince = Time.realtimeSinceStartup;
+		}
+		switch (step)
+		{
+		case 0:
+			if (Time.realtimeSinceStartup - menuSince > 5f)
+			{
+				JoinMenu.OpenDialog();
+				Next();
+			}
+			break;
+		case 1:
+			if (Since > 2.5f)
+			{
+				Shot("join");
+				Next();
+			}
+			break;
+		case 2:
+			if (Since > 1f)
+			{
+				JoinMenu.LabCloseAll();
+				JoinMenu.LabNotice("The host closed the shop.", "The Corner Shop");
+				Next();
+			}
+			break;
+		case 3:
+			if (Since > 2.5f)
+			{
+				Shot("disconnected");
+				Next();
+			}
+			break;
+		case 4:
+			if (Since > 1f)
+			{
+				JoinMenu.LabCloseAll();
+				JoinMenu.LabMods();
+				Next();
+			}
+			break;
+		case 5:
+			if (Since > 2.5f)
+			{
+				Shot("mods");
+				Next();
+			}
+			break;
+		case 6:
+			if (Since > 1f)
+			{
+				JoinMenu.LabCloseAll();
+				JoinMenu.OpenAbout();
+				Next();
+			}
+			break;
+		case 7:
+			if (Since > 2.5f)
+			{
+				Shot("about");
+				Next();
+			}
+			break;
+		case 8:
+			if (Since > 1f)
+			{
+				JoinMenu.LabCloseAll();
+				Log.Info("shots: menus-done");
 				Next();
 			}
 			break;

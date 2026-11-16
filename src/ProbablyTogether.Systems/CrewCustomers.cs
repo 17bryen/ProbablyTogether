@@ -144,7 +144,7 @@ public static class CrewCustomers
 		{
 			return true;
 		}
-		why = "Today this shop has extra customers that need the upstream mod 0.2.8 or newer (you have " + Text.Clip(string.IsNullOrEmpty(mod) ? "?" : mod, 24) + "). Update the mod, or join again tomorrow morning.";
+		why = "Today this shop has extra customers that need a newer version of the mod (you have " + Text.Clip(string.IsNullOrEmpty(mod) ? "?" : mod, 24) + "). Update the mod, or join again tomorrow morning.";
 		Log.Info("crew customers: refused a join from ProbablyTogether " + Text.Clip(mod ?? "?", 24) + " (today +" + Today + ")");
 		return false;
 	}

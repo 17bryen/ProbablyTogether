@@ -12,7 +12,9 @@ using Object = UnityEngine.Object;
 
 namespace ProbablyTogether.UI;
 
-internal static class HostPanels
+/// Host setup screen (password, port, LAN address) and new-shop rules screen.
+/// Both reuse the game's difficulty-screen prefab, with its plates and options hidden and rows built from the game's own pieces.
+internal static partial class HostPanels
 {
 	internal const string SetupWindow = "bellun_probably_together.host_setup";
 
@@ -54,14 +56,14 @@ internal static class HostPanels
 
 	internal static bool RulesOpen => rules != null && rules.Window != null && rules.Window.IsAlive;
 
-	private static Panel Open(string id, string title, Action onContinue)
+	private static Panel Open(string id, string title, Action onContinue, string layer = "menu")
 	{
 		CustomUIManager instance = CustomUIManager.Instance;
 		if ((Object)(object)instance == (Object)null || (Object)(object)instance.newGameDifficultyPrefab == (Object)null)
 		{
 			throw new InvalidOperationException("the game's new game panel is not available");
 		}
-		CustomUIWindow window = instance.CreateWindow(id, null, "menu", instance.newGameDifficultyPrefab).SetCloseOnEscape().GetWindow();
+		CustomUIWindow window = instance.CreateWindow(id, null, layer, instance.newGameDifficultyPrefab).SetCloseOnEscape().GetWindow();
 		NewGameDifficultyFrame frame = (window.root != null) ? window.root.GetComponent<NewGameDifficultyFrame>() : null;
 		if ((Object)(object)frame == (Object)null)
 		{

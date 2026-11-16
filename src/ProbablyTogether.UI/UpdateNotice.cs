@@ -168,14 +168,14 @@ public static class UpdateNotice
 			if (State != "downloading")
 			{
 				State = "downloading";
-				Say("A new version of ProbablyTogether is out. Steam is downloading it. This window says when it is ready.");
-				Log.Info("update: the Workshop has a newer ProbablyTogether (updated " + Stamp(latest) + ", this copy " + Stamp(num) + "); waiting for Steam to download it");
+				Say("A new version of " + Mod.Name + " is out. Steam is downloading it. This window says when it is ready.");
+				Log.Info("update: the Workshop has a newer version (updated " + Stamp(latest) + ", this copy " + Stamp(num) + "); waiting for Steam to download it");
 			}
 		}
 		else if (State == "downloading")
 		{
 			State = "ready";
-			Say("ProbablyTogether is updated. Restart the game to use it.");
+			Say(Mod.Name + " is updated. Restart the game to use it.");
 			Log.Info("update: Steam downloaded the newer upload (" + Stamp(num) + "), same version number");
 		}
 		else
@@ -197,7 +197,7 @@ public static class UpdateNotice
 			return true;
 		}
 		State = "ready";
-		Say("ProbablyTogether " + text + " is downloaded. Restart the game to use it.");
+		Say(Mod.Name + " " + text + " is downloaded. Restart the game to use it.");
 		Log.Info("update: " + Mod.Name + " " + text + " is on disk, " + Mod.Version + " is running: restart needed");
 		return true;
 	}
@@ -260,9 +260,23 @@ public static class UpdateNotice
 		}
 		if (IsOpen)
 		{
+			HostPanels.CloseMessage("bellun_probably_together.update");
 			instance.CloseWindow("bellun_probably_together.update");
 		}
-		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.update", Lang.Tr("ProbablyTogether update"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 260f);
+		if (HostPanels.Available)
+		{
+			try
+			{
+				HostPanels.OpenMessage("bellun_probably_together.update", Lang.Trf("{0} update", Mod.Name), new string[1] { Lang.Tr(Line) }, -1, Lang.Tr("OK"), null);
+				Log.Info("ui: update notice shown on the game's panel: " + Line);
+				return;
+			}
+			catch (Exception ex)
+			{
+				Log.Warn("ui: the game's panel could not be used for the update notice: " + ex.Message);
+			}
+		}
+		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.update", Lang.Trf("{0} update", Mod.Name), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 260f);
 		val.AddLabel(Lang.Tr(Line), "line");
 		HorizontalLayoutGroup val2 = Kit.Row((Transform)(object)val.CurrentContainer, "row", 8f);
 		new CustomUIBuilder(instance, val.Handle, (RectTransform)((Component)val2).transform).AddFlexibleSpace().AddButton(Lang.Tr("OK"), (Action)delegate
@@ -297,7 +311,7 @@ public static class UpdateNotice
 			if (text == "downloading")
 			{
 				State = "downloading";
-				Say("A new version of ProbablyTogether is out. Steam is downloading it. This window says when it is ready.");
+				Say("A new version of " + Mod.Name + " is out. Steam is downloading it. This window says when it is ready.");
 			}
 			else
 			{
@@ -306,7 +320,7 @@ public static class UpdateNotice
 					return false;
 				}
 				State = "ready";
-				Say("ProbablyTogether " + text.Substring(6) + " is downloaded. Restart the game to use it.");
+				Say(Mod.Name + " " + text.Substring(6) + " is downloaded. Restart the game to use it.");
 			}
 			lab = true;
 			Log.Info("update: lab state " + text);

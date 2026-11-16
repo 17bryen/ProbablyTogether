@@ -49,6 +49,13 @@ public static class JoinMenu
 
 	private static CustomUIWindow window;
 
+	/// True while the open Join window is the game's own panel, not the plain window.
+	private static bool panel;
+
+	private static bool Up => panel ? HostPanels.JoinOpen : (window != null && window.IsAlive);
+
+	private static HostPanels.ModsView modsView;
+
 	private static Color? statusRed;
 
 	private static bool hiddenForChild;
@@ -93,6 +100,10 @@ public static class JoinMenu
 	{
 		get
 		{
+			if (panel)
+			{
+				return HostPanels.JoinVisible;
+			}
 			if (window != null && window.IsAlive)
 			{
 				return window.IsVisible;
@@ -113,6 +124,10 @@ public static class JoinMenu
 	{
 		get
 		{
+			if (HostPanels.MessageOpen("bellun_probably_together.about"))
+			{
+				return true;
+			}
 			if ((Object)(object)CustomUIManager.Instance != (Object)null)
 			{
 				return CustomUIManager.Instance.IsOpen("bellun_probably_together.about");
@@ -153,9 +168,9 @@ public static class JoinMenu
 			{
 				TryBuildButton(instance);
 			}
-			else if ((Object)(object)buttonLabel != (Object)null && ((TMP_Text)buttonLabel).text != Lang.Tr("Join server"))
+			else if ((Object)(object)buttonLabel != (Object)null && ((TMP_Text)buttonLabel).text != Lang.Tr("Join a shop"))
 			{
-				((TMP_Text)buttonLabel).text = Lang.Tr("Join server");
+				((TMP_Text)buttonLabel).text = Lang.Tr("Join a shop");
 				Kit.FitFont(buttonLabel);
 			}
 			if (DialogOpen)
@@ -212,7 +227,7 @@ public static class JoinMenu
 					((Behaviour)val2).enabled = false;
 				}
 			}
-			((TMP_Text)buttonLabel).text = Lang.Tr("Join server");
+			((TMP_Text)buttonLabel).text = Lang.Tr("Join a shop");
 			bool flag = (Object)(object)parent != (Object)null && (Object)(object)((Component)parent).GetComponent<LayoutGroup>() != (Object)null;
 			val.transform.SetSiblingIndex(moddingButton.transform.GetSiblingIndex() + 1);
 			if (!flag)
@@ -400,9 +415,53 @@ public static class JoinMenu
 		return string.Join(",", list);
 	}
 
+	/// Set when the upstream mod is also loaded.
 	internal static bool UpstreamWarning;
 
-	internal static string UpstreamText => Lang.Tr("ProbablyTogether is also turned on. Turn it off in Mods and restart: the two cannot run together.");
+	internal static string UpstreamText => Lang.Tr("Another co-op mod is also turned on. Turn it off in Mods and restart: the two cannot run together.");
+
+	private const int DefaultPort = 27700;
+
+	/// Opens the Join window on the game's own panel. False if it could not be made.
+	private static bool OpenPanel(List<SavedServer> list, SavedServer last)
+	{
+		if (!HostPanels.Available)
+		{
+			return false;
+		}
+		try
+		{
+			string name;
+			bool flag = SteamName(out name);
+			string text = last?.address ?? "";
+			string port = DefaultPort.ToString(CultureInfo.InvariantCulture);
+			int num = text.LastIndexOf(':');
+			if (num > 0 && text.IndexOf(':') == num)
+			{
+				port = text.Substring(num + 1);
+				text = text.Substring(0, num);
+			}
+			string footer = Mod.Name + " " + Mod.Version + ". " + Lang.Tr("A free, unofficial mod. Not made by or affiliated with Questing Goose Studio or tinyBuild.");
+			HostPanels.OpenJoin("bellun_probably_together.join", text, port, flag ? name : DefaultName(), flag, last?.password ?? "", !string.IsNullOrEmpty(last?.password), footer, Join, delegate
+			{
+				panel = false;
+				OnDialogClosed();
+			});
+			panel = true;
+			window = null;
+			NameReadOnly = flag;
+			SetStatus(UpstreamWarning ? UpstreamText : ((LastMessage.Length > 0 && Net.ClientState == ClientState.Idle) ? LastMessage : ""));
+			Log.Info("ui: Join window opened on the game's panel (" + list.Count + " remembered server(s))");
+			return true;
+		}
+		catch (Exception ex)
+		{
+			panel = false;
+			HostPanels.CloseJoin();
+			Log.Warn("ui: the game's panel could not be used for the Join window, the plain one comes: " + ex.Message);
+			return false;
+		}
+	}
 
 	public static void OpenDialog()
 	{
@@ -418,6 +477,10 @@ public static class JoinMenu
 		}
 		List<SavedServer> list = LoadServers();
 		SavedServer savedServer = ((list.Count > 0) ? list[0] : null);
+		if (OpenPanel(list, savedServer))
+		{
+			return;
+		}
 		CustomUIBuilder obj = instance.CreateWindow("bellun_probably_together.join", Lang.Tr("Join server"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 720f);
 		string name;
 		bool flag = SteamName(out name);
@@ -479,9 +542,30 @@ public static class JoinMenu
 
 	internal static void JoinListed(string address, string name, bool? locked)
 	{
-		if (window == null || !window.IsAlive)
+		if (!Up)
 		{
 			OpenDialog();
+		}
+		if (panel && Up)
+		{
+			SavedServer savedServer2 = LoadServers().Find((SavedServer x) => string.Equals(x.address, address, StringComparison.OrdinalIgnoreCase));
+			string text2 = ((locked == false) ? "" : (savedServer2?.password ?? ""));
+			int num = address.LastIndexOf(':');
+			bool flag = num > 0 && address.IndexOf(':') == num;
+			HostPanels.JoinSet("address", flag ? address.Substring(0, num) : address);
+			HostPanels.JoinSet("port", flag ? address.Substring(num + 1) : DefaultPort.ToString(CultureInfo.InvariantCulture));
+			HostPanels.JoinSet("password", text2);
+			HostPanels.JoinRemember = text2.Length > 0;
+			if (locked == true && text2.Length == 0)
+			{
+				SetStatus(Lang.Trf("Enter the password for {0}, then press Join.", name), hint: true);
+				Focus("password");
+			}
+			else
+			{
+				Join();
+			}
+			return;
 		}
 		if (window != null && window.IsAlive)
 		{
@@ -518,6 +602,18 @@ public static class JoinMenu
 
 	private static void Focus(string id)
 	{
+		if (panel)
+		{
+			try
+			{
+				HostPanels.JoinFocus(id);
+			}
+			catch (Exception ex2)
+			{
+				Log.Warn("ui: could not focus " + id + ": " + ex2.Message);
+			}
+			return;
+		}
 		CustomUIWindow obj = window;
 		TMP_InputField val = ((obj == null) ? null : obj.Get(id)?.input);
 		if ((Object)(object)val == (Object)null)
@@ -658,9 +754,23 @@ public static class JoinMenu
 		}
 		if (AboutOpen)
 		{
+			HostPanels.CloseMessage("bellun_probably_together.about");
 			instance.CloseWindow("bellun_probably_together.about");
 		}
 		string[] array = AboutParagraphs(Chat.ChatKeyName);
+		if (HostPanels.Available)
+		{
+			try
+			{
+				HostPanels.OpenMessage("bellun_probably_together.about", Mod.Name, array, -1, Lang.Tr("Back"), null);
+				Log.Info("ui: About window opened on the game's panel");
+				return;
+			}
+			catch (Exception ex)
+			{
+				Log.Warn("ui: the game's panel could not be used for About: " + ex.Message);
+			}
+		}
 		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.about", Mod.Name.ToUpperInvariant(), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(620f, 560f);
 		for (int i = 0; i < array.Length; i++)
 		{
@@ -698,7 +808,7 @@ public static class JoinMenu
 		{
 			Lang.Tr("Online co-op for Probably Stolen: 2 to 4 players run one shop together. One player hosts from the main menu (Host a shop) or runs a dedicated server; the others join by address and password."),
 			Lang.Tr("One player serves the counter at a time while the others work the back room. The night starts when everyone is ready. Press {0} to chat.").Replace("{0}", chatKey ?? "Enter"),
-			Mod.Name + " " + Mod.Version + ". " + Lang.Tr("A free, unofficial mod by a player, based on the upstream mod 0.2.8 by HumanGenome (MIT). Not made by or affiliated with Questing Goose Studio or tinyBuild.")
+			Mod.Name + " " + Mod.Version + ". " + Lang.Tr("A free, unofficial mod. Not made by or affiliated with Questing Goose Studio or tinyBuild. Its licences come with it, in the files next to the mod.")
 		};
 	}
 
@@ -735,6 +845,7 @@ public static class JoinMenu
 	{
 		if (AboutOpen)
 		{
+			HostPanels.CloseMessage("bellun_probably_together.about");
 			CustomUIManager.Instance.CloseWindow("bellun_probably_together.about");
 		}
 	}
@@ -742,6 +853,46 @@ public static class JoinMenu
 	private static void OnDialogClosed()
 	{
 		window = null;
+	}
+
+	/// Shows the dropped-player notice and a shop's required mods without a shop.
+	internal static void LabNotice(string text, string server)
+	{
+		notice = text;
+		noticeServer = server;
+	}
+
+	internal static void LabMods()
+	{
+		ShowModsRefusal("mods", "", new List<ModList.Info>
+		{
+			new ModList.Info
+			{
+				Id = "better_shelves",
+				Name = "Better Shelves",
+				Ws = 3000000001uL
+			},
+			new ModList.Info
+			{
+				Id = "night_owl",
+				Name = "Night Owl",
+				Ws = 3000000002uL,
+				Why = "different"
+			},
+			new ModList.Info
+			{
+				Id = "private_tweaks",
+				Name = "Private Tweaks"
+			}
+		});
+	}
+
+	internal static void LabCloseAll()
+	{
+		HostPanels.CloseMessage("bellun_probably_together.notice");
+		HostPanels.CloseMessage("bellun_probably_together.mods");
+		HostPanels.CloseMessage("bellun_probably_together.about");
+		CloseDialog();
 	}
 
 	internal static CustomUIBuilder Row(CustomUIBuilder b, float spacing)
@@ -781,30 +932,50 @@ public static class JoinMenu
 
 	public static void Join()
 	{
-		if (window == null || !window.IsAlive || (joining && Net.ClientState != ClientState.Idle))
+		if (!Up || (joining && Net.ClientState != ClientState.Idle))
 		{
 			return;
 		}
-		CustomUIElement obj = window.Get("address");
-		string text = (((obj != null) ? obj.GetString() : null) ?? "").Trim();
+		string text;
 		string text2;
-		if (!SteamName(out var name))
+		string text4;
+		bool flag;
+		string name;
+		if (panel)
 		{
-			CustomUIElement obj2 = window.Get("name");
-			text2 = Server_CleanName((obj2 != null) ? obj2.GetString() : null);
+			// Two fields, as on the host's screen. An address pasted with its port ("1.2.3.4:27700") is taken whole.
+			text = HostPanels.JoinText("address").Trim();
+			string text5 = HostPanels.JoinText("port").Trim();
+			if (text.Length > 0 && text.IndexOf(':') < 0 && text5.Length > 0)
+			{
+				text = text + ":" + text5;
+			}
+			text2 = (SteamName(out name) ? name : Server_CleanName(HostPanels.JoinText("name")));
+			text4 = HostPanels.JoinText("password");
+			flag = HostPanels.JoinRemember;
 		}
 		else
 		{
-			text2 = name;
+			CustomUIElement obj = window.Get("address");
+			text = (((obj != null) ? obj.GetString() : null) ?? "").Trim();
+			if (!SteamName(out name))
+			{
+				CustomUIElement obj2 = window.Get("name");
+				text2 = Server_CleanName((obj2 != null) ? obj2.GetString() : null);
+			}
+			else
+			{
+				text2 = name;
+			}
+			CustomUIElement obj3 = window.Get("password");
+			text4 = ((obj3 != null) ? obj3.GetString() : null) ?? "";
+			CustomUIElement obj4 = window.Get("remember");
+			flag = obj4 != null && obj4.GetBool();
 		}
 		string text3 = text2;
-		CustomUIElement obj3 = window.Get("password");
-		string text4 = ((obj3 != null) ? obj3.GetString() : null) ?? "";
-		CustomUIElement obj4 = window.Get("remember");
-		bool flag = obj4 != null && obj4.GetBool();
 		if (!ValidAddress(text))
 		{
-			SetStatus(Lang.Tr("Enter the server address, like 203.0.113.5:27700."));
+			SetStatus(Lang.Tr(panel ? "Enter the host's address, like 203.0.113.5, and the port." : "Enter the server address, like 203.0.113.5:27700."));
 			return;
 		}
 		if (text3.Length == 0)
@@ -878,6 +1049,11 @@ public static class JoinMenu
 	{
 		Status = Kit.Safe(s);
 		StatusIsHint = hint;
+		if (panel)
+		{
+			HostPanels.JoinNote(Status, hint);
+			return;
+		}
 		if (window == null || !window.IsAlive)
 		{
 			return;
@@ -903,6 +1079,12 @@ public static class JoinMenu
 
 	internal static void HideForChild()
 	{
+		if (panel && HostPanels.JoinVisible)
+		{
+			HostPanels.JoinShow(show: false);
+			hiddenForChild = true;
+			return;
+		}
 		if (window != null && window.IsAlive && window.IsVisible)
 		{
 			window.Hide();
@@ -915,6 +1097,11 @@ public static class JoinMenu
 		if (hiddenForChild)
 		{
 			hiddenForChild = false;
+			if (panel)
+			{
+				HostPanels.JoinShow(show: true);
+				return;
+			}
 			if (window != null && window.IsAlive)
 			{
 				window.Show();
@@ -1186,6 +1373,25 @@ public static class JoinMenu
 		}
 		string text = notice;
 		notice = null;
+		if (HostPanels.Available)
+		{
+			try
+			{
+				List<string> list = new List<string>();
+				if (!string.IsNullOrEmpty(noticeServer))
+				{
+					list.Add(Lang.Trf("From {0}:", Kit.Name(noticeServer)));
+				}
+				list.Add(Kit.Safe(text));
+				HostPanels.OpenMessage("bellun_probably_together.notice", Lang.Tr("Disconnected"), list, list.Count - 1, Lang.Tr("OK"), null, Lang.Tr("Join a shop"), OpenDialog);
+				Log.Info("ui: disconnected notice shown on the game's panel: " + text);
+				return;
+			}
+			catch (Exception ex)
+			{
+				Log.Warn("ui: the game's panel could not be used for the notice: " + ex.Message);
+			}
+		}
 		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.notice", Lang.Tr("Disconnected"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(560f, 300f);
 		if (!string.IsNullOrEmpty(noticeServer))
 		{
@@ -1312,11 +1518,54 @@ public static class JoinMenu
 			return false;
 		}
 		modsRebuilding = true;
+		HostPanels.CloseMessage("bellun_probably_together.mods");
 		instance.CloseWindow("bellun_probably_together.mods");
 		modsRebuilding = false;
+		modsView = null;
 		modsNeeded = list;
 		modsExtra = code == "extramods";
 		bool flag = !modsExtra && HasWorkshop(list);
+		if (HostPanels.Available)
+		{
+			try
+			{
+				List<string> list2 = new List<string>();
+				List<string> list3 = new List<string>();
+				List<Action> list4 = new List<Action>();
+				foreach (ModList.Info item in list)
+				{
+					list2.Add(Kit.Safe((item.Name.Length > 0) ? item.Name : item.Id));
+					list3.Add(Kit.Safe(Lang.Tr(FirstState(item))));
+					ulong id2 = item.Ws;
+					list4.Add((!modsExtra && id2 != 0L) ? ((Action)delegate
+					{
+						OpenWorkshopPage(id2);
+					}) : null);
+				}
+				modsView = HostPanels.OpenMods("bellun_probably_together.mods", Lang.Tr("Mods for this shop"), Kit.Safe(Intro(list.Count, flag)), list2, list3, list4, Lang.Tr("Workshop page"), Steps(flag, list.Count), Lang.Tr("Open Mods"), OpenGameMods, Lang.Tr("Close"), delegate
+				{
+					modsView = null;
+					OnModsClosed();
+				});
+				HideForChild();
+				for (int j = 0; j < list.Count; j++)
+				{
+					PaintState(j, FirstState(list[j]));
+				}
+				modsStep = 0;
+				PaintSteps(flag ? 1 : 0);
+				modsNextPoll = 0f;
+				SetModsStatus(flag ? Lang.Trf("{0} of {1} ready", 0, WorkshopCount()) : FirstStep());
+				Log.Info("ui: mods window shown on the game's panel (" + code + "): " + ModList.Names(list));
+				return true;
+			}
+			catch (Exception ex)
+			{
+				modsView = null;
+				HostPanels.CloseMessage("bellun_probably_together.mods");
+				Log.Warn("ui: the game's panel could not be used for the mods window: " + ex.Message);
+			}
+		}
 		CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.mods", Lang.Tr("Mods for this server"), "menu", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(640f, 640f);
 		val.AddLabel(Kit.Safe(Intro(list.Count, flag)), "reason");
 		val.AddSpace(4f).BeginScroll((float)list.Count * 48f);
@@ -1443,6 +1692,19 @@ public static class JoinMenu
 
 	private static void PaintSteps(int now)
 	{
+		if (modsView != null && now != modsStep)
+		{
+			modsStep = now;
+			for (int j = 1; j <= modsView.Steps.Length; j++)
+			{
+				TextMeshProUGUI val = modsView.Steps[j - 1];
+				if ((Object)(object)val != (Object)null)
+				{
+					((Graphic)val).color = (j < now) ? NewGameStyle.TAG_POSITIVE : ((j == now) ? NewGameStyle.TITLE : NewGameStyle.DESCRIPTION);
+				}
+			}
+			return;
+		}
 		if (modsWindow == null || !modsWindow.IsAlive || now == modsStep)
 		{
 			return;
@@ -1477,6 +1739,16 @@ public static class JoinMenu
 
 	private static void PaintState(int i, string text)
 	{
+		if (modsView != null)
+		{
+			TextMeshProUGUI val2 = (i >= 0 && i < modsView.States.Length) ? modsView.States[i] : null;
+			if ((Object)(object)val2 != (Object)null)
+			{
+				((TMP_Text)val2).text = Kit.Safe(Lang.Tr(text));
+				((Graphic)val2).color = (text == "Ready") ? NewGameStyle.TAG_POSITIVE : ((text == "Downloading...") ? NewGameStyle.DESCRIPTION : NewGameStyle.WARNING);
+			}
+			return;
+		}
 		CustomUIWindow obj = modsWindow;
 		CustomUIElement val = ((obj != null) ? obj.Get("state_" + i) : null);
 		if (val != null)
@@ -1537,6 +1809,11 @@ public static class JoinMenu
 	private static void SetModsStatus(string s)
 	{
 		ModsStatus = s ?? "";
+		if (modsView != null && (Object)(object)modsView.Status != (Object)null)
+		{
+			((TMP_Text)modsView.Status).text = Kit.Safe(ModsStatus);
+			return;
+		}
 		if (modsWindow != null && modsWindow.IsAlive)
 		{
 			CustomUIElement obj = modsWindow.Get("modstatus");
@@ -1611,6 +1888,10 @@ public static class JoinMenu
 		{
 			SetModsStatus((num == 1) ? Lang.Tr("Ready. Restart the game now.") : Lang.Trf("All {0} ready. Restart the game now.", num));
 		}
+		if (modsView != null && (Object)(object)modsView.Status != (Object)null)
+		{
+			((Graphic)modsView.Status).color = (num2 < num) ? NewGameStyle.DESCRIPTION : NewGameStyle.TAG_POSITIVE;
+		}
 		CustomUIWindow obj2 = modsWindow;
 		if (obj2 != null)
 		{
@@ -1625,10 +1906,12 @@ public static class JoinMenu
 	private static void OpenGameMods()
 	{
 		CustomUIManager instance = CustomUIManager.Instance;
+		HostPanels.CloseMessage("bellun_probably_together.mods");
 		if (instance != null)
 		{
 			instance.CloseWindow("bellun_probably_together.mods");
 		}
+		HostPanels.CloseJoin();
 		if (instance != null)
 		{
 			instance.CloseWindow("bellun_probably_together.join");

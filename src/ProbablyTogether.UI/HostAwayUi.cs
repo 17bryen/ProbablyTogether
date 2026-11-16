@@ -23,6 +23,18 @@ internal static class HostAwayUi
 		try
 		{
 			CustomUIManager instance = CustomUIManager.Instance;
+			if (HostPanels.Available)
+			{
+				try
+				{
+					HostPanels.OpenMessage("bellun_probably_together.leave", Lang.Tr("Leaving your shop"), new string[1] { Lang.Tr("You are hosting this shop. Step away and the others keep playing (you can rejoin at any time), or close the shop and everyone is disconnected.") }, -1, Lang.Tr("Keep playing"), null, Lang.Tr("Step away"), StepOut, Lang.Tr("Close the shop"), AskStop, null, "meta");
+					return;
+				}
+				catch (Exception ex2)
+				{
+					Log.Warn("host: the game's panel could not be used for the leave window: " + ex2.Message);
+				}
+			}
 			if ((Object)(object)instance != (Object)null)
 			{
 				CustomUIBuilder val = instance.CreateWindow("bellun_probably_together.leave", Lang.Tr("Leaving your shop"), "meta", (GameObject)null, (CustomUIManager.Style)0).SetCloseOnEscape(true).SetSize(620f, 330f);
@@ -52,6 +64,7 @@ internal static class HostAwayUi
 
 	private static void CloseLeave()
 	{
+		HostPanels.CloseMessage("bellun_probably_together.leave");
 		try
 		{
 			CustomUIManager instance = CustomUIManager.Instance;
