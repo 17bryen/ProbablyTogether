@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.2 - 2026-11-16
+
+Same protocol (17).
+
+### Fixed
+- Going back through the host screens no longer shows the bare menu for a moment.
+
 ## 0.9.1 - 2026-11-16
 
 Same protocol (17).
