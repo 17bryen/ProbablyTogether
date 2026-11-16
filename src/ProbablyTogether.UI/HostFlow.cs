@@ -213,6 +213,7 @@ internal static class HostFlow
 			Paths.KeepSettings = true;
 			SaveUIManager.InvalidateCache();
 			Active = true;
+			scanned = false;
 			Slot = 0;
 			MorningFile = null;
 			pending = null;
@@ -274,7 +275,9 @@ internal static class HostFlow
 	{
 		try
 		{
-			List<int> list = SaveFiles.ScanAndRegisterOrphans();
+			// Scan once per visit; Back also returns to the list.
+			List<int> list = scanned ? null : SaveFiles.ScanAndRegisterOrphans();
+			scanned = true;
 			if (list != null && list.Count > 0)
 			{
 				Log.Info("host: " + list.Count + " save file(s) found in the folder and added to the list: slot " + string.Join(", ", list));
@@ -557,6 +560,11 @@ internal static class HostFlow
 		Log.Info("host: the host flow is over (" + why + ")");
 	}
 
+	/// Each menu tick, a flow whose screen closed steps back or ends.
+	private static int idleFrame;
+
+	private static bool scanned;
+
 	internal static void Tick()
 	{
 		if (!Active || moving)
@@ -580,9 +588,10 @@ internal static class HostFlow
 		if (idleSince < 0f)
 		{
 			idleSince = Time.realtimeSinceStartup;
+			idleFrame = Time.frameCount;
 			return;
 		}
-		if (Time.realtimeSinceStartup - idleSince < 0.3f)
+		if (Time.frameCount - idleFrame < 2)
 		{
 			return;
 		}
