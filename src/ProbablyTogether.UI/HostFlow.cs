@@ -272,6 +272,18 @@ internal static class HostFlow
 
 	private static void ShowList()
 	{
+		try
+		{
+			List<int> list = SaveFiles.ScanAndRegisterOrphans();
+			if (list != null && list.Count > 0)
+			{
+				Log.Info("host: " + list.Count + " save file(s) found in the folder and added to the list: slot " + string.Join(", ", list));
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: looking for unlisted save files threw: " + ex.Message);
+		}
 		LoadGameUI.Open();
 		CustomUIWindow customUIWindow = Window(ListWindow);
 		LoadGameFrame loadGameFrame = (customUIWindow != null) ? customUIWindow.root.GetComponent<LoadGameFrame>() : null;

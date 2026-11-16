@@ -6,6 +6,7 @@
     <LangVersion>12.0</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <Configurations>Debug;Release;Ship</Configurations>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Deterministic>true</Deterministic>
@@ -32,6 +33,14 @@
     <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(GameManaged)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(GameManaged)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(GameManaged)\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <!-- Ship: the player build, without the bot scripts. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Ship'">
+    <Optimize>true</Optimize>
+    <DefineConstants>SHIP</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Ship'">
+    <Compile Remove="ProbablyTogether.Bots.Scripts\**" />
   </ItemGroup>
   <ItemGroup>
     <None Include="manifest.xml" CopyToOutputDirectory="Always" />

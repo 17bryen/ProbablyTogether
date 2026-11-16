@@ -14,6 +14,8 @@ internal static class Background
 
 		public Action Work;
 
+		public Action Stop;
+
 		public float Since;
 	}
 
@@ -34,9 +36,10 @@ internal static class Background
 		}
 	}
 
-	internal static void Run(string name, Action work)
+	/// `onStop` ends the work (usually by closing its socket); a loop blocked in a read only notices when the socket closes.
+	internal static void Run(string name, Action work, Action onStop = null)
 	{
-		if (Try(name, work))
+		if (Try(name, work, onStop))
 		{
 			return;
 		}
@@ -46,18 +49,39 @@ internal static class Background
 			{
 				Name = name,
 				Work = work,
+				Stop = onStop,
 				Since = -1f
 			});
 		}
 	}
 
-	private static bool Try(string name, Action work)
+	internal static int Stopped;
+
+	private static bool Try(string name, Action work, Action onStop)
 	{
 		try
 		{
 			if (ModHelper.RunInBackground(Mod.Id, delegate(CancellationToken token)
 			{
-				work();
+				if (onStop == null)
+				{
+					work();
+					return;
+				}
+				using (token.Register(delegate
+				{
+					Interlocked.Increment(ref Stopped);
+					try
+					{
+						onStop();
+					}
+					catch
+					{
+					}
+				}))
+				{
+					work();
+				}
 			}))
 			{
 				Interlocked.Increment(ref Started);
@@ -93,7 +117,7 @@ internal static class Background
 			{
 				item.Since = realtimeSinceStartup;
 			}
-			if (Try(item.Name, item.Work))
+			if (Try(item.Name, item.Work, item.Stop))
 			{
 				lock (gate)
 				{

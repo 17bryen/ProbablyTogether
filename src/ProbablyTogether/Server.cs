@@ -123,7 +123,10 @@ internal static class Server
 			listener = new TcpListener(IPAddress.Any, cfg.port);
 			listener.Start(32);
 			listening = true;
-			Background.Run("accept", AcceptLoop);
+			Background.Run("accept", AcceptLoop, delegate
+			{
+				listener?.Stop();
+			});
 			Log.Info("server: listening on TCP " + cfg.port);
 			return true;
 		}
@@ -335,6 +338,7 @@ internal static class Server
 		}
 		if (kind == "sys.ping")
 		{
+			// Keep-alive: the connection has already noted it.
 			return;
 		}
 		if (kind.StartsWith("sys.", StringComparison.Ordinal))

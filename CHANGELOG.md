@@ -2,6 +2,17 @@
 
 All changes to Probably Together.
 
+## 0.9.1 - 2026-11-16
+
+Same protocol (17).
+
+### Changed
+- The released file no longer contains the test bots and is about half the size.
+- The developer console is no longer closed through its library by name.
+- The mod's network loops stop when the game stops the mod.
+- `<GameVersions>` lists both `0.46D` and `1.0.0`.
+- "Your shops" lists save files moved into the hosted folder by hand.
+
 ## 0.9.0 - 2026-11-15
 
 Same protocol (17). Follows the game's December 10, 2026 mod rules.

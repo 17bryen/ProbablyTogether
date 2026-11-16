@@ -439,7 +439,10 @@ internal sealed class Conn
 		{
 			Enqueue(Wire.Magic);
 		}
-		Background.Run("read " + Id, ReadLoop);
+		Background.Run("read " + Id, ReadLoop, delegate
+		{
+			Close("the game stopped the mod");
+		});
 		Background.Run("write " + Id, WriteLoop);
 	}
 

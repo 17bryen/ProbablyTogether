@@ -18,12 +18,6 @@ internal static class Suppress
 
 	internal static int BlockedDevTools;
 
-	private static readonly MethodInfo consoleDeactivate = AccessTools.Method("QFSW.QC.QuantumConsole:Deactivate", (Type[])null, (Type[])null);
-
-	private static readonly MethodInfo consoleIsActive = AccessTools.PropertyGetter("QFSW.QC.QuantumConsole:IsActive");
-
-	private static readonly Type consoleType = AccessTools.TypeByName("QFSW.QC.QuantumConsole");
-
 	internal static bool DevToolAllowed(string what)
 	{
 		if (!Net.IsClient)
@@ -85,40 +79,5 @@ internal static class Suppress
 
 	private static void OnClientLoaded()
 	{
-		if (!Net.IsClient || consoleType == null || consoleDeactivate == null)
-		{
-			return;
-		}
-		try
-		{
-			Object[] array = Object.FindObjectsOfType(consoleType);
-			bool flag = default(bool);
-			foreach (Object obj in array)
-			{
-				if (!(consoleIsActive == null))
-				{
-					object obj2 = consoleIsActive.Invoke(obj, null);
-					int num;
-					if (obj2 is bool)
-					{
-						flag = (bool)obj2;
-						num = 1;
-					}
-					else
-					{
-						num = 0;
-					}
-					if (((uint)num & (flag ? 1u : 0u)) == 0)
-					{
-						continue;
-					}
-				}
-				consoleDeactivate.Invoke(obj, null);
-			}
-		}
-		catch (Exception ex)
-		{
-			Log.Warn("closing the dev console: " + ex.Message);
-		}
 	}
 }
