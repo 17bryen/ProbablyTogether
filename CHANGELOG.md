@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.4 - 2026-11-18
+
+Same protocol (17). Only the host needs it.
+
+### Fixed
+- Short Sleeper: the night's report no longer claims a customer was lost when only the short sleeper went out.
+
 ## 0.9.3 - 2026-11-16
 
 Same protocol (17).

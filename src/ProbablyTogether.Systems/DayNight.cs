@@ -45,6 +45,8 @@ public static class DayNight
 
 	private static int nightDay;
 
+	internal static int NightDay => nightDay;
+
 	private static int timeoutOverride;
 
 	private static bool pendingReady;

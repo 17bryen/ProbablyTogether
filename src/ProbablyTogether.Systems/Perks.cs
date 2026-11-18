@@ -537,8 +537,10 @@ public static class Perks
 		}
 		if (id == "short_sleeper")
 		{
-			int day = Game.Day;
-			return list.Where((Member m) => Of(m.s).B[BOut] >= day - 1 && Of(m.s).B[BOut] > 0).All((Member m) => Has(m.s, id));
+			// No customer is missed if everybody who went out last night is a short sleeper.
+			// During the night the day has not moved on, so "last night" is tonight.
+			int last = DayNight.NightRunning ? DayNight.NightDay : (Game.Day - 1);
+			return list.Where((Member m) => Of(m.s).B[BOut] >= last && Of(m.s).B[BOut] > 0).All((Member m) => Has(m.s, id));
 		}
 		return anyone.Contains(id) ? list.Any((Member m) => Has(m.s, id)) : list.All((Member m) => Has(m.s, id));
 	}
