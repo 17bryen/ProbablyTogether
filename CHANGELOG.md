@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.7 - 2026-11-19
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- A trade picked by a joining player brings its starting reputation again, counted in that player's ledger row. Its starting cash and rent are not charged to the shop.
+
 ## 0.9.6 - 2026-11-19
 
 Same protocol (17). Every player needs it.

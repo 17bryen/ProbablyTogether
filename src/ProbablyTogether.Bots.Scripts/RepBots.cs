@@ -26,9 +26,22 @@ public class RepBot : DayNightBotBase
 
 	private string start = "";
 
+	private double startSecurity;
+
 	public override string Name => name;
 
 	public override BotRole Role => BotRole.Any;
+
+	/// What a trade's start does to Security (NewGameData.HandleInitialItem).
+	private static double TradeSecurity(string trade)
+	{
+		return trade switch
+		{
+			"DRUG_DEALER" => -15.0 * Difficulty.Rules.reputationLossMultiplier,
+			"GUNSMITH" => 25.0 * Difficulty.Rules.reputationGainMultiplier,
+			_ => 0.0,
+		};
+	}
 
 	public override float TimeoutSeconds => 420f;
 
@@ -132,6 +145,7 @@ public class RepBot : DayNightBotBase
 		Do("start", delegate
 		{
 			start = All();
+			startSecurity = Rep("FACTION_SECURITY");
 			return start + "; permits [" + Permits() + "]; " + Guides() + "; skip intro " + DayNightBotBase.Ps.skipIntro;
 		});
 		if (!withB)
@@ -141,7 +155,12 @@ public class RepBot : DayNightBotBase
 		WaitFor("b-here", 240f, () => ProbablyTogether.Server.PlayerCount >= 2, () => ProbablyTogether.Server.PlayerCount + " player(s)");
 		WaitFor("seat-2-picked-a-trade", 240f, () => Specs.Of(2) != null, () => "seat 2: none");
 		Delay("kit-settles", 3f);
-		Check("a-trade-pick-leaves-the-standing", () => All() == start, () => "seat 2 is the " + Specs.Of(2) + "; now " + All() + "; at the start " + start);
+		Check("a-trade-pick-adds-its-standing-for-the-picker", delegate
+		{
+			double num = TradeSecurity(Specs.Of(2));
+			return Math.Abs(Rep("FACTION_SECURITY") - (startSecurity + num)) < 0.0001 && Math.Abs(Standing.RepOf(2, "FACTION_SECURITY") - num) < 0.001;
+		}, () => "seat 2 is the " + Specs.Of(2) + ": its start is " + TradeSecurity(Specs.Of(2)).ToString("R", CultureInfo.InvariantCulture) + " Security; the shop had " + startSecurity.ToString("R", CultureInfo.InvariantCulture) + ", now " + All() + "; seat 2's row in the ledger " + Standing.RepOf(2, "FACTION_SECURITY").ToString("R", CultureInfo.InvariantCulture));
+		Check("a-gunsmith-keeps-its-permit", () => !NetworkUpgrade.IsGunPermitIUnlocked() || Rep("FACTION_SECURITY") >= 0.0, () => "Security " + Rep("FACTION_SECURITY").ToString("R", CultureInfo.InvariantCulture) + " (the game revokes Gun Permit I below 0)");
 		Check("a-gunsmith-joiner-brings-the-permit", () => Specs.Of(2) != "GUNSMITH" || HasPermit("FIREARM", 1), () => "seat 2 is the " + Specs.Of(2) + "; permits [" + Permits() + "]");
 		WaitFor("seat-2-picked-perks", 120f, () => Perks.Picked(2), () => "seat 2 has not picked");
 		Delay("pick-settles", 3f);

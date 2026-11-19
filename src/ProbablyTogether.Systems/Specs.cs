@@ -456,6 +456,18 @@ public static class Specs
 		return dictionary;
 	}
 
+	private static void RepCredit(int seat, Dictionary<StoreReputation, double> before)
+	{
+		foreach (KeyValuePair<StoreReputation, double> item in before)
+		{
+			double num = item.Key.GetReputationExact() - item.Value;
+			if (Math.Abs(num) > 0.0001)
+			{
+				Standing.Credit(seat, item.Key.factionId, num);
+			}
+		}
+	}
+
 	/// Puts the standings back after kits made only for probing.
 	private static void RepBack(Dictionary<StoreReputation, double> before)
 	{
@@ -523,7 +535,7 @@ public static class Specs
 				store.playerCash = playerCash;
 				store.startingRent = startingRent;
 				store.rentValue = rentValue;
-				RepBack(repBefore);
+				RepCredit(seat, repBefore);
 			}
 			list.AddRange(((GameInventory)val).childItems);
 			foreach (GameItem childItem in ((GameInventory)instance.showcaseElement).childItems)
