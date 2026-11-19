@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.5 - 2026-11-19
+
+Same protocol (17). The host needs it; every player needs it for trade picks.
+
+### Fixed
+- A hosted shop now starts with its starting reputation, permits and unlocks. Shops already started keep what they have.
+- Picking a trade no longer moves the shop's reputation.
+
 ## 0.9.4 - 2026-11-18
 
 Same protocol (17). Only the host needs it.

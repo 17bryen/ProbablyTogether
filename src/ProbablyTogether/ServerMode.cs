@@ -88,6 +88,9 @@ internal static class ServerMode
 		}
 	}
 
+	/// The server is loading a new run (the game's new-game code is running); no player is in the shop yet.
+	internal static bool SettingUpNewRun => phase == Phase.Loading && newRun && Net.IsServer;
+
 	internal static string StatusState
 	{
 		get

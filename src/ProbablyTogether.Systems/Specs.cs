@@ -439,6 +439,42 @@ public static class Specs
 		}
 	}
 
+	/// The shop's standings before a kit is made; the kit's standing changes are credited to its player.
+	private static Dictionary<StoreReputation, double> RepBefore(PlayerStore store)
+	{
+		Dictionary<StoreReputation, double> dictionary = new Dictionary<StoreReputation, double>();
+		if (store?.storeReputations != null)
+		{
+			foreach (StoreReputation storeReputation in store.storeReputations)
+			{
+				if (storeReputation != null)
+				{
+					dictionary[storeReputation] = storeReputation.GetReputationExact();
+				}
+			}
+		}
+		return dictionary;
+	}
+
+	/// Puts the standings back after kits made only for probing.
+	private static void RepBack(Dictionary<StoreReputation, double> before)
+	{
+		foreach (KeyValuePair<StoreReputation, double> item in before)
+		{
+			try
+			{
+				if (item.Key.GetReputationExact() != item.Value)
+				{
+					item.Key.SetReputation(item.Value);
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Warn("specs: putting back the standing with " + item.Key.factionId + " threw: " + ex.Message);
+			}
+		}
+	}
+
 	/// Runs the game's starting-kit code for one scenario into a storage bay.
 	/// Must run inside a Replay scope so every copy makes the same items with the same ids.
 	private static string RunKit(int seat, string id, GameItem bay, out string machines)
@@ -461,6 +497,7 @@ public static class Specs
 		int playerCash = store.playerCash;
 		int startingRent = store.startingRent;
 		int rentValue = store.rentValue;
+		Dictionary<StoreReputation, double> repBefore = RepBefore(store);
 		HashSet<GameItem> hashSet = new HashSet<GameItem>(((GameInventory)instance.showcaseElement).childItems);
 		GameItem dossier = instance.dossier;
 		HashSet<GameItem> hashSet2 = ((dossier != null) ? new HashSet<GameItem>(GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)dossier, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null)) : new HashSet<GameItem>());
@@ -486,6 +523,7 @@ public static class Specs
 				store.playerCash = playerCash;
 				store.startingRent = startingRent;
 				store.rentValue = rentValue;
+				RepBack(repBefore);
 			}
 			list.AddRange(((GameInventory)val).childItems);
 			foreach (GameItem childItem in ((GameInventory)instance.showcaseElement).childItems)
@@ -637,6 +675,7 @@ public static class Specs
 			int playerCash = store.playerCash;
 			int startingRent = store.startingRent;
 			int rentValue = store.rentValue;
+			Dictionary<StoreReputation, double> repBefore = RepBefore(store);
 			HashSet<GameItem> hashSet = new HashSet<GameItem>(((GameInventory)instance.showcaseElement).childItems);
 			using (Net.Apply())
 			{
@@ -659,6 +698,7 @@ public static class Specs
 					store.playerCash = playerCash;
 					store.startingRent = startingRent;
 					store.rentValue = rentValue;
+					RepBack(repBefore);
 				}
 				List<GameItem> list2 = new List<GameItem>(((GameInventory)val).childItems);
 				foreach (GameItem childItem in ((GameInventory)instance.showcaseElement).childItems)

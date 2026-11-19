@@ -1911,6 +1911,11 @@ public static class Economy
 		{
 			return true;
 		}
+		// The host's own new-run setup is the server deciding; outside a request a host otherwise counts as a client.
+		if (ServerMode.SettingUpNewRun)
+		{
+			return true;
+		}
 		Blocked++;
 		LastBlocked = what;
 		if (Blocked <= 10)
