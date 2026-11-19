@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.6 - 2026-11-19
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- Players no longer keep "catching up with the shop" while Dr. Jackson is at the counter. His stall leaves out the Commissary items only if every player is banned.
+- A shop whose founder is banned from the Commissary now gets the Stamp Guide and the Logo Checker once a player who is not banned joins.
+
 ## 0.9.5 - 2026-11-19
 
 Same protocol (17). The host needs it; every player needs it for trade picks.

@@ -827,6 +827,75 @@ public static class Perks
 		}
 	}
 
+	/// Given once per shop, when the first player not banned from the Commissary has picked, or at the next opening.
+	private static readonly string[] commissaryGuides = new string[2] { "stamp_guide", "logo_checker" };
+
+	private const string GuidesKey = "commissaryGuides";
+
+	internal static int GuidesGiven;
+
+	internal static void CommissaryGuides(List<string> notes)
+	{
+		PlayerStore store = Game.Store;
+		EmporiumEntry e = EmporiumEntry.Instance;
+		if (!Enabled || store == null || (UnityEngine.Object)(object)e == (UnityEngine.Object)null || e.dossier == null || !store.skipIntro || store.IsRockBottomStart() || ForTheShop("banned_commissary"))
+		{
+			return;
+		}
+		try
+		{
+			if (ModHelper.GetModData("bellun_probably_together", GuidesKey, (string)null) == "1")
+			{
+				return;
+			}
+		}
+		catch
+		{
+			return;
+		}
+		HashSet<string> owned;
+		try
+		{
+			owned = new HashSet<string>(e.GetAllOwnedItems(false, true).Select((GameItem i) => i.identifier), StringComparer.Ordinal);
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("perks: looking for the Commissary's guides threw: " + ex.Message);
+			return;
+		}
+		List<string> given = new List<string>();
+		using (Net.Apply())
+		{
+			foreach (string id in commissaryGuides)
+			{
+				if (owned.Contains(id))
+				{
+					continue;
+				}
+				GameItem item = DirectoryMaster.Item(id);
+				if (item == null)
+				{
+					continue;
+				}
+				GraphUtils.TryAcceptAll(e.dossier, item);
+				if (item.parentInventory == null)
+				{
+					GraphUtils.EmporiumTryAdd(item);
+				}
+				if (item.parentInventory != null)
+				{
+					given.Add(id);
+				}
+			}
+			ModHelper.SetModData("bellun_probably_together", GuidesKey, "1");
+		}
+		if (given.Count > 0)
+		{
+			GuidesGiven += given.Count;
+			notes.Add("the Commissary's guides into the dossier (" + string.Join(", ", given) + "): not every player is banned");
+		}
+	}
+
 	/// Every copy, from the server's seed: applies these perks for one holder.
 	private static string Apply(int seat, List<string> ids, GameItem bay, bool merge = false)
 	{
@@ -919,6 +988,7 @@ public static class Perks
 		{
 			SetFields(Of(seat).B);
 		}
+		CommissaryGuides(notes);
 		Picks++;
 		LastApplied = seat + ":" + string.Join(",", ids);
 		return (notes.Count > 0) ? string.Join("; ", notes) : "nothing to hand out";

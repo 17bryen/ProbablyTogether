@@ -196,6 +196,52 @@ internal static class PerksNobodyPatch
 	}
 }
 
+/// Dr. Jackson's stall at the shop is laid out on every copy, so the shop as a whole is asked;
+/// his stall at his own place (isVisitingPlayerStore false) is asked for the traveller.
+[HarmonyPatch(typeof(StoreClientList), "PlaceInventorInventory", new Type[] { typeof(bool) })]
+internal static class PerksJacksonVisitPatch
+{
+	private static void Prefix(bool isVisitingPlayerStore, out bool __state)
+	{
+		__state = isVisitingPlayerStore && Perks.Enabled;
+		if (__state)
+		{
+			Perks.NobodyEnter();
+		}
+	}
+
+	private static Exception Finalizer(bool __state, Exception __exception)
+	{
+		if (__state)
+		{
+			Perks.NobodyLeave();
+		}
+		return __exception;
+	}
+}
+
+/// The morning's opening, on every copy: the Commissary's guides for a shop that never had them.
+[HarmonyPatch(typeof(StoreShutterButton), "OnShutterDoorOpenMorning")]
+internal static class PerksGuidesMorningPatch
+{
+	private static void Postfix()
+	{
+		try
+		{
+			List<string> list = new List<string>();
+			Perks.CommissaryGuides(list);
+			if (list.Count > 0 && !DayLog.Replaying)
+			{
+				Log.Info("perks: " + string.Join("; ", list));
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("perks: the Commissary's guides at the opening threw: " + ex.Message);
+		}
+	}
+}
+
 /// Side Street and Prime Real Estate: a customer less, or more, for every holder (the game counts one).
 [HarmonyPatch(typeof(StoreClientManager), "GetNormalCustomerCount")]
 internal static class PerksCustomerCountPatch
