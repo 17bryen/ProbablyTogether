@@ -251,6 +251,11 @@ public static class Economy
 		};
 		Net.ToAll("econ.network.bought", msg);
 		Systems.Specs.WildBought(buyer, id);
+		// The ledger: what a player pays Joe Wild for a specialization of their own is theirs; the rest is the shop's.
+		if (Systems.Specs.WildIsPersonal(id))
+		{
+			Systems.Standing.Cash(buyer, -cash);
+		}
 		HostRefresh("network", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " bought " + id + " for " + cost + " (favor " + favor + ", cash " + cash + "); state " + up.state + ", cash now " + store.playerCash + ", favor " + store.wildFavor);
 		return null;
@@ -333,6 +338,10 @@ public static class Economy
 			});
 		}
 		Systems.Specs.WildSetToBay(m.by, m.id, back);
+		if (Systems.Specs.WildIsPersonal(m.id))
+		{
+			Systems.Standing.Cash(m.by, -m.cash);
+		}
 		Applied++;
 		if (m.by == Net.LocalPlayer && !DayLog.Replaying)
 		{

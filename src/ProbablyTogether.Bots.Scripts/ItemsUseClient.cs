@@ -300,7 +300,8 @@ public sealed class ItemsUseClient : BotScript
 				EmporiumAudioPlayer instance = EmporiumAudioPlayer.Instance;
 				if ((Object)(object)instance != (Object)null && (Object)(object)instance.ratchet != (Object)null)
 				{
-					instance.ratchet.Play();
+					// Go through QuietAudioCallSites, the same way the game's own audio calls do.
+					QuietAudioCallSites.Play(instance.ratchet);
 				}
 				num3 = ItemsUse.QuietSoundsBlocked - quietSoundsBlocked - num2;
 			}

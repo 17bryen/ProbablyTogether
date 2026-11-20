@@ -22,7 +22,7 @@ public abstract class CarryBotBase : ItemsBotBase
 
 	protected static readonly MethodInfo mStart = AccessTools.Method(typeof(ItemMouseDragHandler), "StartDrag", new Type[0], (Type[])null);
 
-	protected static readonly MethodInfo mEnd = AccessTools.Method(typeof(ItemMouseDragHandler), "EndDrag", new Type[0], (Type[])null);
+	protected static readonly MethodInfo mEnd = BotDrag.EndDrag;
 
 	protected static readonly MethodInfo mAbort = AccessTools.Method(typeof(ItemMouseDragHandler), "AbortDrag", new Type[0], (Type[])null);
 

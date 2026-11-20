@@ -70,7 +70,7 @@ public sealed class CarryA : CarryBotBase
 		string text = "";
 		try
 		{
-			CarryBotBase.mEnd.Invoke(current, null);
+			BotDrag.End(current);
 		}
 		catch (Exception ex)
 		{

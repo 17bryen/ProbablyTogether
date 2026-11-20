@@ -198,6 +198,14 @@ public static class Specs
 
 	internal static string LastNoRoom = "";
 
+	/// Entries the buyer pays for personally in the ledger, though their machines stay everybody's.
+	private static readonly HashSet<string> personalWild = new HashSet<string>(StringComparer.Ordinal) { "WINEMAKER" };
+
+	internal static bool WildIsPersonal(string upgradeId)
+	{
+		return upgradeId != null && (WildTrade(upgradeId) != null || personalWild.Contains(upgradeId));
+	}
+
 	/// The trade an entry belongs to (null: the shop's).
 	public static string WildTrade(string upgradeId)
 	{
@@ -1132,6 +1140,7 @@ public static class Specs
 		int localSeat = Members.LocalSeat;
 		if (localSeat > 0 && Of(localSeat) != null && WindowUp)
 		{
+			// A host's own pick does not come back as a message.
 			CloseWindow();
 		}
 		if (localSeat <= 0 || Of(localSeat) != null || Bays.BayOf(localSeat) == null)

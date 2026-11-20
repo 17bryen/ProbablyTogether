@@ -155,7 +155,7 @@ public sealed class ItemsMoveUi : ItemsBotBase
 			string text = "";
 			try
 			{
-				mEndDrag.Invoke(current, null);
+				BotDrag.End(current);
 			}
 			catch (Exception ex)
 			{

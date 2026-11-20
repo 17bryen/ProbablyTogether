@@ -748,7 +748,17 @@ public static class Machines
 
 	internal static bool OnTrackDone()
 	{
-		if (!Net.IsOnline || Net.Applying)
+		if (!Net.IsOnline)
+		{
+			return true;
+		}
+		// The shop's cassette player is not part of a private trip, so it is checked as at home.
+		bool applying;
+		using (Systems.HostTrip.AtHome())
+		{
+			applying = Net.Applying;
+		}
+		if (applying)
 		{
 			return true;
 		}

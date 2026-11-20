@@ -255,7 +255,7 @@ public static class ItemsUseLab
 		string result = "";
 		try
 		{
-			mEndDrag.Invoke(current, null);
+			BotDrag.End(current);
 		}
 		catch (Exception ex)
 		{

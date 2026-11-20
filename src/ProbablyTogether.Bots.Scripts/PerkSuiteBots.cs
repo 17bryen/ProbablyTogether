@@ -333,6 +333,13 @@ public abstract class PerkUniqueABase : PerkSuiteBase
 	protected void Shared()
 	{
 		Check("all-thirteen-act-on-this-game-and-are-in-the-shop's-list", () => Active(Founder) && Founder.All(Listed), () => "not active here: " + string.Join(",", Founder.Where((string i) => !StartingPerk.IsPerkActive(i))) + "; " + State);
+		// Their effects, through the game's own functions (PerkEffects).
+		bool ok = false;
+		string d = "";
+		Check("vigilant-no-burglary-at-night", delegate { d = PerkEffects.Vigilant(out ok); return ok; }, () => d);
+		Check("sawyers-crew-janitorial-is-free", delegate { d = PerkEffects.SawyerCrew(out ok); return ok; }, () => d);
+		Check("diplomatic-a-third-more-reputation-from-trade", delegate { d = PerkEffects.Diplomatic(out ok); return ok; }, () => d);
+		Check("intimidating-a-third-less-evidence", delegate { d = PerkEffects.Evidence(0.67, out ok); return ok; }, () => d);
 		Check("convict-and-well-connected-security-minus-15", () => Near(Rep(Sec), rep0[Sec] - 30.0 + 15.0), () => "security " + rep0[Sec] + " -> " + Rep(Sec));
 		Check("sycophant-and-well-connected-upper-levels-plus-30", () => Near(Rep(Ul), rep0[Ul] + 30.0), () => "upper levels " + rep0[Ul] + " -> " + Rep(Ul));
 		Check("well-connected-the-rest-plus-15", () => Near(Rep(Rev), rep0[Rev] + 15.0) && Near(Rep(Bm), rep0[Bm] + 15.0) && Near(Rep(Ll), rep0[Ll] + 15.0), () => State);
@@ -395,6 +402,11 @@ public abstract class PerkUniqueBBase : PerkSuiteBase
 	protected void Shared()
 	{
 		Check("all-ten-act-on-this-game-and-are-in-the-shop's-list", () => Active(Founder) && Founder.All(Listed), () => "not active here: " + string.Join(",", Founder.Where((string i) => !StartingPerk.IsPerkActive(i))) + "; " + State);
+		// Blabbermouth's effects, through the game's own functions (PerkEffects).
+		bool ok = false;
+		string d = "";
+		Check("blabbermouth-a-third-more-evidence", delegate { d = PerkEffects.Evidence(1.33, out ok); return ok; }, () => d);
+		Check("blabbermouth-half-the-black-markets-reputation", delegate { d = PerkEffects.BlabbermouthRep(out ok); return ok; }, () => d);
 		Check("model-citizen-and-public-enemy-security-plus-15", () => Near(Rep(Sec), rep0[Sec] + 30.0 - 15.0), () => "security " + rep0[Sec] + " -> " + Rep(Sec));
 		Check("public-enemy-sympathizer-and-snitch-revolution-level", () => Near(Rep(Rev), rep0[Rev] - 15.0 + 25.0 - 10.0), () => "revolution " + rep0[Rev] + " -> " + Rep(Rev));
 		Check("public-enemy-and-snitch-black-market-minus-25", () => Near(Rep(Bm), rep0[Bm] - 25.0), () => "black market " + rep0[Bm] + " -> " + Rep(Bm));
@@ -480,6 +492,10 @@ public sealed class PerkPersonalH : PerkPersonalBase
 	{
 		HostStart(Founder, Friend);
 		Shared();
+		// Illiterate, Tinkerer and Osteoarthritis as the server answers during each player's own request.
+		bool ok = false;
+		string d = "";
+		Check("illiterate-tinkerer-osteoarthritis-are-the-holder's", delegate { d = PerkEffects.Personal(OtherSeat, Me, out ok); return ok; }, () => d);
 		Check("i-can-read-and-do-not-tinker", () => HealthData.CanRead() && !StartingPerk.IsIlliterate() && !StartingPerk.IsTinkerer() && !StartingPerk.IsShortSleeper() && !StartingPerk.IsAgoraphobia(), () => "can read " + HealthData.CanRead() + ", tinkerer " + StartingPerk.IsTinkerer());
 		Check("careful-scavenger-three-searches-and-no-wounds-for-me", () => ScavHelper.GetMaxScavAttempts() == 3 && ScavHelper.GetMinorWoundChance() == 0f && StartingPerk.IsCarefulScavenger() && !StartingPerk.IsProficientScavenger(), () => "my searches " + ScavHelper.GetMaxScavAttempts() + ", minor wound chance " + ScavHelper.GetMinorWoundChance());
 		Check("i-am-the-banned-one", () => StartingPerk.IsBannedCommissary() && !StartingPerk.IsWelfareProgram(), () => "banned here " + StartingPerk.IsBannedCommissary());

@@ -151,7 +151,7 @@ public sealed class ItemsOffline : ItemsBotBase
 			string text = "";
 			try
 			{
-				mEndDrag.Invoke(current, null);
+				BotDrag.End(current);
 			}
 			catch (Exception ex)
 			{

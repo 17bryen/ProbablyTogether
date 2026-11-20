@@ -20,7 +20,7 @@ public sealed class PicsFeatLead : PicsFeatBase
 
 	private static readonly MethodInfo mStart = AccessTools.Method(typeof(ItemMouseDragHandler), "StartDrag", new Type[0], (Type[])null);
 
-	private static readonly MethodInfo mEnd = AccessTools.Method(typeof(ItemMouseDragHandler), "EndDrag", new Type[0], (Type[])null);
+	private static readonly MethodInfo mEnd = BotDrag.EndDrag;
 
 	private long pointed;
 
@@ -100,7 +100,7 @@ public sealed class PicsFeatLead : PicsFeatBase
 			fLastInv.SetValue(current, null);
 			try
 			{
-				mEnd.Invoke(current, null);
+				BotDrag.End(current);
 			}
 			catch
 			{

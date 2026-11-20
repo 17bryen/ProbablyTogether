@@ -2,6 +2,15 @@
 
 All changes to Probably Together.
 
+## 0.9.12 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- Using the Mind Reprogrammer on someone else's unique perk no longer gives the perk to the player who clicked.
+- The cassette player no longer changes track on a travelling player's copy, which made machines differ until morning.
+- What a player pays Joe Wild for a specialization of their own now counts as theirs in the ledger; the rest of his list stays the shop's.
+
 ## 0.9.11 - 2026-11-20
 
 Same protocol (17). Every player needs it.

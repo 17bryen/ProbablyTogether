@@ -105,11 +105,12 @@ internal static class PerksRemovePatch
 [HarmonyPatch(typeof(MindReprogrammerHelper), "Apply", new Type[] { typeof(GameItem), typeof(StartingPerk) })]
 internal static class PerksReprogramPatch
 {
-	private static void Postfix(StartingPerk definition)
+	// Only when Apply ran: a player's copy skips it and sends the click to the server, but postfixes still run.
+	private static void Postfix(bool __runOriginal, StartingPerk definition)
 	{
 		try
 		{
-			if (definition != null)
+			if (__runOriginal && definition != null)
 			{
 				Perks.AfterReprogram(definition.id);
 			}

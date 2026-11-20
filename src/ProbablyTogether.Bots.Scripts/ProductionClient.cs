@@ -125,7 +125,7 @@ public sealed class ProductionClient : ProductionScript
 				fDragging.SetValue(current, true);
 				try
 				{
-					mEndDrag.Invoke(current, null);
+					BotDrag.End(current);
 				}
 				catch (Exception ex)
 				{

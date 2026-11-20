@@ -92,7 +92,7 @@ public sealed class CarryOffline : CarryBotBase
 			string text = "";
 			try
 			{
-				CarryBotBase.mEnd.Invoke(current, null);
+				BotDrag.End(current);
 			}
 			catch (Exception ex)
 			{
