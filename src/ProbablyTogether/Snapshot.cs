@@ -119,6 +119,10 @@ public static class Snapshot
 
 	internal static int AskCount { get; private set; }
 
+	internal static int Loads { get; private set; }
+
+	internal static DayLog.ReplayStats LastReplay { get; private set; }
+
 	internal static bool SessionOpen
 	{
 		get
@@ -641,6 +645,7 @@ public static class Snapshot
 	{
 		Systems.Outings.OnSnapshot();
 		Systems.Standing.NewScene();
+		Systems.TradeVisits.NewScene();
 		if (m == null || (m.save == null && m.saveB64 == null))
 		{
 			Client.Disconnect("the server sent an empty snapshot");
@@ -834,6 +839,8 @@ public static class Snapshot
 		{
 			return;
 		}
+		Loads++;
+		LastReplay = replayStats;
 		MsgDigest msgDigest = Digest.Compute();
 		Log.Info("client: morning snapshot #" + msgSnapshot.seq + " loaded in " + num2 + " ms" + ((num > 0) ? (" (" + num + " ms of it waiting for the log)") : "") + ", then " + replayStats?.ToString() + ": " + msgDigest.Describe() + "; " + Ids.Count + " ids indexed");
 		Dictionary<string, string> econ = null;

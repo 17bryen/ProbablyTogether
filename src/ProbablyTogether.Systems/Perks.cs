@@ -341,6 +341,57 @@ public static class Perks
 		return seat > 0 && Of(seat).Ids.Contains(id);
 	}
 
+	/// The perks this player's screens show as theirs, in the shop's order. Display only.
+	internal static List<StartingPerk> ShownFor(int seat)
+	{
+		List<StartingPerk> list = new List<StartingPerk>();
+		HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
+		foreach (StartingPerk p in Game.Store?.startingPerks ?? new List<StartingPerk>())
+		{
+			if (p == null || string.IsNullOrEmpty(p.id) || seen.Contains(p.id))
+			{
+				continue;
+			}
+			if (addictions.Contains(p.id) && !Has(seat, p.id))
+			{
+				continue;
+			}
+			seen.Add(p.id);
+			list.Add(p);
+		}
+		void AddPersonal(string id)
+		{
+			if (KindOf(id) == Personal && !seen.Contains(id))
+			{
+				StartingPerk startingPerk = Def(id);
+				if (startingPerk != null)
+				{
+					seen.Add(id);
+					list.Add(startingPerk);
+				}
+			}
+		}
+		foreach (string id in Of(seat).Ids)
+		{
+			AddPersonal(id);
+		}
+		foreach (KeyValuePair<int, Rec> item in Table().OrderBy((KeyValuePair<int, Rec> p) => p.Key))
+		{
+			if (item.Key == seat || Members.BySeat(item.Key) == null)
+			{
+				continue;
+			}
+			foreach (string id2 in item.Value.Ids)
+			{
+				if (anyone.Contains(id2))
+				{
+					AddPersonal(id2);
+				}
+			}
+		}
+		return list;
+	}
+
 	public static List<int> Holders(string id)
 	{
 		return (from p in Table()

@@ -97,7 +97,8 @@ public sealed class TradeVisitsH : TradeVisitsBotBase
 		Check("the-chemists-supplier-comes-for-b-too", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Specs.TakenBy("DRUG_DEALER") && FirstLine("retired_chemist").Contains(Members.NameOf(Specs.TakenBy("DRUG_DEALER"))) && !FirstLine("retired_chemist").Contains("again"), () => "in the queue " + InQueue("retired_chemist") + ", for seat " + TradeVisits.SeatFor("retired_chemist") + ", referral bought " + NetworkUpgrade.IsRetiredChemistUnlocked() + "; his first line: '" + FirstLine("retired_chemist") + "'");
 		Check("the-shop-is-what-it-was", () => DayNightBotBase.Ps.startType != NewGameData.StartType.DRUG_DEALER && StoreStation.Instance.dayCounter == day0 + 1, () => Where + "; day counter " + StoreStation.Instance.dayCounter);
 		Do("my-queue-next-day", () => Customers.DigestText());
-		Delay("b-compares-the-queue", 30f);
+		// B asks for a resync and waits out the 30 s throttle.
+		Delay("b-compares-the-queue-and-reloads", 150f);
 	}
 }
 
@@ -144,5 +145,22 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		}, "cust.text");
 		Check("same-customers-as-the-host", () => Customers.DigestText() == theirs, () => (Customers.DigestText() == theirs) ? "same" : ("here " + Customers.DigestText() + " / host " + theirs));
 		Check("no-reload-at-the-openings", () => DayNight.Mismatches == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked " + Digest.ReloadsAsked);
+		Do("ask-a-resync", delegate
+		{
+			loadsBefore = Snapshot.Loads;
+			asksBefore = Snapshot.AskCount;
+			Snapshot.RequestResync("rig: reload the morning with a supplier in the queue");
+			return "loads " + loadsBefore + ", asks " + asksBefore;
+		});
+		WaitFor("the-morning-reloaded", 90f, () => Snapshot.Loads > loadsBefore && Client.State == ClientState.Ready, () => "loads " + Snapshot.Loads + ", state " + Client.State);
+		Delay("the-replay-lands", 3f);
+		Check("the-replay-agrees-with-the-server", () => Snapshot.LastReplay != null && Snapshot.LastReplay.ChecksBad == 0, () => (Snapshot.LastReplay == null) ? "no replay" : Snapshot.LastReplay.ToString());
+		Check("the-supplier-still-asks-for-me", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Members.LocalSeat && FirstLine("retired_chemist").Contains(Members.NameOf(Members.LocalSeat)), () => "in the queue " + InQueue("retired_chemist") + ", for seat " + TradeVisits.SeatFor("retired_chemist") + "; his first line here: '" + FirstLine("retired_chemist") + "'");
+		Delay("past-the-resync-throttle", 35f);
+		Check("no-second-resync", () => Snapshot.AskCount == asksBefore + 1 && Snapshot.Loads == loadsBefore + 1, () => "asks " + Snapshot.AskCount + " (before " + asksBefore + "), loads " + Snapshot.Loads + " (before " + loadsBefore + ")");
 	}
+
+	private int loadsBefore;
+
+	private int asksBefore;
 }

@@ -209,6 +209,16 @@ public abstract class PerkStackBase : PerkSuiteBase
 
 	protected static readonly string[] Friend = new string[8] { "saving", "bad_lease", "prime_real_estate", "awful_negotiator", "lucky", "handy", "nicotine_addiction", "narcotic_addiction" };
 
+	/// The status tab shows the shop's perks and, of the addictions, only this player's own.
+	protected void StatusTab(string[] mine, string[] theirs)
+	{
+		Check("my-status-tab-shows-the-shop's-perks-and-my-addictions-only", delegate
+		{
+			List<string> shown = Perks.ShownFor(Members.LocalSeat).Select((StartingPerk p) => p.id).ToList();
+			return mine.All(shown.Contains) && theirs.Except(mine).All((string i) => !shown.Contains(i));
+		}, () => "shown [" + string.Join(",", Perks.ShownFor(Members.LocalSeat).Select((StartingPerk p) => p.id)) + "]");
+	}
+
 	protected void Shared()
 	{
 		Check("savings-twice-is-300", () => S.playerCash == cash0 + 300, () => "cash " + cash0 + " -> " + S.playerCash);
@@ -235,6 +245,7 @@ public sealed class PerkStackH : PerkStackBase
 	{
 		HostStart(Founder, Friend);
 		Shared();
+		StatusTab(Founder, Friend);
 		Check("i-am-the-one-on-alcohol", () => HealthData.IsNicotineAddicted() && HealthData.IsAlcoholAddicted() && !HealthData.IsNarcoticAddicted(), () => "nicotine " + HealthData.IsNicotineAddicted() + ", alcohol " + HealthData.IsAlcoholAddicted() + ", narcotic " + HealthData.IsNarcoticAddicted());
 		Do("i-have-had-my-nicotine", delegate
 		{
@@ -258,6 +269,7 @@ public sealed class PerkStackB : PerkStackBase
 	{
 		ClientStart(Friend, Founder);
 		Shared();
+		StatusTab(Friend, Founder);
 		Check("i-am-the-one-on-narcotics", () => HealthData.IsNicotineAddicted() && !HealthData.IsAlcoholAddicted() && HealthData.IsNarcoticAddicted(), () => "nicotine " + HealthData.IsNicotineAddicted() + ", alcohol " + HealthData.IsAlcoholAddicted() + ", narcotic " + HealthData.IsNarcoticAddicted());
 		Check("the-first-doses-are-in-my-bay", () => InBay(Me).Contains("packet_red_cigarette") && InBay(Me).Contains("pink_injector"), () => "my bay [" + string.Join(",", InBay(Me)) + "]");
 		WaitFor("the-founder's-dose-helps-the-shop-here-too", 60f, () => H.GetTotalAddictionPenalty() == 24, () => State);

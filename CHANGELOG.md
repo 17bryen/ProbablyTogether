@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.8 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- A player's copy no longer reloads every 30 seconds for the rest of the day after a resync. Trade visitors' greetings now replay the same as on the server.
+- The status tab and the run summary now show each player their own perks and addictions, plus the shop's, instead of one list for everyone.
+
 ## 0.9.7 - 2026-11-19
 
 Same protocol (17). Every player needs it.

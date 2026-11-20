@@ -26,6 +26,15 @@ public static class TradeVisits
 
 	private static string announced = "";
 
+	/// A morning load rebuilds the day's queue from the snapshot, so who came for whom starts empty.
+	internal static void NewScene()
+	{
+		forDay = -1;
+		forSeat.Clear();
+		Openers.Clear();
+		announced = "";
+	}
+
 	internal static int Added;
 
 	internal static int Greeted;
@@ -503,6 +512,7 @@ internal static class TradeVisitsCartelPatch
 
 	private static void Postfix(StoreClientManager __instance)
 	{
+		// Whatever goes wrong here must not stop the shop from opening.
 		try
 		{
 			TradeVisits.AfterCartel(__instance);

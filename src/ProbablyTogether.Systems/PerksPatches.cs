@@ -474,3 +474,82 @@ internal static class PerksBlackmailPatch
 		}
 	}
 }
+
+/// The status tab's rows are drawn again from what counts for this player (Perks.ShownFor); records stay as they are.
+[HarmonyPatch(typeof(AdvCalendarUIManager), "OnStatusButtonClicked")]
+internal static class PerksStatusTabPatch
+{
+	private static void Postfix(AdvCalendarUIManager __instance)
+	{
+		try
+		{
+			if (!Perks.Enabled || !Net.HasLocalPlayer || __instance == null || (UnityEngine.Object)(object)__instance.activePerksContainer == (UnityEngine.Object)null || (UnityEngine.Object)(object)__instance.perkElementPrefab == (UnityEngine.Object)null)
+			{
+				return;
+			}
+			Transform transform = __instance.activePerksContainer.transform;
+			for (int num = transform.childCount - 1; num >= 0; num--)
+			{
+				GameObject gameObject = transform.GetChild(num).gameObject;
+				// Destroy waits for the end of the frame: hidden now, the layout does not count the game's rows.
+				gameObject.SetActive(false);
+				UnityEngine.Object.Destroy(gameObject);
+			}
+			foreach (StartingPerk item in Perks.ShownFor(Members.LocalSeat))
+			{
+				StartingPerkElement component = UnityEngine.Object.Instantiate(__instance.perkElementPrefab, transform).GetComponent<StartingPerkElement>();
+				component.perk = item;
+				component.id = item.id;
+				component.background.sprite = __instance.highlightPerkBackground;
+			}
+		}
+		catch (Exception ex)
+		{
+			if (Log.Allow("perks|status", 30000L, out var skipped))
+			{
+				Log.Warn("perks: drawing the status tab's perks threw" + Log.More(skipped) + ": " + ex.Message);
+			}
+		}
+	}
+}
+
+/// The run's summary reads this player's list while it is built.
+[HarmonyPatch]
+internal static class PerksRunSummaryPatch
+{
+	private static MethodBase TargetMethod()
+	{
+		return AccessTools.Method(typeof(RunSummaryUI), "BuildOverview", (Type[])null, (Type[])null);
+	}
+
+	private static bool Prepare()
+	{
+		return TargetMethod() != null;
+	}
+
+	private static void Prefix(PlayerStore store, out List<StartingPerk> __state)
+	{
+		__state = null;
+		try
+		{
+			if (Perks.Enabled && Net.HasLocalPlayer && store != null)
+			{
+				__state = store.startingPerks;
+				store.startingPerks = Perks.ShownFor(Members.LocalSeat);
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("perks: the run summary's perks threw: " + ex.Message);
+		}
+	}
+
+	private static Exception Finalizer(PlayerStore store, List<StartingPerk> __state, Exception __exception)
+	{
+		if (__state != null && store != null)
+		{
+			store.startingPerks = __state;
+		}
+		return __exception;
+	}
+}
