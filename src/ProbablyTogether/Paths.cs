@@ -312,7 +312,7 @@ public static class Paths
 	{
 		List<MethodBase> list = new List<MethodBase>();
 		List<string> list2 = new List<string>();
-		ScanModule(typeof(SaveFiles).Assembly.ManifestModule, list, list2, (MemberInfo m) => m is MethodInfo methodInfo && methodInfo.Name == "Play" && methodInfo.DeclaringType == typeof(AudioSource) && methodInfo.GetParameters().Length == 0);
+		ScanModule(typeof(SaveFiles).Assembly.ManifestModule, list, list2, (MemberInfo m) => m is MethodInfo methodInfo && QuietAudioCallSites.IsSoundCall(methodInfo));
 		Log.Info("items-use: " + list.Count + " game method(s) play a sound source directly; those calls are quiet while another player's action is replayed" + ((list2.Count > 0) ? (" (" + list2.Count + " left alone)") : ""));
 		return list;
 	}

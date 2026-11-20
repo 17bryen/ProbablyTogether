@@ -132,7 +132,7 @@ public sealed class SecurityB : SecurityClientScript
 			Do("resync", delegate
 			{
 				Vars["loads"] = SecurityClientScript.Mine("sec.loads");
-				Vars["quiet"] = ReplayQuietEffectsPatch.Skipped.ToString();
+				Vars["quiet"] = (ReplayQuietEffectsPatch.Skipped + QuietAudioCallSites.ReplaySkipped).ToString();
 				Vars["instant"] = ShotReplayInstantPatch.Instant.ToString();
 				Snapshot.RequestResync();
 				return "asked (loads so far " + Vars["loads"] + ")";
@@ -144,7 +144,7 @@ public sealed class SecurityB : SecurityClientScript
 			// Replayed shots end at once, the bodies go with their officers, and the replay is silent.
 			Check("replayed-shots-ended-at-once", () => ShotReplayInstantPatch.Instant > int.Parse(Vars["instant"]), () => "instant shots " + ShotReplayInstantPatch.Instant + " (before " + Vars["instant"] + ")");
 			Check("no-body-after-the-replay", () => SecurityClientScript.Mine("sec.body") == "0", () => "body " + SecurityClientScript.Mine("sec.body") + ", last hidden: " + Security.LastBodyHidden);
-			Check("the-replay-played-no-sound-effects", () => ReplayQuietEffectsPatch.Skipped > int.Parse(Vars["quiet"]), () => "effects skipped " + ReplayQuietEffectsPatch.Skipped + " (before " + Vars["quiet"] + ")");
+			Check("the-replay-played-no-sound-effects", () => ReplayQuietEffectsPatch.Skipped + QuietAudioCallSites.ReplaySkipped > int.Parse(Vars["quiet"]), () => "effects skipped " + (ReplayQuietEffectsPatch.Skipped + QuietAudioCallSites.ReplaySkipped) + " (before " + Vars["quiet"] + ")");
 		}, 900f);
 		Compare("end", delegate
 		{

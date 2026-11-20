@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.11 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- Reload replays stay silent without a patch on Unity's audio, following the game's mod rules.
+
 ## 0.9.10 - 2026-11-20
 
 Same protocol (17). Every player needs it.

@@ -35,38 +35,6 @@ internal static class ReplayQuietEffectsPatch
 	}
 }
 
-[HarmonyPatch]
-internal static class ReplayQuietOneShotPatch
-{
-	private static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> TargetMethods()
-	{
-		System.Reflection.MethodInfo one = AccessTools.Method(typeof(AudioSource), "PlayOneShot", new Type[1] { typeof(AudioClip) }, (Type[])null);
-		if (one != null)
-		{
-			yield return one;
-		}
-		System.Reflection.MethodInfo two = AccessTools.Method(typeof(AudioSource), "PlayOneShot", new Type[2]
-		{
-			typeof(AudioClip),
-			typeof(float)
-		}, (Type[])null);
-		if (two != null)
-		{
-			yield return two;
-		}
-	}
-
-	private static bool Prefix()
-	{
-		if (!DayLog.Replaying)
-		{
-			return true;
-		}
-		ReplayQuietEffectsPatch.Skipped++;
-		return false;
-	}
-}
-
 /// During a replay, finish the shot at once; the log's own steps remove the body.
 [HarmonyPatch(typeof(StoreUIManager), "WoundAnimationRoutine")]
 internal static class ShotReplayInstantPatch
@@ -102,7 +70,7 @@ internal static class ShotReplayInstantPatch
 			{
 				__instance.ExitShootingMode();
 			}
-		// On a player's copy the server's "shootoutStart" step starts the shootout.
+			// On a player's copy the server's "shootoutStart" step starts the shootout.
 		}
 		catch (Exception ex)
 		{
