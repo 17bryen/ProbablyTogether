@@ -711,6 +711,40 @@ public static class Security
 		}
 	}
 
+	internal static int BodiesHidden;
+
+	internal static string LastBodyHidden = "";
+
+	private static void HideBody(StoreUIManager ui, string why)
+	{
+		if ((Object)(object)ui == (Object)null || (Object)(object)ui.body == (Object)null || !ui.body.activeSelf)
+		{
+			return;
+		}
+		ui.body.SetActive(false);
+		BodiesHidden++;
+		LastBodyHidden = why;
+		Log.Info("security: the shot customer's body is taken away here (" + why + ")");
+	}
+
+	/// After a client's morning reload: a body with no shot or shootout was left by a fall that outlasted its officer.
+	internal static void AfterLoad()
+	{
+		try
+		{
+			StoreUIManager instance = StoreUIManager.Instance;
+			if (!Game.ShopLoaded || (Object)(object)instance == (Object)null || instance.isShot || (Game.Store != null && Game.Store.isHandlingShootout))
+			{
+				return;
+			}
+			HideBody(instance, "nobody was shot when the day caught up");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("security: checking for a leftover body threw: " + ex.Message);
+		}
+	}
+
 	private static void ClientPoster(MsgSecPoster m)
 	{
 		StorePoster instance = StorePoster.Instance;
@@ -824,14 +858,20 @@ public static class Security
 				}
 			}
 			ClientOfficersHere = false;
+			if (!instance.isShot)
+			{
+				HideBody(instance, "the officers left");
+			}
 			break;
 		}
 		case "arrestDone":
 			using (Replay.Client(m.seed))
 			{
 				instance.OnArrestDialoguePlayed();
-				break;
 			}
+			// The officer takes the body (AugHelper.OnShootoutLeave only runs in the server's dialogue).
+			HideBody(instance, "the officer is done");
+			break;
 		case "shootoutStart":
 			ClientOfficersHere = false;
 			using (Replay.Client(m.seed))

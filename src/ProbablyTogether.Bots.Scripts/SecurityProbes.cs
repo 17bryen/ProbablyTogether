@@ -49,6 +49,8 @@ public sealed class SecurityProbes : BotProbeSet
 		BotProbes.Add("sec.wanted8", () => PS((PlayerStore p) => (p.wantedStatus == null || !p.wantedStatus.TryGetValue("wanted8", out var value)) ? "0" : BotProbeSet.Str(value)));
 		BotProbes.Add("sec.arresting", () => PS((PlayerStore p) => (!p.isClientBeingArrested) ? "0" : "1"));
 		BotProbes.Add("sec.shootout", () => PS((PlayerStore p) => (!p.isHandlingShootout) ? "0" : "1"));
+		// The shot customer's body on the floor (gone once the officer is done).
+		BotProbes.Add("sec.body", () => (!((Object)(object)StoreUIManager.Instance == (Object)null) && !((Object)(object)StoreUIManager.Instance.body == (Object)null)) ? ((!StoreUIManager.Instance.body.activeSelf) ? "0" : "1") : "");
 		BotProbes.Add("sec.shot", () => (!((Object)(object)StoreUIManager.Instance == (Object)null)) ? ((!StoreUIManager.Instance.isShot) ? "0" : "1") : "");
 		BotProbes.Add("sec.poster", () => (!((Object)(object)StorePoster.Instance == (Object)null)) ? ((!StorePoster.Instance.isPulled) ? "0" : "1") : "");
 		BotProbes.Add("sec.officers", () => BotProbeSet.Str((Security.OfficerActive(1) ? 1 : 0) + (Security.OfficerActive(2) ? 1 : 0)));

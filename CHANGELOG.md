@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.9 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- A shot aug's body no longer stays on the floor all day on the other players' copies after a reload.
+- A reload no longer plays the whole day's sound effects at once.
+
 ## 0.9.8 - 2026-11-20
 
 Same protocol (17). Every player needs it.

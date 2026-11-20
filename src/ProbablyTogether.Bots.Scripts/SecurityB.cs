@@ -120,21 +120,28 @@ public sealed class SecurityB : SecurityClientScript
 		});
 		Compare("aug", delegate
 		{
-			AfterIdle("aug", "sec.aug", "cash", "sec.slips", "sec.rep", "sec.crimes", "sec.fp", "sec.part", "sec.unlocked");
+			AfterIdle("aug", "sec.aug", "cash", "sec.slips", "sec.rep", "sec.crimes", "sec.fp", "sec.part", "sec.unlocked", "sec.body");
+			Check("aug-body-taken", () => SecurityClientScript.Mine("sec.body") == "0", () => "body " + SecurityClientScript.Mine("sec.body"));
 		});
 		Compare("manslaughter", delegate
 		{
-			AfterIdle("manslaughter", "sec.aug", "cash", "sec.slips", "sec.rep", "sec.crimes", "sec.fp", "sec.part");
+			AfterIdle("manslaughter", "sec.aug", "cash", "sec.slips", "sec.rep", "sec.crimes", "sec.fp", "sec.part", "sec.body");
 			Do("resync", delegate
 			{
 				Vars["loads"] = SecurityClientScript.Mine("sec.loads");
+				Vars["quiet"] = ReplayQuietEffectsPatch.Skipped.ToString();
+				Vars["instant"] = ShotReplayInstantPatch.Instant.ToString();
 				Snapshot.RequestResync();
 				return "asked (loads so far " + Vars["loads"] + ")";
 			});
 			WaitFor("reloaded", 150f, () => SecurityClientScript.N("sec.loads") > SecurityClientScript.N(Vars["loads"]) && Net.IsLive && BotProbes.InShop, () => "loads " + SecurityClientScript.Mine("sec.loads") + ", state " + Net.ClientState);
 			Delay("replay-settle", 8f);
-			SameAll("replayed", "sec.wrongful", "sec.wanted8", "sec.contraband", "sec.hidden", "sec.inspLoss", "sec.poster", "sec.unlocked", "sec.counter", "sec.arresting", "sec.shot", "sec.shootout", "sec.fp", "sec.part", "cash", "sec.rep", "sec.slips", "sec.aug", "sec.crimes", "sec.bribe", "sec.eleanor", "sec.crate", "sec.stolen");
+			SameAll("replayed", "sec.wrongful", "sec.wanted8", "sec.contraband", "sec.hidden", "sec.inspLoss", "sec.poster", "sec.unlocked", "sec.counter", "sec.arresting", "sec.shot", "sec.shootout", "sec.body", "sec.fp", "sec.part", "cash", "sec.rep", "sec.slips", "sec.aug", "sec.crimes", "sec.bribe", "sec.eleanor", "sec.crate", "sec.stolen");
 			SameSoft("replayed", "sec.items");
+			// Replayed shots end at once, the bodies go with their officers, and the replay is silent.
+			Check("replayed-shots-ended-at-once", () => ShotReplayInstantPatch.Instant > int.Parse(Vars["instant"]), () => "instant shots " + ShotReplayInstantPatch.Instant + " (before " + Vars["instant"] + ")");
+			Check("no-body-after-the-replay", () => SecurityClientScript.Mine("sec.body") == "0", () => "body " + SecurityClientScript.Mine("sec.body") + ", last hidden: " + Security.LastBodyHidden);
+			Check("the-replay-played-no-sound-effects", () => ReplayQuietEffectsPatch.Skipped > int.Parse(Vars["quiet"]), () => "effects skipped " + ReplayQuietEffectsPatch.Skipped + " (before " + Vars["quiet"] + ")");
 		}, 900f);
 		Compare("end", delegate
 		{

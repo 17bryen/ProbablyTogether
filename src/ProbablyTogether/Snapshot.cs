@@ -839,6 +839,7 @@ public static class Snapshot
 		{
 			return;
 		}
+		Security.AfterLoad();
 		Loads++;
 		LastReplay = replayStats;
 		MsgDigest msgDigest = Digest.Compute();
