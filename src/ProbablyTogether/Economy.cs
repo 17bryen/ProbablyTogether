@@ -223,6 +223,7 @@ public static class Economy
 		Seed seed;
 		int favor;
 		int cash;
+		HashSet<GameItem> back = Systems.Specs.BackStorageNow();
 		using (Replay.Server(out seed))
 		{
 			Pay(store, cost, out favor, out cash);
@@ -233,11 +234,14 @@ public static class Economy
 				up.Unlock();
 			});
 		}
+		// The server's own purchase (by 0) on a host is the host player's; it goes into their bay.
+		int buyer = ((by <= 0 && Net.HasLocalPlayer) ? Net.LocalPlayer : by);
+		Systems.Specs.WildSetToBay(buyer, id, back);
 		Applied++;
 		MsgEconBought msg = new MsgEconBought
 		{
 			id = id,
-			by = by,
+			by = buyer,
 			seed = seed,
 			cost = cost,
 			favor = favor,
@@ -246,7 +250,7 @@ public static class Economy
 			p = Parts()
 		};
 		Net.ToAll("econ.network.bought", msg);
-		Systems.Specs.WildBought(by, id);
+		Systems.Specs.WildBought(buyer, id);
 		HostRefresh("network", by);
 		Log.Info("economy: " + Net.PlayerName(by) + " bought " + id + " for " + cost + " (favor " + favor + ", cash " + cash + "); state " + up.state + ", cash now " + store.playerCash + ", favor " + store.wildFavor);
 		return null;
@@ -317,6 +321,7 @@ public static class Economy
 			NoteMismatch("network.bought: this copy has no upgrade " + m.id);
 			return;
 		}
+		HashSet<GameItem> back = Systems.Specs.BackStorageNow();
 		using (Replay.Client(m.seed))
 		{
 			store.wildFavor -= m.favor;
@@ -327,6 +332,7 @@ public static class Economy
 				up.Unlock();
 			});
 		}
+		Systems.Specs.WildSetToBay(m.by, m.id, back);
 		Applied++;
 		if (m.by == Net.LocalPlayer && !DayLog.Replaying)
 		{

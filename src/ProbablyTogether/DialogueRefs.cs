@@ -288,8 +288,13 @@ internal static class DialogueRefs
 		};
 		int num = 0;
 		Dialogue val = d;
+		bool plain = true;
 		while (val != null && num < 16)
 		{
+			if (val.startAction != null || val.endAction != null || (val.choices != null && val.choices.Count > 0) || val.isMainDialog)
+			{
+				plain = false;
+			}
 			MsgDlgLine msgDlgLine = new MsgDlgLine
 			{
 				title = (val.title ?? ""),
@@ -308,6 +313,7 @@ internal static class DialogueRefs
 			val = val.nextDialogue;
 			num++;
 		}
+		msgDlgInline.plain = plain && val == null;
 		return msgDlgInline;
 	}
 

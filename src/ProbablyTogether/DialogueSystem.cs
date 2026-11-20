@@ -256,12 +256,15 @@ internal static class DialogueSystem
 		}
 	}
 
+	internal static int PlainShown;
+
 	internal static void DescribeStart(DialogueChannel ch, MsgDlgStep m, Dialogue d)
 	{
 		m.rf = DialogueRefs.NamedOf(d) ?? DialogueRefs.Of(ch, d);
 		if (m.rf == null)
 		{
 			m.inline = DialogueRefs.Describe(d);
+			m.inline.own = AimReaction.IsServerOnly(d);
 		}
 	}
 
@@ -868,8 +871,9 @@ internal static class DialogueSystem
 			if (obj is MsgDlgStep { op: "start", rf: null, inline: not null } msgDlgStep)
 			{
 				DialogueChannel dialogueChannel = Chan(msgDlgStep.ch);
-				Dialogue val = ((dialogueChannel != null) ? DialogueRefs.TakeOffer(dialogueChannel, msgDlgStep.inline) : null);
-				if (val == null && !DayLog.Replaying)
+				bool flag = msgDlgStep.inline.own && msgDlgStep.inline.plain;
+				Dialogue val = ((dialogueChannel != null && !flag) ? DialogueRefs.TakeOffer(dialogueChannel, msgDlgStep.inline) : null);
+				if (val == null && !DayLog.Replaying && !flag)
 				{
 					if (headWaitSince < 0f)
 					{
@@ -935,6 +939,13 @@ internal static class DialogueSystem
 					if (val == null && m.rf != null)
 					{
 						val = DialogueRefs.Resolve(dialogueChannel, m.rf);
+					}
+					if (val == null && m.rf == null && m.inline != null && m.inline.plain)
+					{
+						// Only text, made on the server alone: its text is all there is, so this copy shows it and stays in step.
+						PlainShown++;
+						Log.Info("dialogue: " + dialogueChannel.Name + " start #" + m.seq + " (inline " + m.inline.fp + ") is only text and was made on the server: showing its text");
+						val = DialogueRefs.TextOnly(m.inline);
 					}
 					if (val == null)
 					{

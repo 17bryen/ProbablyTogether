@@ -581,12 +581,62 @@ public static class Security
 		if (m.on)
 		{
 			serverAiming = from;
+			// The host's game makes the reaction itself; for a client's aim the server makes it for everyone, the aimer included.
+			if (!Net.HasLocalPlayer || from != Net.LocalPlayer)
+			{
+				reactFor = from;
+				reactVisit = VisitKey();
+				reactDueAt = Time.realtimeSinceStartup + 0.6f;
+			}
 		}
 		else if (serverAiming == from)
 		{
 			serverAiming = -1;
 		}
 		SendAimToOthers(from, m.on);
+	}
+
+	private static int reactFor = -1;
+
+	private static string reactVisit = "";
+
+	private static float reactDueAt = -1f;
+
+	internal static int ReactionsMade;
+
+	private static void ServerReact()
+	{
+		int num = reactFor;
+		string text = reactVisit;
+		reactDueAt = -1f;
+		reactFor = -1;
+		StoreUIManager instance = StoreUIManager.Instance;
+		PlayerStore store = Game.Store;
+		if (serverAiming != num || num < 0 || VisitKey() != text || store?.currentClientInstance == null || (Object)(object)instance == (Object)null || instance.isShot || (Object)(object)DialogUIManager.Instance == (Object)null)
+		{
+			return;
+		}
+		try
+		{
+			// Mirrors the game's EnterShootingMode without the camera. Outside Net.Apply: these are server steps sent to every copy.
+			StoreClient clientBlueprint = store.currentClientInstance.GetClientBlueprint();
+			if (clientBlueprint != null && clientBlueprint.holsterResumesDialogue)
+			{
+				DialogUIManager.Instance.PauseConversation();
+			}
+			else
+			{
+				DialogUIManager.Instance.InterruptDialog();
+				DialogUIManager.Instance.RemoveCustomerDialogue();
+			}
+			DialogUIManager.Instance.StartDialogue(AugHelper.GetClientReactionUnholster());
+			ReactionsMade++;
+			Log.Info("server: " + Net.PlayerName(num) + " aims the shotgun: the customer's reaction is the counter's");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("server: the customer's reaction to " + Net.PlayerName(num) + "'s aim threw: " + ex.Message);
+		}
 	}
 
 	private static void SendAimToOthers(int player, bool on)
@@ -1019,6 +1069,10 @@ public static class Security
 					}
 				}
 			}
+		}
+		if (reactDueAt > 0f && realtimeSinceStartup > reactDueAt)
+		{
+			ServerReact();
 		}
 		if (shootoutDueAt > 0f && realtimeSinceStartup > shootoutDueAt)
 		{

@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.10 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- Every player now sees the customer react to an aimed shotgun, without a resync.
+- Buying a trade from Joe Wild no longer gives two starter sets. The buyer gets the game's set in their storage bay; a trade picked at the start still brings its full kit.
+
 ## 0.9.9 - 2026-11-20
 
 Same protocol (17). Every player needs it.

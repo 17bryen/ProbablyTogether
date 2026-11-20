@@ -230,6 +230,99 @@ public static class Specs
 		return null;
 	}
 
+	/// The shop's storages in the order the game fills them, back storage first.
+	private static List<GameGridInventory> ShopStorages()
+	{
+		List<GameGridInventory> list = new List<GameGridInventory>();
+		EmporiumEntry instance = EmporiumEntry.Instance;
+		if ((Object)(object)instance == (Object)null)
+		{
+			return list;
+		}
+		foreach (GameGridInventory item in new GameGridInventory[4] { instance.backInvinvElement, instance.invElement, instance.showcaseElement, instance.hiddenElement })
+		{
+			if (item != null && !list.Contains(item))
+			{
+				list.Add(item);
+			}
+		}
+		return list;
+	}
+
+	internal static HashSet<GameItem> BackStorageNow()
+	{
+		HashSet<GameItem> hashSet = new HashSet<GameItem>();
+		foreach (GameGridInventory item in ShopStorages())
+		{
+			hashSet.UnionWith(((GameInventory)item).childItems);
+		}
+		return hashSet;
+	}
+
+	internal static string LastWildIds = "";
+
+	internal static int WildSets;
+
+	/// Every copy, after the game's purchase code: moves what a trade entry gave from the shop's storage into the buyer's bay.
+	internal static void WildSetToBay(int player, string upgradeId, HashSet<GameItem> before)
+	{
+		LastWildIds = "";
+		string text = WildTrade(upgradeId);
+		if (text == null || !Bays.Enabled || before == null || player <= 0)
+		{
+			return;
+		}
+		int num = Members.SeatOf(player);
+		GameItem val = ((num > 0) ? Bays.BayOf(num) : null);
+		GraphNodeStorage val3 = val?.contentWindow?.child;
+		List<GameItem> list = new List<GameItem>();
+		foreach (GameGridInventory item0 in ShopStorages())
+		{
+			list.AddRange(((GameInventory)item0).childItems.Where((GameItem i) => i != null && !before.Contains(i) && (object)i != val));
+		}
+		List<string> list2 = new List<string>();
+		int num2 = 0;
+		using (Net.Apply())
+		{
+			foreach (GameItem item in list)
+			{
+				list2.Add(Ids.Of(item).ToString(CultureInfo.InvariantCulture));
+				if (val3 == null)
+				{
+					continue;
+				}
+				GameInventory parentInventory = item.parentInventory;
+				parentInventory?.Expel(item);
+				if (GraphUtils.TryAccept(val3, item) != -1)
+				{
+					num2++;
+				}
+				else if (parentInventory == null || GraphUtils.TryAccept((GraphNodeStorage)(object)parentInventory, item) == -1)
+				{
+					Log.Warn("specs: " + item.identifier + " of Joe Wild's " + upgradeId + " fit neither the bay nor where the game put it");
+				}
+			}
+		}
+		foreach (GameItem item2 in list)
+		{
+			foreach (GameItem item3 in GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)item2, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null))
+			{
+				string text2 = Ids.Of(item3).ToString(CultureInfo.InvariantCulture);
+				if (item3 != null && Ids.Of(item3) > 0 && !list2.Contains(text2))
+				{
+					list2.Add(text2);
+				}
+			}
+		}
+		LastWildIds = string.Join(",", list2);
+		WildSets++;
+		Log.Info("specs: Joe Wild's " + upgradeId + " for " + Members.NameOf(num) + ": " + list.Count + " thing(s), " + num2 + " into their bay" + ((val3 == null) ? " (no bay: they stay in the shop's storage)" : ""));
+		if (TakenBy(text) == 0 && num > 0 && !DayLog.Replaying)
+		{
+			Notices.Show(Lang.Trf("{0} is now the shop's {1}.", Kit.Name(Members.NameOf(num)), Label(text)), "spec");
+		}
+	}
+
 	/// Server: the buyer takes the trade if nobody holds it.
 	internal static void WildBought(int player, string upgradeId)
 	{
@@ -251,33 +344,9 @@ public static class Specs
 		member.x.TryGetValue(MoreFact, out var value);
 		member.x.TryGetValue("mach", out var value2);
 		List<string> list = new List<string>((value2 ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries));
-		string text2 = "no storage bay: no kit";
-		string kitFact = null;
-		GameItem val = Bays.BayOf(num);
-		if (val != null)
-		{
-			MsgSpecKit msgSpecKit = new MsgSpecKit
-			{
-				seat = num,
-				id = text,
-				bay = Ids.Of(val)
-			};
-			string machines;
-			using (Replay.Server(out msgSpecKit.seed))
-			{
-				text2 = RunKit(num, text, val, out machines);
-			}
-			Kits++;
-			kitFact = KitFactWith(num, text, LastKitIds);
-			Net.ToAll("spec.kit", msgSpecKit);
-			foreach (string item3 in (machines ?? "").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-			{
-				if (!list.Contains(item3))
-				{
-					list.Add(item3);
-				}
-			}
-		}
+		// The entry's items are already in the buyer's bay (WildSetToBay); record them as this trade's kit.
+		string text2 = "Joe Wild's own set: " + ((LastWildIds.Length > 0) ? (LastWildIds.Split(',').Length + " item id(s)") : "nothing");
+		string kitFact = (LastWildIds.Length > 0) ? KitFactWith(num, text, LastWildIds) : null;
 		if (tradeMachines.TryGetValue(text, out var value3))
 		{
 			foreach (string item in value3)

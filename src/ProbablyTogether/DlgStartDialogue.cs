@@ -29,6 +29,12 @@ internal static class DlgStartDialogue
 		{
 			return true;
 		}
+		if (AimReaction.IsLocalOnly(dialogue))
+		{
+			AimReaction.LocalDropped++;
+			__result = false;
+			return false;
+		}
 		DialogueRefs.AddOffer(DialogueSystem.Counter, dialogue);
 		__result = false;
 		return false;

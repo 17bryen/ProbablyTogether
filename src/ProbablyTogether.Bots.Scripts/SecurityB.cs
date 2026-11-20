@@ -76,6 +76,9 @@ public sealed class SecurityB : SecurityClientScript
 		Compare("holster-aiming", delegate
 		{
 			WaitFor("sees-a-aiming", 10f, () => Security.AimingPlayer > 0 && Security.AimingPlayer != Net.LocalPlayer, () => "aiming player " + Security.AimingPlayer);
+			// The customer's reaction to A's aim shows from the server's text, without a resync.
+			WaitFor("sees-the-customer-react", 10f, () => DialogueSystem.PlainShown >= 1, () => "plain lines shown " + DialogueSystem.PlainShown);
+			Check("no-resync-for-the-reaction", () => Snapshot.AskCount == 0, () => "resyncs asked " + Snapshot.AskCount);
 			Do("forged-holster", delegate
 			{
 				Vars["r1"] = BotScript.Str(Security.RefusalCount);

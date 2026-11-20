@@ -82,6 +82,8 @@ public sealed class SecurityA : SecurityClientScript
 		{
 			Vars["hrep"] = SecurityClientScript.Mine("sec.rep");
 			Vars["hcash"] = SecurityClientScript.Mine("cash");
+			Vars["plain"] = BotScript.Str(DialogueSystem.PlainShown);
+			Vars["asks"] = BotScript.Str(Snapshot.AskCount);
 			return "rep " + Vars["hrep"] + ", cash " + Vars["hcash"];
 		});
 		Do("holster-aim", delegate
@@ -91,6 +93,9 @@ public sealed class SecurityA : SecurityClientScript
 		});
 		WaitFor("holster-aiming", 10f, () => StoreUIManager.Instance.isShootingMode, () => "isShootingMode " + StoreUIManager.Instance.isShootingMode);
 		WaitServer("holster-server-sees-aim", 10f, (IReadOnlyDictionary<string, string> v) => v.TryGetValue("sec.lock", out var value) && value == Net.LocalPlayer.ToString(CultureInfo.InvariantCulture), "sec.lock");
+		// The customer's reaction to my aim comes from the server, seen without a resync.
+		WaitFor("holster-the-customer-reacts-to-me", 10f, () => DialogueSystem.PlainShown > SecurityClientScript.N(Vars["plain"]), () => "plain lines shown " + DialogueSystem.PlainShown + " (before " + Vars["plain"] + ")");
+		Check("holster-no-resync-for-the-reaction", () => Snapshot.AskCount == SecurityClientScript.N(Vars["asks"]), () => "resyncs asked " + Snapshot.AskCount + " (before " + Vars["asks"] + ")");
 		HandOver("holster-aiming");
 		Do("holster-put-away", delegate
 		{
