@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.14 - 2026-11-20
+
+Same protocol (17). Only players who want it need it.
+
+### Changed
+- A player's storage windows stay open, where they were and on the same tab, through the morning reload and after a resync. Kept per shop on the player's own PC, so a rejoin finds them too.
+
 ## 0.9.13 - 2026-11-20
 
 Same protocol (17). Every player needs it.

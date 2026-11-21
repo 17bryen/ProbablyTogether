@@ -653,6 +653,7 @@ public static class Snapshot
 
 	internal static void OnSnapshot(MsgSnapshot m)
 	{
+		ProbablyTogether.UI.WindowMemory.BeforeLoad();
 		Systems.Outings.OnSnapshot();
 		Systems.Standing.NewScene();
 		Systems.TradeVisits.NewScene();
@@ -849,6 +850,7 @@ public static class Snapshot
 			return;
 		}
 		Security.AfterLoad();
+		ProbablyTogether.UI.WindowMemory.AfterLoad();
 		Loads++;
 		loadedMs = Clock.Ms;
 		LastReplay = replayStats;

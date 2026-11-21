@@ -145,6 +145,16 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		}, "cust.text");
 		Check("same-customers-as-the-host", () => Customers.DigestText() == theirs, () => (Customers.DigestText() == theirs) ? "same" : ("here " + Customers.DigestText() + " / host " + theirs));
 		Check("no-reload-at-the-openings", () => DayNight.Mismatches == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked " + Digest.ReloadsAsked);
+		// A moved window reopens in the same place after the reload.
+		Do("open-and-move-my-bay", delegate
+		{
+			GameItem bay = Bays.BayOf(Members.LocalSeat);
+			ItemMouseDoubleClickHandler.current.OpenContentAction(bay, UnityEngine.Vector2.zero);
+			bay.contentWindow.rectTransform.anchoredPosition = new UnityEngine.Vector2(137f, -61f);
+			bay.contentWindow.FixBounds();
+			bayPos = bay.contentWindow.rectTransform.anchoredPosition;
+			return "bay #" + bay.GetUniqueID() + " open: " + bay.contentWindow.IsVisible() + " at " + bayPos;
+		});
 		Do("ask-a-resync", delegate
 		{
 			loadsBefore = Snapshot.Loads;
@@ -155,10 +165,21 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		WaitFor("the-morning-reloaded", 90f, () => Snapshot.Loads > loadsBefore && Client.State == ClientState.Ready, () => "loads " + Snapshot.Loads + ", state " + Client.State);
 		Delay("the-replay-lands", 3f);
 		Check("the-replay-agrees-with-the-server", () => Snapshot.LastReplay != null && Snapshot.LastReplay.ChecksBad == 0, () => (Snapshot.LastReplay == null) ? "no replay" : Snapshot.LastReplay.ToString());
+		Check("my-bay-is-open-again-where-i-left-it", delegate
+		{
+			GameItem bay = Bays.BayOf(Members.LocalSeat);
+			return bay?.contentWindow != null && bay.contentWindow.IsVisible() && (bay.contentWindow.rectTransform.anchoredPosition - bayPos).magnitude < 1f;
+		}, delegate
+		{
+			GameItem bay = Bays.BayOf(Members.LocalSeat);
+			return "open " + (bay?.contentWindow?.IsVisible() ?? false) + " at " + bay?.contentWindow?.rectTransform.anchoredPosition + " (was " + bayPos + "); reopened " + ProbablyTogether.UI.WindowMemory.Reopened + ", not: " + ProbablyTogether.UI.WindowMemory.LastSkipped;
+		});
 		Check("the-supplier-still-asks-for-me", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Members.LocalSeat && FirstLine("retired_chemist").Contains(Members.NameOf(Members.LocalSeat)), () => "in the queue " + InQueue("retired_chemist") + ", for seat " + TradeVisits.SeatFor("retired_chemist") + "; his first line here: '" + FirstLine("retired_chemist") + "'");
 		Delay("past-the-resync-throttle", 35f);
 		Check("no-second-resync", () => Snapshot.AskCount == asksBefore + 1 && Snapshot.Loads == loadsBefore + 1, () => "asks " + Snapshot.AskCount + " (before " + asksBefore + "), loads " + Snapshot.Loads + " (before " + loadsBefore + ")");
 	}
+
+	private UnityEngine.Vector2 bayPos;
 
 	private int loadsBefore;
 
