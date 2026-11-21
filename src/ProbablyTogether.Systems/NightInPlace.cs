@@ -54,6 +54,9 @@ internal static class NightInPlace
 		try
 		{
 			string text = WhyNot(m);
+			// A morning sent again later the same day (a resync) always reloads.
+			nightDay = -1;
+			finalLines = null;
 			if (text != null)
 			{
 				LastWhyNot = text;
@@ -108,7 +111,7 @@ internal static class NightInPlace
 			int num2 = finalLine.IndexOf('|');
 			if (num2 > 0 && int.TryParse(finalLine.Substring(0, num2), NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) && result != 0)
 			{
-				if (!dictionary.TryGetValue(result, out var value) || value != finalLine)
+				if (!dictionary.TryGetValue(result, out var value) || (value != finalLine && !OnlyTemperatures(finalLine, value)))
 				{
 					num++;
 					text = text ?? ((value == null) ? ("not here: " + NightCheck.Head(finalLine)) : NightCheck.Explain(finalLine, value));
@@ -124,7 +127,26 @@ internal static class NightInPlace
 		return null;
 	}
 
-	/// The game's LoadGame after-load steps, minus anything that builds or decodes items.
+	/// True when the lines differ only in temperatures, which the server keeps pushing and may be newer here.
+	private static bool OnlyTemperatures(string server, string here)
+	{
+		string[] array = server.Split(new char[1] { '|' }, 5);
+		string[] array2 = here.Split(new char[1] { '|' }, 5);
+		if (array.Length < 5 || array2.Length < 5 || array[0] != array2[0] || array[1] != array2[1] || array[2] != array2[2] || array[3] != array2[3])
+		{
+			return false;
+		}
+		return WithoutTemperatures(array[4]) == WithoutTemperatures(array2[4]);
+	}
+
+	private static string WithoutTemperatures(string tags)
+	{
+		return string.Join(",", from t in tags.Split(',')
+			where t.Length > 0 && t.Substring(0, Math.Max(0, t.IndexOf('='))).IndexOf("TEMP", StringComparison.Ordinal) < 0
+			select t);
+	}
+
+		/// The game's LoadGame after-load steps, minus anything that builds or decodes items.
 	private static void AfterLoad(PlayerStore ps)
 	{
 		ps.contrabandMarkupCritial = 150;

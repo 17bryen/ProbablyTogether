@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.20 - 2026-11-21
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- A morning no longer reloads the shop because a container's temperature differs by a fraction of a degree.
+- A resync later in the day now always reloads, instead of being treated like the night's morning.
+
 ## 0.9.19 - 2026-11-21
 
 Same protocol (17). Every player needs it.
