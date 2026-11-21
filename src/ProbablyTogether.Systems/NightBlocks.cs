@@ -45,6 +45,14 @@ internal static class NightBlocks
 
 	internal static string LastSummary = "";
 
+	internal static int S1Bad;
+
+	internal static int S2Runs;
+
+	internal static int S2Bad;
+
+	internal static string S2Summary = "";
+
 	internal static bool On => Net.IsOnline && Net.IsServer && Application.version == ForGame;
 
 	[SystemInit]
@@ -92,6 +100,116 @@ internal static class NightBlocks
 		}
 	}
 
+	/// The night's second shared block: chemistry, fridges, hoppers, every item's end-of-night and late step.
+	private static void BlockS2(PlayerStore ps)
+	{
+		ChemicalHelper.RunNightlyChemicalSimulation();
+		MachineFridge.ClearColdMarkers();
+		HopperHelper.RunWindow(1);
+		foreach (GameItem item in Sorted(ps.FindAllItem()))
+		{
+			StolenHelper.UpdateStolenItem(item);
+			item.onCycleEndSlotItemFunc?.Invoke(item, item.parentInventory, item.GetIncompleteSlotInInventory());
+		}
+		HopperHelper.RunWindow(2);
+		foreach (GameItem item2 in Sorted(ps.FindAllItem()))
+		{
+			item2.onCycleEndLateSlotItemFunc?.Invoke(item2, item2.parentInventory, item2.GetIncompleteSlotInInventory());
+		}
+		HopperHelper.RunWindow(3);
+		CurrentConverterHelper.isNightCycle = false;
+		MachineFridge.HandleColdFeatureExpiry();
+	}
+
+	/// The item's parent item, or null if it is in one of the shop's storages.
+	private static GameItem ParentItem(GameItem it)
+	{
+		GameInventory parentInventory = it?.parentInventory;
+		if (parentInventory?.parents == null || parentInventory.parents.Count == 0)
+		{
+			return null;
+		}
+		return parentInventory.parents[0] as GameItem;
+	}
+
+	private static void SendDelta(Dictionary<int, string> before)
+	{
+		try
+		{
+			Dictionary<int, string> dictionary = NightCheck.Lines();
+			Dictionary<int, GameItem> dictionary2 = new Dictionary<int, GameItem>();
+			foreach (GameItem item in Items.All())
+			{
+				if (item != null && item.uniqueId != 0 && !dictionary2.ContainsKey(item.uniqueId))
+				{
+					dictionary2[item.uniqueId] = item;
+				}
+			}
+			HashSet<int> hashSet = new HashSet<int>();
+			foreach (KeyValuePair<int, string> item2 in dictionary)
+			{
+				if (!before.TryGetValue(item2.Key, out var value) || value != item2.Value)
+				{
+					hashSet.Add(item2.Key);
+				}
+			}
+			List<ItemsOp> list = new List<ItemsOp>();
+			int num = 0;
+			foreach (int item3 in hashSet.OrderBy((int x) => x))
+			{
+				if (!dictionary2.TryGetValue(item3, out var value2))
+				{
+					continue;
+				}
+				// Only the outermost changed item: its rebuilt copy holds what changed inside it.
+				bool flag = false;
+				for (GameItem gameItem = ParentItem(value2); gameItem != null; gameItem = ParentItem(gameItem))
+				{
+					if (hashSet.Contains(gameItem.uniqueId))
+					{
+						flag = true;
+						break;
+					}
+				}
+				if (!flag)
+				{
+					Subtree subtree = Items.Encode(value2);
+					if (subtree != null)
+					{
+						list.Add(new ItemsOp
+						{
+							t = "sub",
+							i = Ids.Of(value2),
+							to = Items.RefOf((GraphNodeStorage)(object)value2.parentInventory),
+							sub = subtree
+						});
+					}
+				}
+			}
+			foreach (int key in before.Keys.OrderBy((int x) => x))
+			{
+				if (key != 0 && !dictionary.ContainsKey(key))
+				{
+					num++;
+					list.Add(new ItemsOp
+					{
+						t = "destroy",
+						i = key
+					});
+				}
+			}
+			DeltaItems = list.Count;
+			ItemsMove.BroadcastOps("night.delta", list);
+			Log.Info("night: the host's own steps changed " + hashSet.Count + " item(s) and removed " + num + "; " + list.Count + " step(s) sent");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("night: sending the night's changes threw: " + ex.Message);
+		}
+	}
+
+	internal static int DeltaItems;
+
 	/// The shop's own values a block changes, as a fingerprint line.
 	private static string ShopLine(PlayerStore ps)
 	{
@@ -131,6 +249,7 @@ internal static class NightBlocks
 				}
 			}
 			Send("s1", seed, tape, ps);
+			Dictionary<int, string> afterS1 = NightCheck.Lines();
 			List<string> list = new List<string> { "INSURANCE_SERVICE", "BUY_REFERAL", "SELL_REFERAL", "WILD_FIXER", "CRIMINEL_NETWORK" };
 			foreach (StoreService item in ps.storeService)
 			{
@@ -176,22 +295,18 @@ internal static class NightBlocks
 			StorePhoneClient.OnEndDay();
 			EmporiumEntry.Instance.ClearFrontInv();
 			DebrisHelper.OnNight();
-			ChemicalHelper.RunNightlyChemicalSimulation();
-			MachineFridge.ClearColdMarkers();
-			HopperHelper.RunWindow(1);
-			ps.FindAllItem().ForEach(delegate(GameItem i)
+			// Send the host's decisions (services, burglary, Lou...) to every copy, then run block S2 under shared dice.
+			SendDelta(afterS1);
+			Seed seed2;
+			Tape tape2;
+			using (Replay.Server(out seed2, -1))
 			{
-				StolenHelper.UpdateStolenItem(i);
-				i.onCycleEndSlotItemFunc?.Invoke(i, i.parentInventory, i.GetIncompleteSlotInInventory());
-			});
-			HopperHelper.RunWindow(2);
-			ps.FindAllItem().ForEach(delegate(GameItem i)
-			{
-				i.onCycleEndLateSlotItemFunc?.Invoke(i, i.parentInventory, i.GetIncompleteSlotInInventory());
-			});
-			HopperHelper.RunWindow(3);
-			CurrentConverterHelper.isNightCycle = false;
-			MachineFridge.HandleColdFeatureExpiry();
+				using (Items.Record(out tape2))
+				{
+					BlockS2(ps);
+				}
+			}
+			Send("s2", seed2, tape2, ps);
 			ps.storeState = PlayerStore.StoreState.MORNING;
 			ps.lockShutterButtonFlag = 0;
 			if (EmporiumEntry.Instance.vendingFountainElement.childItem != null)
@@ -243,7 +358,7 @@ internal static class NightBlocks
 
 	private static void ClientBlock(MsgNightBlock m)
 	{
-		if (m == null || m.items == null || DayLog.Replaying || !Game.ShopLoaded || Net.IsServer || m.name != "s1")
+		if (m == null || m.items == null || DayLog.Replaying || !Game.ShopLoaded || Net.IsServer || (m.name != "s1" && m.name != "s2"))
 		{
 			return;
 		}
@@ -254,7 +369,14 @@ internal static class NightBlocks
 			{
 				using (Items.Play(m.tape ?? new Tape()))
 				{
-					BlockS1(store);
+					if (m.name == "s1")
+					{
+						BlockS1(store);
+					}
+					else
+					{
+						BlockS2(store);
+					}
 				}
 			}
 			Compare(m, Fingerprint(store));
@@ -313,6 +435,16 @@ internal static class NightBlocks
 			}
 		}
 		Runs++;
+		if (m.name == "s2")
+		{
+			S2Runs++;
+			S2Bad = Differ + Missing + Extra;
+			S2Summary = "block s2 of day " + m.day + ": " + Same + " same, " + Differ + " different, " + Missing + " only on the server, " + Extra + " only here";
+		}
+		else
+		{
+			S1Bad = Differ + Missing + Extra;
+		}
 		LastSummary = "block " + m.name + " of day " + m.day + ": " + Same + " same, " + Differ + " different, " + Missing + " only on the server, " + Extra + " only here";
 		Log.Info("night: " + LastSummary + ((list.Count > 0) ? (": " + string.Join(" | ", list)) : ""));
 	}

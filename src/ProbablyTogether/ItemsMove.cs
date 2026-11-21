@@ -585,6 +585,29 @@ public static class ItemsMove
 		return Execute(what, actor, 0, body, null, what);
 	}
 
+	/// Server: its own item steps (the night's changes) go to every copy as one action.
+	internal static void BroadcastOps(string kind, List<ItemsOp> ops)
+	{
+		if (!Items.Ready || ops == null || ops.Count == 0)
+		{
+			return;
+		}
+		ItemsOps itemsOps = new ItemsOps
+		{
+			actor = 0,
+			kind = kind,
+			ops = ops,
+			seed = new Seed(),
+			tape = new Tape
+			{
+				after = (Game.Store?.currentUniqueId ?? 0)
+			}
+		};
+		itemsOps.seq = ++seq;
+		Net.ToAll("items.ops", itemsOps);
+		Log.Info("items: #" + itemsOps.seq + " " + kind + ": " + Summary(ops));
+	}
+
 	internal static void BroadcastSubtree(GameItem item, string why)
 	{
 		if (Items.Ready && !Items.IsGone(item))

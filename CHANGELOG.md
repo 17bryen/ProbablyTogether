@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.18 - 2026-11-21
+
+Same protocol (17). Every player needs it.
+
+### Added
+- The host's night steps (services, burglary, janitorial, events, health, debris) are sent to every copy, and the second part of the night is run and compared on every copy.
+
 ## 0.9.17 - 2026-11-21
 
 Same protocol (17). Every player needs it.
