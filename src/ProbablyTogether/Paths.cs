@@ -66,6 +66,20 @@ public static class Paths
 		over = null;
 		overDone = true;
 		Log.Info("data folder: back to the account folder");
+		ForgetSaveList();
+	}
+
+	/// The load menu caches its save list; make it reread after every folder switch.
+	private static void ForgetSaveList()
+	{
+		try
+		{
+			SaveUIManager.InvalidateCache();
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("data folder: the game's list of saves was not reset: " + ex.Message);
+		}
 	}
 
 	/// Host mode from the menu: point the shop's saves at a folder before the shop loads.
@@ -78,6 +92,7 @@ public static class Paths
 			over = text;
 			overDone = true;
 			Log.Info("data folder: now " + text);
+			ForgetSaveList();
 			return true;
 		}
 		catch (Exception ex)

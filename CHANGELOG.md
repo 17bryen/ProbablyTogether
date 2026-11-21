@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.21 - 2026-11-21
+
+Same protocol (17). Only the host needs it.
+
+### Fixed
+- After hosting, the single-player load menu no longer shows only the hosted shops until the game restarts.
+
 ## 0.9.20 - 2026-11-21
 
 Same protocol (17). Every player needs it.

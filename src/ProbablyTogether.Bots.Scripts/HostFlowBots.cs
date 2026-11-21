@@ -47,5 +47,14 @@ public sealed class HostFlowAgain : HostFlowBotBase
 		WaitFor("the-same-shop", 60f, () => Specs.Of(1) == "GUNSMITH" && Perks.Picked(1) && Perks.Has(1, "saving") && Perks.Has(1, "illiterate"), () => State);
 		Check("its-name-is-still-on-its-save", () => (Paths.IndexLoad<SavePreviewData>("preview_" + DayNightBotBase.Ps.saveSlotId, null)?.customName ?? "") == Net.ServerName && Net.ServerName.Length > 0, () => State);
 		Check("continued-from-the-list", () => ProbablyTogether.UI.HostFlow.Reached == 1, () => State);
+		// After leaving the hosted shop, the game's load menu must reread its list of saves.
+		Do("leave-the-shop", delegate
+		{
+			HarmonyLib.AccessTools.Field(typeof(SaveUIManager), "s_cachedSlotIds").SetValue(null, new List<int> { 424242 });
+			ProbablyTogether.UI.UiLeavePatch.Leave();
+			return "the load menu's list marked; left the shop";
+		});
+		WaitFor("back-on-the-menu", 90f, () => Boot.Scene == "EmporiumMenu" && Net.Role == ProbablyTogether.Role.Off, () => "scene " + Boot.Scene + ", role " + Net.Role);
+		Check("the-load-menu-reads-its-list-again", () => HarmonyLib.AccessTools.Field(typeof(SaveUIManager), "s_cachedSlotIds").GetValue(null) == null, () => "the load menu's cached list is " + ((HarmonyLib.AccessTools.Field(typeof(SaveUIManager), "s_cachedSlotIds").GetValue(null) is List<int> list) ? string.Join(",", list) : "null"));
 	}
 }
