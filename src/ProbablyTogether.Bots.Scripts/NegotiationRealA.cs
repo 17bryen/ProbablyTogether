@@ -10,6 +10,8 @@ namespace ProbablyTogether.Bots.Scripts;
 
 public sealed class NegotiationRealA : NegotiationRealScript
 {
+	private static readonly System.Reflection.FieldInfo moveBought = HarmonyLib.AccessTools.Field(typeof(EmporiumOption), "moveBoughtItemsToInventory");
+
 	private int v;
 
 	private int sold;
@@ -461,8 +463,15 @@ public sealed class NegotiationRealA : NegotiationRealScript
 			}
 			cashBefore = PlayerStore.Instance.playerCash;
 			int wholesalePrice = PlayerStore.Instance.GetWholesalePrice();
+			// Set this PC's "move bought items to inventory" opposite to the server's; the purchase must follow the buyer's setting.
+			string flip = "";
+			if ((Object)(object)EmporiumOption.Instance != (Object)null && moveBought != null)
+			{
+				moveBought.SetValue(EmporiumOption.Instance, !EmporiumOption.MoveBoughtItemsToInventory);
+				flip = "; my 'move bought items' now " + EmporiumOption.MoveBoughtItemsToInventory;
+			}
 			NegociationUIManager.Instance.OnWholesaleClick();
-			return "OnWholesaleClick() through the client prefix: price " + wholesalePrice + ", cash " + cashBefore;
+			return "OnWholesaleClick() through the client prefix: price " + wholesalePrice + ", cash " + cashBefore + flip;
 		});
 		WaitFor("wholesale-answered", 15f, () => EmporiumEntry.Instance.GetAllNonOwendItemCount() == 0 || PlayerStore.Instance.playerCash == cashBefore, NegotiationRealScript.Show).Soft();
 		Delay("wholesale-settle", 1.5f);

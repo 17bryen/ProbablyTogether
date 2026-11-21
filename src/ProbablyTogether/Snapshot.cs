@@ -57,6 +57,14 @@ public static class Snapshot
 
 	private static long askedMs;
 
+	/// Resyncs asked soon after a load, in a row: each doubles the wait before the next.
+	private static int quickAsks;
+
+	private static long loadedMs;
+
+	/// 30 s after the last resync, doubled for each quick re-ask after a load, up to 4 minutes.
+	internal static long AskWaitMs => Math.Min(240000L, 30000L << Math.Min(quickAsks, 3));
+
 	private static Dictionary<long, string> askTable;
 
 	private static string askReason;
@@ -502,12 +510,14 @@ public static class Snapshot
 	{
 		if (Net.IsClient && Client.State == ClientState.Ready)
 		{
-			if (askedMs > 0 && Clock.Ms - askedMs < 30000)
+			if (askedMs > 0 && Clock.Ms - askedMs < AskWaitMs)
 			{
 				Log.Info("client: resync already asked " + (Clock.Ms - askedMs) + " ms ago; not asking again (" + reason + ")");
 			}
 			else
 			{
+				// Asked again within two minutes of a load: the reload did not cure it; wait longer next time.
+				quickAsks = (loadedMs > 0 && Clock.Ms - loadedMs < 120000) ? (quickAsks + 1) : 0;
 				askedMs = Clock.Ms;
 				AskCount++;
 				Log.Info("client: asking for a resync (" + reason + ")");
@@ -651,7 +661,6 @@ public static class Snapshot
 			Client.Disconnect("the server sent an empty snapshot");
 			return;
 		}
-		askedMs = 0L;
 		// Not reset here: the wait counts from the last ask.
 		held.Clear();
 		byte[] bytes;
@@ -841,6 +850,7 @@ public static class Snapshot
 		}
 		Security.AfterLoad();
 		Loads++;
+		loadedMs = Clock.Ms;
 		LastReplay = replayStats;
 		MsgDigest msgDigest = Digest.Compute();
 		Log.Info("client: morning snapshot #" + msgSnapshot.seq + " loaded in " + num2 + " ms" + ((num > 0) ? (" (" + num + " ms of it waiting for the log)") : "") + ", then " + replayStats?.ToString() + ": " + msgDigest.Describe() + "; " + Ids.Count + " ids indexed");
@@ -877,6 +887,8 @@ public static class Snapshot
 		held.Clear();
 		replayCount = 0;
 		askedMs = 0L;
+		quickAsks = 0;
+		loadedMs = 0L;
 		askTable = null;
 		askReason = null;
 		DayLog.ClientAbort();

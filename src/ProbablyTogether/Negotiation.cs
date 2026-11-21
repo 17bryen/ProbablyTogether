@@ -337,11 +337,16 @@ public static class Negotiation
 			return false;
 		}
 		Seed seed;
+		// A counter deal files purchases by the asking player's setting, never into a trip's bag.
+		int filing = (!counter) ? (-1) : ((m.inv >= 0) ? m.inv : MyFiling());
 		try
 		{
 			using (Replay.Server(out seed, from))
 			{
-				act();
+				using (Filing(filing))
+				{
+					act();
+				}
 			}
 		}
 		catch (Exception ex2)
@@ -352,6 +357,7 @@ public static class Negotiation
 		}
 		m.player = from;
 		m.seed = seed;
+		m.inv = filing;
 		if (counter && m.v == null)
 		{
 			m.v = LocalVisit();
@@ -420,7 +426,10 @@ public static class Negotiation
 		{
 			using (Replay.Client(m.seed, m.player))
 			{
-				act();
+				using (Filing(m.inv))
+				{
+					act();
+				}
 			}
 		}
 		catch (Exception ex2)
@@ -429,6 +438,45 @@ public static class Negotiation
 			Mismatch(kind + " threw here");
 		}
 		ApplyAfter(kind, m.after);
+	}
+
+	/// This PC's "move bought items to inventory" setting as a filing (1 or 0).
+	internal static int MyFiling()
+	{
+		try
+		{
+			return EmporiumOption.MoveBoughtItemsToInventory ? 1 : 0;
+		}
+		catch
+		{
+			return -1;
+		}
+	}
+
+	/// Filing for the deal being applied; -1 lets the game decide.
+	internal static int FilingNow = -1;
+
+	internal static int Filed;
+
+	private sealed class FilingScope : IDisposable
+	{
+		private readonly int was;
+
+		internal FilingScope(int filing)
+		{
+			was = FilingNow;
+			FilingNow = filing;
+		}
+
+		public void Dispose()
+		{
+			FilingNow = was;
+		}
+	}
+
+	internal static IDisposable Filing(int filing)
+	{
+		return new FilingScope(filing);
 	}
 
 	internal static void Refuse(int player, string kind, string reason)
@@ -610,7 +658,8 @@ public static class Negotiation
 			v = LocalVisit(),
 			ids = array,
 			single = single,
-			ignoreBudget = ignoreBudget
+			ignoreBudget = ignoreBudget,
+			inv = MyFiling()
 		});
 		return true;
 	}
@@ -626,7 +675,8 @@ public static class Negotiation
 		{
 			v = LocalVisit(),
 			intent = intent,
-			itemId = itemId
+			itemId = itemId,
+			inv = MyFiling()
 		});
 		return true;
 	}
@@ -640,7 +690,8 @@ public static class Negotiation
 		Net.ToServer("nego.barterSet", new MsgNegoBarterSet
 		{
 			v = LocalVisit(),
-			offset = offset
+			offset = offset,
+			inv = MyFiling()
 		});
 		return true;
 	}

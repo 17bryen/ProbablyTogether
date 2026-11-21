@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.13 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- A player's copy no longer reloads every few seconds after a purchase when players have different "move bought items to inventory" settings. The buyer's setting now decides where the goods go on every copy.
+- Repeated resyncs now wait longer each time (30 s, then 1, 2, 4 minutes) instead of looping.
+
 ## 0.9.12 - 2026-11-20
 
 Same protocol (17). Every player needs it.
