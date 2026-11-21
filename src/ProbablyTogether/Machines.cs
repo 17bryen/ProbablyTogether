@@ -2179,6 +2179,15 @@ public static class Machines
 		return false;
 	}
 
+	/// Server, as the night starts: every changed machine and container to everybody now.
+	internal static void PushNow()
+	{
+		if (Net.IsServer && Game.ShopLoaded)
+		{
+			PushTicks();
+		}
+	}
+
 	private static void PushTicks(int onlyTo = -1)
 	{
 		List<MachineTickItem> list = new List<MachineTickItem>();

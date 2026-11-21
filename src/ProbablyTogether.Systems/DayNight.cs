@@ -1119,6 +1119,9 @@ public static class DayNight
 		NightRunning = true;
 		nightDay = Game.Day;
 		LastDayEndedWhy = why;
+		// Every player compares the shop as the night starts (NightCheck).
+		Machines.PushNow();
+		NightCheck.SendBaseline(nightDay);
 		Net.ToAll("dayNight.dayEnded", new MsgDnDayEnded
 		{
 			day = nightDay,

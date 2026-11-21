@@ -2,6 +2,16 @@
 
 All changes to Probably Together.
 
+## 0.9.16 - 2026-11-21
+
+Same protocol (17). Every player needs it.
+
+### Added
+- At nightfall every copy compares a fingerprint of every item with the server's and logs what differs.
+
+### Fixed
+- Machines and containers are sent to everybody right before the night, so none start it a tick behind.
+
 ## 0.9.15 - 2026-11-20
 
 Same protocol (17). Every player needs it.
