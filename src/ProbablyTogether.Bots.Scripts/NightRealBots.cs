@@ -95,6 +95,9 @@ public sealed class NightRealB : NightRealBase
 		Check("block-s2-ran", () => NightBlocks.S2Runs >= 1, () => NightBlocks.S2Summary);
 		Check("the-night-start-was-the-same", () => NightCheck.Differ + NightCheck.OnlyServer + NightCheck.OnlyHere == 0, () => NightCheck.LastSummary).Soft();
 		Check("block-s1-the-same", () => NightBlocks.S1Bad == 0, () => "s1 differences " + NightBlocks.S1Bad).Soft();
+		Check("the-morning-came-in-place", () => NightInPlace.Mornings >= 1, () => "in place " + NightInPlace.Mornings + "; why not: " + NightInPlace.LastWhyNot);
+		Delay("the-morning-settles", 15f);
+		Check("no-resync-after-the-morning", () => Snapshot.AskCount == 0 && Digest.ReloadsAsked == 0, () => "resyncs asked " + Snapshot.AskCount + ", reloads asked " + Digest.ReloadsAsked);
 		Check("block-s2-the-same", () => NightBlocks.S2Bad == 0, () => NightBlocks.S2Summary).Soft();
 	}
 }

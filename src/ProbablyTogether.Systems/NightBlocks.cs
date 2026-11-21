@@ -64,6 +64,7 @@ internal static class NightBlocks
 		}
 		inited = true;
 		Net.On<MsgNightBlock>("night.block", null, ClientBlock);
+		Snapshot.BeforeMorningCapture += BeforeMorning;
 	}
 
 	/// Calls the game's mod hooks as its own night does.
@@ -132,7 +133,8 @@ internal static class NightBlocks
 		return parentInventory.parents[0] as GameItem;
 	}
 
-	private static void SendDelta(Dictionary<int, string> before)
+	/// Server: sends every copy what the host's steps changed since before (rebuilt items, and removals).
+	private static void SendDelta(Dictionary<int, string> before, string kind = "night.delta")
 	{
 		try
 		{
@@ -199,7 +201,7 @@ internal static class NightBlocks
 				}
 			}
 			DeltaItems = list.Count;
-			ItemsMove.BroadcastOps("night.delta", list);
+			ItemsMove.BroadcastOps(kind, list);
 			Log.Info("night: the host's own steps changed " + hashSet.Count + " item(s) and removed " + num + "; " + list.Count + " step(s) sent");
 		}
 		catch (Exception ex)
@@ -209,6 +211,40 @@ internal static class NightBlocks
 	}
 
 	internal static int DeltaItems;
+
+	private static Dictionary<int, string> afterS2;
+
+	private static int afterS2Day = -1;
+
+	/// Server, before the morning snapshot: sends the new day's item changes and the last fingerprint,
+	/// so player copies take the morning in place.
+	private static void BeforeMorning(string reason)
+	{
+		Dictionary<int, string> dictionary = afterS2;
+		int num = afterS2Day;
+		afterS2 = null;
+		afterS2Day = -1;
+		if (reason != "night" || dictionary == null || !On)
+		{
+			return;
+		}
+		try
+		{
+			Ids.Normalize();
+			SendDelta(dictionary, "night.final");
+			Net.ToAll("night.block", new MsgNightBlock
+			{
+				day = num,
+				name = "final",
+				items = Fingerprint(Game.Store).Values.ToList()
+			});
+			Log.Info("night: the night's last changes and fingerprint sent before the morning");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("night: the night's last fingerprint threw: " + ex.Message);
+		}
+	}
 
 	/// The shop's own values a block changes, as a fingerprint line.
 	private static string ShopLine(PlayerStore ps)
@@ -307,6 +343,8 @@ internal static class NightBlocks
 				}
 			}
 			Send("s2", seed2, tape2, ps);
+			afterS2 = NightCheck.Lines();
+			afterS2Day = Game.Day;
 			ps.storeState = PlayerStore.StoreState.MORNING;
 			ps.lockShutterButtonFlag = 0;
 			if (EmporiumEntry.Instance.vendingFountainElement.childItem != null)
@@ -358,7 +396,16 @@ internal static class NightBlocks
 
 	private static void ClientBlock(MsgNightBlock m)
 	{
-		if (m == null || m.items == null || DayLog.Replaying || !Game.ShopLoaded || Net.IsServer || (m.name != "s1" && m.name != "s2"))
+		if (m == null || m.items == null || DayLog.Replaying || !Game.ShopLoaded || Net.IsServer)
+		{
+			return;
+		}
+		if (m.name == "final")
+		{
+			NightInPlace.Final(m.day, m.items);
+			return;
+		}
+		if (m.name != "s1" && m.name != "s2")
 		{
 			return;
 		}
@@ -444,6 +491,10 @@ internal static class NightBlocks
 		else
 		{
 			S1Bad = Differ + Missing + Extra;
+		}
+		if (Differ + Missing + Extra > 0)
+		{
+			NightInPlace.Bad("block " + m.name + " differed (" + (Differ + Missing + Extra) + " item(s))");
 		}
 		LastSummary = "block " + m.name + " of day " + m.day + ": " + Same + " same, " + Differ + " different, " + Missing + " only on the server, " + Extra + " only here";
 		Log.Info("night: " + LastSummary + ((list.Count > 0) ? (": " + string.Join(" | ", list)) : ""));

@@ -138,6 +138,7 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		Check("the-shop-was-the-same-at-night", () => NightCheck.Checks >= 1 && NightCheck.Differ + NightCheck.OnlyServer + NightCheck.OnlyHere == 0, () => NightCheck.LastSummary).Soft();
 		Check("the-first-night-block-ran-here", () => NightBlocks.Runs >= 1, () => NightBlocks.LastSummary);
 		Check("the-first-night-block-came-out-the-same", () => NightBlocks.Runs >= 1 && NightBlocks.S1Bad == 0, () => "s1 differences " + NightBlocks.S1Bad).Soft();
+		Check("the-morning-came-in-place", () => NightInPlace.Mornings >= 1, () => "in place " + NightInPlace.Mornings + "; last reason not: " + NightInPlace.LastWhyNot);
 		Check("the-second-night-block-came-out-the-same", () => NightBlocks.S2Runs >= 1 && NightBlocks.S2Bad == 0, () => NightBlocks.S2Summary).Soft();
 		WaitFor("opened-next-day", 120f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Delay("the-opening-lands", 2f);

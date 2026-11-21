@@ -211,6 +211,11 @@ internal static class NightCheck
 			}
 		}
 		Checks++;
+		NightInPlace.NightStarts(m.day);
+		if (Differ + OnlyServer + OnlyHere > 0)
+		{
+			NightInPlace.Bad("the night's start differed (" + (Differ + OnlyServer + OnlyHere) + " item(s))");
+		}
 		LastSummary = "day " + m.day + ": " + Same + " same, " + Differ + " different, " + OnlyServer + " only on the server, " + OnlyHere + " only here";
 		Log.Info("night: starting fingerprint " + LastSummary + ((list.Count > 0) ? (": " + string.Join(" | ", list)) : ""));
 		if (TagsDiffering.Count > 0)

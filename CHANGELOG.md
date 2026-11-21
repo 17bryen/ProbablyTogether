@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.19 - 2026-11-21
+
+Same protocol (17). Every player needs it.
+
+### Changed
+- When a player's copy came through the night exactly like the server's, the morning now loads in place without "catching up with the shop". Windows stay open, and the shop still reloads as before if anything differed.
+
 ## 0.9.18 - 2026-11-21
 
 Same protocol (17). Every player needs it.

@@ -771,6 +771,11 @@ public static class Snapshot
 				return;
 			}
 			sceneRequested = true;
+			// After a night handled in place (NightBlocks, NightInPlace): the morning in place, no reload.
+			if (loading.reason == "night" && Systems.NightInPlace.TryApply(loading, Paths.Under("probably_together/session.es3")))
+			{
+				return;
+			}
 			instance.saveSlot = 990077;
 			instance.saveFile = "probably_together/session.es3";
 			instance.isLoadFromMainMenu = false;
