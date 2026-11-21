@@ -384,6 +384,39 @@ public static class Machines
 		return index >= 0;
 	}
 
+	/// A button's identity is the method its click calls, so it matches whatever the language.
+	internal static string Identity(object button)
+	{
+		try
+		{
+			System.Reflection.MethodInfo methodInfo = CallbackOf(button)?.Method;
+			if (methodInfo != null)
+			{
+				return "cb:" + methodInfo.DeclaringType?.FullName + "." + methodInfo.Name;
+			}
+		}
+		catch
+		{
+		}
+		return "";
+	}
+
+	/// Matches by what the control does, or by caption for a copy that sends no identity.
+	private static bool SameControl(object w, string x)
+	{
+		if (string.IsNullOrEmpty(x))
+		{
+			return true;
+		}
+		if (x.StartsWith("cb:", StringComparison.Ordinal))
+		{
+			string text = Identity(w);
+			return text == "" || text == x;
+		}
+		string text2 = Caption(w);
+		return text2 == "" || text2 == x;
+	}
+
 	private static string Caption(object w)
 	{
 		MachineryButton val = (MachineryButton)((w is MachineryButton) ? w : null);
@@ -580,7 +613,7 @@ public static class Machines
 			m = num2,
 			w = index,
 			t = button.GetType().Name,
-			x = Caption(button)
+			x = Identity(button)
 		});
 		Deselect(button);
 		return false;
@@ -698,7 +731,7 @@ public static class Machines
 			m = num,
 			w = index,
 			t = "MachineryRadioButton",
-			x = Caption(rb),
+			x = "",
 			on = on
 		});
 		return false;
@@ -1053,8 +1086,7 @@ public static class Machines
 			{
 				return "widget";
 			}
-			string text2 = Caption(obj);
-			if (text2 != "" && !string.IsNullOrEmpty(r.x) && text2 != r.x)
+			if (!SameControl(obj, r.x))
 			{
 				return "widget";
 			}

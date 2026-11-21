@@ -157,6 +157,8 @@ public sealed class MachinesClient : BotScript
 				throw new InvalidOperationException("no button in the bottle printer window (" + Machines.Widgets(I("box")).Count + " widgets)");
 			}
 			before = Machines.SentCount;
+			// The button's caption here differs from the server's, as with a local translation.
+			HarmonyLib.AccessTools.Property(typeof(MachineryButton), "text").SetValue(val, "인쇄 (번역)");
 			MachinesLab.Press(val);
 			return "pressed '" + val.text + "' (widget " + Machines.Widgets(I("box")).IndexOf(val) + "); requests sent " + before + " -> " + Machines.SentCount + "; output here still " + MachinesLab.OutCount(k);
 		});

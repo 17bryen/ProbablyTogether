@@ -97,6 +97,7 @@ public sealed class TradeVisitsH : TradeVisitsBotBase
 		Check("the-chemists-supplier-comes-for-b-too", () => InQueue("retired_chemist") && TradeVisits.SeatFor("retired_chemist") == Specs.TakenBy("DRUG_DEALER") && FirstLine("retired_chemist").Contains(Members.NameOf(Specs.TakenBy("DRUG_DEALER"))) && !FirstLine("retired_chemist").Contains("again"), () => "in the queue " + InQueue("retired_chemist") + ", for seat " + TradeVisits.SeatFor("retired_chemist") + ", referral bought " + NetworkUpgrade.IsRetiredChemistUnlocked() + "; his first line: '" + FirstLine("retired_chemist") + "'");
 		Check("the-shop-is-what-it-was", () => DayNightBotBase.Ps.startType != NewGameData.StartType.DRUG_DEALER && StoreStation.Instance.dayCounter == day0 + 1, () => Where + "; day counter " + StoreStation.Instance.dayCounter);
 		Do("my-queue-next-day", () => Customers.DigestText());
+		WaitFor("i-hear-b-ring-the-bell", 60f, () => BellShare.Heard > 0, () => "rings heard " + BellShare.Heard);
 		// B asks for a resync and waits out the 30 s throttle.
 		Delay("b-compares-the-queue-and-reloads", 150f);
 	}
@@ -145,6 +146,29 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		}, "cust.text");
 		Check("same-customers-as-the-host", () => Customers.DigestText() == theirs, () => (Customers.DigestText() == theirs) ? "same" : ("here " + Customers.DigestText() + " / host " + theirs));
 		Check("no-reload-at-the-openings", () => DayNight.Mismatches == 0, () => "day/night mismatches " + DayNight.Mismatches + "; reloads asked " + Digest.ReloadsAsked);
+		// A machine button whose caption is translated on this PC only still works.
+		Do("press-my-blender-in-another-language", delegate
+		{
+			GameItem blender = Items.All().FirstOrDefault((GameItem i) => i != null && i.identifier == "blender" && Specs.OwnerOfType("blender") == Members.LocalSeat);
+			if (blender == null)
+			{
+				throw new InvalidOperationException("no blender of mine in the shop");
+			}
+			ItemMouseDoubleClickHandler.current.OpenContentAction(blender, UnityEngine.Vector2.zero);
+			MachineryButton btn = Machines.Widgets(blender).OfType<MachineryButton>().First();
+			HarmonyLib.AccessTools.Property(typeof(MachineryButton), "text").SetValue(btn, "블렌드 시작 (번역)");
+			pressApplied = Machines.AppliedCount;
+			pressRejected = Machines.RejectCount;
+			MachinesLab.Press(btn);
+			return "pressed '" + btn.text + "' on blender #" + Ids.Of(blender) + "; sent " + Machines.SentCount;
+		});
+		WaitFor("the-server-took-the-press", 20f, () => Machines.AppliedCount > pressApplied || Machines.RejectCount > pressRejected, () => "applied " + Machines.AppliedCount + ", refused " + Machines.RejectCount);
+		Check("not-refused-for-its-caption", () => Machines.RejectCount == pressRejected, () => "last refusal: " + Machines.LastReject);
+		Do("ring-the-bell", delegate
+		{
+			BellShare.Rang();
+			return "bell.ring sent";
+		});
 		// A moved window reopens in the same place after the reload.
 		Do("open-and-move-my-bay", delegate
 		{
@@ -180,6 +204,10 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 	}
 
 	private UnityEngine.Vector2 bayPos;
+
+	private int pressApplied;
+
+	private int pressRejected;
 
 	private int loadsBefore;
 

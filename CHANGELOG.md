@@ -2,6 +2,14 @@
 
 All changes to Probably Together.
 
+## 0.9.15 - 2026-11-20
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- Machine buttons no longer refuse every press ("That control is not there any more") when players' games are in different languages.
+- Everyone now hears and sees the counter's bell, not only the player who rang it.
+
 ## 0.9.14 - 2026-11-20
 
 Same protocol (17). Only players who want it need it.
