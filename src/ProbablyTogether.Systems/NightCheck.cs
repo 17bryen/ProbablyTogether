@@ -70,7 +70,7 @@ internal static class NightCheck
 		}
 	}
 
-	private static Dictionary<int, string> Lines()
+	internal static Dictionary<int, string> Lines()
 	{
 		Dictionary<int, string> dictionary = new Dictionary<int, string>();
 		foreach (GameItem item in Items.All())
@@ -109,6 +109,11 @@ internal static class NightCheck
 				}
 				flag = false;
 				stringBuilder.Append(item).Append('=').Append(TagHash(dictionary[item]));
+				// Temperatures keep their value, so a difference says by how much.
+				if (item.IndexOf("TEMP", StringComparison.Ordinal) >= 0)
+				{
+					stringBuilder.Append('~').Append(dictionary[item].valueDouble.ToString("0.###", CultureInfo.InvariantCulture));
+				}
 			}
 		}
 		return stringBuilder.ToString();
@@ -215,13 +220,14 @@ internal static class NightCheck
 		}
 	}
 
-	private static string Head(string line)
+	internal static string Head(string line)
 	{
 		string[] array = line.Split(new char[1] { '|' }, 5);
 		return "#" + array[0] + " " + ((array.Length > 1) ? array[1] : "?") + ((array.Length > 3) ? (" in " + array[3]) : "");
 	}
 
-	private static string Explain(string server, string here)
+	/// Names which parts of an item's line differ: count, place, tags.
+	internal static string Explain(string server, string here)
 	{
 		string[] array = server.Split(new char[1] { '|' }, 5);
 		string[] array2 = here.Split(new char[1] { '|' }, 5);
@@ -251,7 +257,12 @@ internal static class NightCheck
 			dictionary2.TryGetValue(item, out var value2);
 			if (value != value2)
 			{
-				list2.Add(item + ((value == null) ? " (only here)" : ((value2 == null) ? " (only on the server)" : "")));
+				string text = "";
+				if (value != null && value2 != null && value.Contains("~"))
+				{
+					text = " " + value.Substring(value.IndexOf('~') + 1) + "/" + value2.Substring(value2.IndexOf('~') + 1);
+				}
+				list2.Add(item + text + ((value == null) ? " (only here)" : ((value2 == null) ? " (only on the server)" : "")));
 				TagsDiffering.TryGetValue(item, out var value3);
 				TagsDiffering[item] = value3 + 1;
 			}

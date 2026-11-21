@@ -136,6 +136,8 @@ public sealed class TradeVisitsB : TradeVisitsBotBase
 		WaitFor("night", 200f, () => DayNightBotBase.Live && DayNightBotBase.Day == day0 + 1 && DayNightBotBase.State == "MORNING", () => "day " + DayNightBotBase.Day + ", " + DayNightBotBase.State);
 		Check("the-night-start-was-compared", () => NightCheck.Checks >= 1, () => NightCheck.LastSummary);
 		Check("the-shop-was-the-same-at-night", () => NightCheck.Checks >= 1 && NightCheck.Differ + NightCheck.OnlyServer + NightCheck.OnlyHere == 0, () => NightCheck.LastSummary).Soft();
+		Check("the-first-night-block-ran-here", () => NightBlocks.Runs >= 1, () => NightBlocks.LastSummary);
+		Check("the-first-night-block-came-out-the-same", () => NightBlocks.Runs >= 1 && NightBlocks.Differ + NightBlocks.Missing + NightBlocks.Extra == 0, () => NightBlocks.LastSummary).Soft();
 		WaitFor("opened-next-day", 120f, () => DayNightBotBase.State == "OPEN", () => "state " + DayNightBotBase.State);
 		Delay("the-opening-lands", 2f);
 		Check("the-cartels-man-is-in-my-queue-for-me", () => InQueue("cartelIntro") && TradeVisits.SeatFor("cartelIntro") == Members.LocalSeat && KnowsCartel, () => Where);

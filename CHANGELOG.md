@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.17 - 2026-11-21
+
+Same protocol (17). Every player needs it.
+
+### Added
+- The first shared part of the night (projector, reactor, power, early item steps) now runs on every copy under the server's dice and is compared. On game 0.46D.
+
 ## 0.9.16 - 2026-11-21
 
 Same protocol (17). Every player needs it.
