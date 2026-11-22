@@ -66,9 +66,9 @@ catches up by reloading the shop when they differ. [CHANGELOG.md](CHANGELOG.md) 
 
 ## License
 
-[MIT](LICENSE). Based on the upstream mod 0.2.8 by
-HumanGenome (MIT). The bundled Concentus voice codec is under the BSD 3-clause license (see
-[LICENSE-Concentus.txt](LICENSE-Concentus.txt)). Game names and data aren't covered by either;
+[MIT](LICENSE), including the MIT-licensed code by HumanGenome it started from (see
+[LICENSE-upstream-Accomplice-MIT.txt](LICENSE-upstream-Accomplice-MIT.txt)). The bundled Concentus voice codec is under the BSD 3-clause license (see
+[LICENSE-Concentus.txt](LICENSE-Concentus.txt)). Game names and data aren't covered by any of these;
 see the disclaimer below.
 
 ## Disclaimer
