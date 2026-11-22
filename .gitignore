@@ -3,8 +3,3 @@ src/obj/
 build.log
 *.user
 .vs/
-rig/
-
-builds/
-reference/game-*/
-reference/patch-*/*.dll
