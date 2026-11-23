@@ -233,19 +233,47 @@ public static class Bays
 		}
 	}
 
-	/// An owned bay takes anything the shop owns. The rule is not saved, so every copy sets it again after loading.
+	/// The bay's own grids: one, or one per tab once an expansion kit has been used on it.
+	public static List<GameInventory> Grids(GameItem bay)
+	{
+		List<GameInventory> list = new List<GameInventory>();
+		if (bay == null)
+		{
+			return list;
+		}
+		HashSet<GraphNodeStorage> seen = new HashSet<GraphNodeStorage>();
+		Queue<GraphNodeStorage> q = new Queue<GraphNodeStorage>(bay.children);
+		while (q.Count > 0)
+		{
+			GraphNodeStorage x = q.Dequeue();
+			if (x == null || x is GameItem || !seen.Add(x))
+			{
+				continue;
+			}
+			if (x is GameInventory inv)
+			{
+				list.Add(inv);
+			}
+			foreach (GraphNodeStorage child in x.children)
+			{
+				q.Enqueue(child);
+			}
+		}
+		return list;
+	}
+
+	/// An owned bay takes anything the shop owns, in every tab. The rule is not saved, so every copy sets it again after loading.
 	internal static void TakeAnything(GameItem bay)
 	{
-		PixelWindow obj = ((bay != null) ? bay.contentWindow : null);
-		GraphNodeStorage val = ((obj != null) ? obj.child : null);
-		GameInventory val2 = (GameInventory)(object)((val is GameInventory) ? val : null);
-		if (val2 == null || !opened.Add(val2))
-		{
-			return;
-		}
 		GameItem self = bay;
-		// Like the game's own containers: only what the shop owns.
-		val2.mayInventoryAddItemFunc = (GameItem added, GameInventory inv) => added != null && added != self && GeneralHelper.IsItemOwned(added) && !GraphUtils.FindParentEquals((GraphNodeStorage)(object)self, (GraphNodeStorage)(object)added);
+		foreach (GameInventory grid in Grids(bay))
+		{
+			if (opened.Add(grid))
+			{
+				// Like the game's own containers: only what the shop owns.
+				grid.mayInventoryAddItemFunc = (GameItem added, GameInventory inv) => added != null && added != self && GeneralHelper.IsItemOwned(added) && !GraphUtils.FindParentEquals((GraphNodeStorage)(object)self, (GraphNodeStorage)(object)added);
+			}
+		}
 	}
 
 	/// Sets the rule now on owned bays under root; the timed look-over does not run while a shop loads.

@@ -2,6 +2,13 @@
 
 All changes to Probably Together.
 
+## 0.9.22 - 2026-11-22
+
+Same protocol (17). Every player needs it.
+
+### Fixed
+- A player's own storage bay keeps taking machines, power blocks included, after a storage bay expansion kit is used on it.
+
 ## 0.9.21 - 2026-11-21
 
 Same protocol (17). Only the host needs it.

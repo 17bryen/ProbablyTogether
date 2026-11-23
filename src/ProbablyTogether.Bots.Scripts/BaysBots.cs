@@ -55,6 +55,50 @@ public abstract class BaysBotBase : DayNightBotBase
 		return (GameInventory)(object)((val is GameInventory) ? val : null);
 	}
 
+	/// Something the shop owns, loose in its storage and nobody's, newest first.
+	protected static GameItem InShop(string id)
+	{
+		return (from i in ((GameInventory)E.invElement).childItems
+			where i != null && i.identifier == id && Bays.OwnerOf(i) == 0
+			orderby Ids.Of(i) descending
+			select i).FirstOrDefault();
+	}
+
+	protected static GameItem PowerblockIn(GameItem bay)
+	{
+		return (bay == null) ? null : GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)bay, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null).FirstOrDefault((GameItem i) => i.identifier == "powerblock");
+	}
+
+	protected static string Tabs(GameItem bay)
+	{
+		List<GameInventory> grids = Bays.Grids(bay);
+		GameItem pb = PowerblockIn(bay);
+		return grids.Count + " grid(s), " + StorageExpansionHelper.GetExtraTabs(bay) + " extra tab(s), powerblock in grid " + ((pb == null) ? "-" : grids.IndexOf(pb.parentInventory).ToString());
+	}
+
+	/// One move of the power block to a free spot of grid g of my bay.
+	protected BotStep MovePowerblock(string name, int g)
+	{
+		return Ask(name, expectRefusal: false, delegate
+		{
+			GameItem pb = PowerblockIn(MyBay);
+			List<GameInventory> grids = Bays.Grids(MyBay);
+			if (pb == null || g >= grids.Count)
+			{
+				return "SKIP " + Tabs(MyBay);
+			}
+			int x;
+			int y;
+			return ItemsBotBase.Spot(grids[g], pb, 1, pb.modifiedShape.orientation, out x, out y) ? ("powerblock#" + Ids.Of(pb) + " to " + x + "," + y + " of grid " + g + " (" + Tabs(MyBay) + ")") : ("SKIP grid " + g + " of my bay takes the power block nowhere (" + Tabs(MyBay) + ")");
+		}, delegate
+		{
+			GameItem pb = PowerblockIn(MyBay);
+			GameInventory to = Bays.Grids(MyBay)[g];
+			ItemsBotBase.Spot(to, pb, 1, pb.modifiedShape.orientation, out var x, out var y);
+			return ItemsMove.Move(pb, (GraphNodeStorage)(object)to, x, y, pb.modifiedShape.flipped, pb.modifiedShape.orientation, -1, rep: false, "bot");
+		}, () => PowerblockIn(MyBay) != null && (object)PowerblockIn(MyBay).parentInventory == Bays.Grids(MyBay)[g]);
+	}
+
 	protected static int CountIn(GameItem bay)
 	{
 		return (bay == null) ? (-1) : GraphUtils.FindAllChildrenType<GameItem>((GraphNodeStorage)(object)bay, (Func<GameItem, bool>)null, (Func<GameItem, bool>)null).Count;
@@ -201,10 +245,41 @@ public class BaysA : BaysBotBase
 			}, () => GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(xId), (GraphNodeStorage)(object)MyBay) ? ItemsMove.QuickMove(Ids.Find(xId), (GraphNodeStorage)(object)E.invWindow, all: false, -1, "bot") : ItemsMove.Pin(Ids.Find(xId), pinned: false, "bot"), () => !GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(xId), (GraphNodeStorage)(object)MyBay));
 			Ask("into-my-bay", expectRefusal: false, () => "#" + xId + " back into my bay", () => ItemsMove.InsertInto(Ids.Find(xId), MyBay, -1, chain: true, "bot"), () => GraphUtils.FindParentEquals((GraphNodeStorage)(object)Ids.Find(xId), (GraphNodeStorage)(object)MyBay));
 			WaitFor("b-stocked-its-bay", 120f, () => CountIn(Theirs) >= 1, () => "their bay holds " + CountIn(Theirs));
+			WaitFor("b-is-live", 120f, () => CountIn(Theirs) >= 2, () => "their bay holds " + CountIn(Theirs));
+			Do("kit-and-powerblock", delegate
+			{
+				LabKit.Do("give", "storage_bay_expansion_kit", "1");
+				LabKit.Do("give", "powerblock", "1");
+				return "asked the lab for an expansion kit and a power block";
+			});
+			WaitFor("kit-and-powerblock-here", 30f, () => InShop("storage_bay_expansion_kit") != null && InShop("powerblock") != null, () => "kit " + (InShop("storage_bay_expansion_kit") != null) + ", powerblock " + (InShop("powerblock") != null));
+			bool kitSent = false;
+			Step("kit-on-my-bay", 30f, delegate(BotStep st)
+			{
+				if (!kitSent)
+				{
+					kitSent = true;
+					if (!ItemsUse.RequestTarget(InShop("storage_bay_expansion_kit"), MyBay))
+					{
+						st.Detail = "the kit request was not sent";
+						return StepStatus.Fail;
+					}
+				}
+				st.Detail = Tabs(MyBay);
+				return (Bays.Grids(MyBay).Count == 3 && StorageExpansionHelper.GetExtraTabs(MyBay) == 2 && InShop("storage_bay_expansion_kit") == null) ? StepStatus.Pass : StepStatus.Running;
+			});
+			Ask("powerblock-into-my-bay", expectRefusal: false, () => "powerblock#" + Ids.Of(InShop("powerblock")) + " into my expanded bay", () => ItemsMove.InsertInto(InShop("powerblock"), MyBay, -1, chain: true, "bot"), () => PowerblockIn(MyBay) != null);
+			MovePowerblock("powerblock-to-tab-2", 1);
+			MovePowerblock("powerblock-to-tab-3", 2);
+			Agree("same-after-the-kit", 30f, "core.digest", "items.digest", "bay.owners");
 		}
 		else
 		{
 			Check("my-things-kept", () => CountIn(MyBay) >= 1 && CountIn(Theirs) == 3, () => "my bay holds " + CountIn(MyBay) + ", theirs " + CountIn(Theirs) + " after the restart");
+			Check("my-bay-kept-its-tabs", () => Bays.Grids(MyBay).Count == 3 && PowerblockIn(MyBay) != null && (object)PowerblockIn(MyBay).parentInventory == Bays.Grids(MyBay)[2], () => Tabs(MyBay));
+			MovePowerblock("powerblock-to-tab-2-after-restart", 1);
+			MovePowerblock("powerblock-back-to-tab-3-after-restart", 2);
+			Agree("same-after-moving-in-tabs", 30f, "core.digest", "items.digest", "bay.owners");
 		}
 		bool askedLab = false;
 		Step("something-loose-to-try-with", 25f, delegate(BotStep st)
