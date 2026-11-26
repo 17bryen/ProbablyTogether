@@ -48,6 +48,10 @@ public static class RandomStarts
 
 	private static List<string> founderPerks;
 
+	private static bool founderTell;
+
+	private static readonly HashSet<int> restored = new HashSet<int>();
+
 	/// Server: last run's draws per seat, dealt again in a new run.
 	private static readonly Dictionary<int, KeyValuePair<string, string>> carried = new Dictionary<int, KeyValuePair<string, string>>();
 
@@ -140,6 +144,7 @@ public static class RandomStarts
 	{
 		founderTrade = null;
 		founderPerks = null;
+		founderTell = true;
 		if (trade)
 		{
 			string text = DrawTrade(1, founding: true);
@@ -178,6 +183,8 @@ public static class RandomStarts
 	{
 		founderTrade = null;
 		founderPerks = null;
+		founderTell = false;
+		restored.Clear();
 		if (!carried.TryGetValue(1, out var value))
 		{
 			return;
@@ -288,6 +295,7 @@ public static class RandomStarts
 		ServerMode.NewRunStarting += delegate
 		{
 			carried.Clear();
+			restored.Clear();
 			foreach (Member item in Members.State.list)
 			{
 				string text = TradeOf(item.s);
@@ -326,7 +334,7 @@ public static class RandomStarts
 		{
 			if ((founderTrade != null || founderPerks != null) && Members.BySeat(1) != null)
 			{
-				Dealt(Net.IsHost ? Net.LocalPlayer : 0, 1, founderTrade, founderPerks);
+				Dealt((Net.IsHost && founderTell) ? Net.LocalPlayer : 0, 1, founderTrade, founderPerks);
 				founderTrade = null;
 				founderPerks = null;
 			}
@@ -353,6 +361,20 @@ public static class RandomStarts
 			{
 				continue;
 			}
+			if (restored.Add(item))
+			{
+				// At once, so the player's copy waits for the deal instead of opening the screens.
+				Dictionary<string, string> facts = new Dictionary<string, string>();
+				if (carried[item].Key != null)
+				{
+					facts[TradeFact] = carried[item].Key;
+				}
+				if (carried[item].Value != null)
+				{
+					facts[PerksFact] = carried[item].Value;
+				}
+				Members.SetFacts(item, facts);
+			}
 			int num = PlayerOf(item);
 			if (num == 0 || Bays.BayOf(item) == null || HostTrip.Out || Outings.AnyOut)
 			{
@@ -360,16 +382,6 @@ public static class RandomStarts
 			}
 			KeyValuePair<string, string> keyValuePair = carried[item];
 			carried.Remove(item);
-			Dictionary<string, string> dictionary = new Dictionary<string, string>();
-			if (keyValuePair.Key != null)
-			{
-				dictionary[TradeFact] = keyValuePair.Key;
-			}
-			if (keyValuePair.Value != null)
-			{
-				dictionary[PerksFact] = keyValuePair.Value;
-			}
-			Members.SetFacts(item, dictionary);
 			if (keyValuePair.Key != null && Specs.Of(item) == null)
 			{
 				string id = (Specs.TakenBy(keyValuePair.Key) == 0) ? keyValuePair.Key : DrawTrade(item);
