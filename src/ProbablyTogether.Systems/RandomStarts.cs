@@ -239,6 +239,7 @@ public static class RandomStarts
 			dictionary[PerksFact] = string.Join(",", perks);
 		}
 		Members.SetFacts(seat, dictionary);
+		Log.Info("random: " + Members.NameOf(seat) + " (seat " + seat + ") was dealt " + (trade ?? "no trade") + "; " + ((perks != null) ? ("[" + string.Join(", ", perks) + "]") : "no perks") + ((player > 0) ? "; shown to them" : ""));
 		if (player > 0)
 		{
 			Net.ToPlayer(player, "random.dealt", new MsgRandomDealt
