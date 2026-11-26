@@ -67,7 +67,7 @@ public static class PerkScreens
 
 	internal static bool PerksOpen => Window(PerkWindow) != null && Covering;
 
-	private static bool Covering => (Object)(object)cover != (Object)null && cover.activeSelf;
+	internal static bool Covering => (Object)(object)cover != (Object)null && cover.activeSelf;
 
 	/// True where the game's trade screen does the asking: the mod's own trade window stays away.
 	public static bool HandlesTrade => !specFailed && (!Bots.BotRunner.Enabled || LabOn);
@@ -174,6 +174,7 @@ public static class PerkScreens
 		}
 		try
 		{
+			RandomBoxes.JoinTrade = false;
 			NewGameSpecializationUI.Open();
 			CustomUIWindow customUIWindow = Window(SpecWindow);
 			NewGameSpecializationFrame frame = (customUIWindow != null) ? customUIWindow.root.GetComponent<NewGameSpecializationFrame>() : null;
@@ -237,7 +238,8 @@ public static class PerkScreens
 		try
 		{
 			StartingScenario selected = NewGameSpecializationUI.Selected;
-			if (selected == null || waiting || !Offered(selected))
+			bool tradeOn = RandomBoxes.TradeOn;
+			if (waiting || (!tradeOn && (selected == null || !Offered(selected))))
 			{
 				return;
 			}
@@ -245,7 +247,18 @@ public static class PerkScreens
 			waitingSince = Time.realtimeSinceStartup;
 			refusal = "";
 			Continued++;
-			if (AgainTrade)
+			if (tradeOn)
+			{
+				if (AgainTrade)
+				{
+					Repick.Confirm(Repick.Trade, null, null, random: true);
+				}
+				else
+				{
+					Specs.Pick(RandomStarts.Pick);
+				}
+			}
+			else if (AgainTrade)
 			{
 				Repick.Confirm(Repick.Trade, selected.startType.ToString(), null);
 			}
@@ -273,6 +286,22 @@ public static class PerkScreens
 		StartingScenario selected = NewGameSpecializationUI.Selected;
 		if ((Object)(object)component == (Object)null || selected == null)
 		{
+			return;
+		}
+		if (RandomBoxes.TradeOn)
+		{
+			RandomBoxes.SpecLook();
+			if (waiting)
+			{
+				component.warning.text = Lang.Tr("Asking the shop...");
+			}
+			else if (refusal.Length > 0)
+			{
+				component.warning.text = Lang.Tr(refusal);
+				component.warning.color = NewGameStyle.WARNING_DANGER;
+			}
+			component.continueButton.interactable = !waiting;
+			NewGameUIElements.RefreshContinueLook(component, hovered: false);
 			return;
 		}
 		string key = selected.startType.ToString();
@@ -324,6 +353,7 @@ public static class PerkScreens
 			// A list of its own: on the shop's founding machine the game's "new game" list is the shop's.
 			// Choosing again starts from what the player has.
 			bool again = AgainPerks;
+			RandomBoxes.JoinPerks = false;
 			NewGameData.Instance.startingPerks = again ? Perks.Of(Members.LocalSeat).Ids.Select(Perks.Def).Where((StartingPerk p) => p != null).ToList() : new List<StartingPerk>();
 			NewGamePerksUI.Open();
 			CustomUIWindow customUIWindow = Window(PerkWindow);
@@ -364,7 +394,10 @@ public static class PerkScreens
 				// The game has just emptied such a player's selection; what they have is added after it.
 				List<StartingPerk> list = NewGameData.Instance.startingPerks;
 				list.Clear();
-				list.AddRange(Perks.Of(Members.LocalSeat).Ids.Select(Perks.Def).Where((StartingPerk p) => p != null));
+				if (!RandomBoxes.PerksOn)
+				{
+					list.AddRange(Perks.Of(Members.LocalSeat).Ids.Select(Perks.Def).Where((StartingPerk p) => p != null));
+				}
 			}
 			try
 			{
@@ -434,8 +467,24 @@ public static class PerkScreens
 			{
 				return;
 			}
-			List<string> list = Selected();
 			bool again = AgainPerks;
+			if (RandomBoxes.PerksOn)
+			{
+				waiting = true;
+				waitingSince = Time.realtimeSinceStartup;
+				refusal = "";
+				Continued++;
+				if (again)
+				{
+					Repick.Confirm(Repick.PerksKind, null, null, random: true);
+				}
+				else
+				{
+					Perks.PickRandom();
+				}
+				return;
+			}
+			List<string> list = Selected();
 			string text = Perks.Refusal(Members.LocalSeat, list, again);
 			if (text != null)
 			{
@@ -633,7 +682,8 @@ public static class PerkScreens
 				RefreshSpec();
 			}
 			string text = (string.IsNullOrEmpty(Net.ServerName) ? Lang.Tr("This shop") : Net.ServerName);
-			if (flag2 || (flag && Bays.BayOf(localSeat) == null))
+			// A new run: the server deals this player last run's draw again.
+			if (flag2 || (flag && Bays.BayOf(localSeat) == null) || (flag && RandomStarts.Redealing(localSeat, trade: true)) || (!flag && flag3 && RandomStarts.Redealing(localSeat, trade: false)))
 			{
 				ShowCover(Lang.Trf("{0}: your place in the shop is being set up...", text));
 				return;
