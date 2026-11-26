@@ -26,6 +26,9 @@
 - **The night without a reload** - every copy goes through the night itself and checks it against
   the host. When it matches, the morning arrives in place, windows and all; when it doesn't, the
   copy reloads the shop as a fallback.
+- **Versus runs** - every player runs a shop of their own instead of sharing one, on the same
+  days and the host's difficulty. A board ranks everyone by cash minus debt, everyone goes to bed
+  together, and the richest shop after the last day wins.
 - **A ledger of whose deals were whose** - money, standing and specializations per player.
 - **Leave and come back** - step out as host without closing the shop, rejoin into your seat, or
   let a trade or a player leave the shop for good.

@@ -2,6 +2,19 @@
 
 All changes to Probably Together.
 
+## Unreleased
+
+Protocol 19. Every player needs it.
+
+### Added
+- Versus runs: "New versus run" on the host's list of shops. Every player runs a shop of their own in their own save,
+  with their own trade and perks on the host's difficulty, for a number of days the host sets.
+- A board over the shop ranks every player by cash minus debt, with each rival's day, trade, cash, debt, reputation and
+  state.
+- Versus bedtime: every shop goes to sleep together once all are ready, or when the host's bedtime timer runs out; a
+  shop still open then is closed.
+- The host keeps a checked copy of every player's latest save.
+
 ## 0.10.0 - 2026-11-27
 
 Protocol 18. Every player needs it.
