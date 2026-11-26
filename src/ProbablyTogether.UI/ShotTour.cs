@@ -10,8 +10,8 @@ using Object = UnityEngine.Object;
 
 namespace ProbablyTogether.UI;
 
-/// Test only (--br-shots=<folder>, --br-shots-mode=host|join|list): a windowed copy walks the screens and saves
-/// a picture of each.
+/// Test only (--br-shots=<folder>, --br-shots-mode=host|join|list|menus, host-random|join-random): a windowed copy
+/// walks the screens and saves a picture of each. The -random modes tick Random (and Force) on the setup screens.
 internal static class ShotTour
 {
 	private static bool inited;
@@ -21,6 +21,10 @@ internal static class ShotTour
 	private static string dir = "";
 
 	private static string mode = "";
+
+	private static string prefix = "";
+
+	private static bool random;
 
 	private static int step;
 
@@ -43,7 +47,7 @@ internal static class ShotTour
 	private static void Shot(string name)
 	{
 		count++;
-		string text = dir + "/" + mode + "-" + count.ToString("00") + "-" + name + ".png";
+		string text = dir + "/" + prefix + "-" + count.ToString("00") + "-" + name + ".png";
 		ScreenCapture.CaptureScreenshot(text);
 		Log.Info("shots: " + text);
 	}
@@ -61,7 +65,9 @@ internal static class ShotTour
 		{
 			inited = true;
 			dir = (Args.Get("--br-shots") ?? "").Replace('\\', '/').TrimEnd('/');
-			mode = Args.Get("--br-shots-mode") ?? "host";
+			prefix = Args.Get("--br-shots-mode") ?? "host";
+			random = prefix.EndsWith("-random", StringComparison.Ordinal);
+			mode = random ? prefix.Substring(0, prefix.Length - 7) : prefix;
 			on = dir.Length > 0 && Args.Bot != null;
 			if (on)
 			{
@@ -78,7 +84,11 @@ internal static class ShotTour
 		Application.runInBackground = true;
 		try
 		{
-			if (mode == "join")
+			if (mode == "join" && random)
+			{
+				JoinRandom();
+			}
+			else if (mode == "join")
 			{
 				Join();
 			}
@@ -182,6 +192,11 @@ internal static class ShotTour
 				{
 					Flow("RulesDone", r);
 				});
+				if (random)
+				{
+					RandomBoxes.LabTick(trade: true, force: false);
+					RandomBoxes.LabTick(trade: true, force: true);
+				}
 				Next();
 			}
 			break;
@@ -201,7 +216,7 @@ internal static class ShotTour
 				instance2.startScenarioId = startingScenario.id;
 				NewGameSpecializationUI.Close();
 				instance.OpenPerkInterface();
-				foreach (string item in (Args.Get("--br-ui-host-perks") ?? "saving,alert").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+				foreach (string item in (random ? "" : (Args.Get("--br-ui-host-perks") ?? "saving,alert")).Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					StartingPerk startingPerk = Perks.Def(item.Trim());
 					if (startingPerk != null)
@@ -210,6 +225,11 @@ internal static class ShotTour
 					}
 				}
 				PerkScreens.Unlock();
+				if (random)
+				{
+					RandomBoxes.LabTick(trade: false, force: false);
+					RandomBoxes.LabTick(trade: false, force: true);
+				}
 				Next();
 			}
 			break;
@@ -251,15 +271,21 @@ internal static class ShotTour
 			}
 			break;
 		case 15:
-			if (Since > 6f)
+			if (Since > 6f && (!random || RandomReveal.Opened > 0 || Since > 30f))
 			{
-				Shot("host-in-the-shop");
+				Shot(random ? "host-reveal" : "host-in-the-shop");
 				Next();
 			}
 			break;
 		// The host asks to leave.
 		case 16:
-			if (mode == "host" && Since > 1.5f)
+			if (random && Since > 1.5f && HostPanels.MessageOpen(HostPanels.RevealWindow))
+			{
+				HostPanels.CloseMessage(HostPanels.RevealWindow);
+				at = Time.realtimeSinceStartup;
+				Log.Info("shots: host-in-the-shop (the reveal closed)");
+			}
+			else if (mode == "host" && Since > 1.5f)
 			{
 				HostAwayUi.AskLeave(StoreUIManager.Instance.confirmPanelUIManager);
 				Next();
@@ -545,6 +571,126 @@ internal static class ShotTour
 			}
 			break;
 		case 21:
+			if (Since > 2.5f)
+			{
+				Shot("join-back-in-the-shop");
+				Next();
+			}
+			break;
+		}
+	}
+
+	/// A player joining a shop that deals trades and perks at random: the locked boxes, the reveal, the repick screens.
+	private static void JoinRandom()
+	{
+		if (!loadingShot && Net.IsClient && !Net.IsLive && Time.realtimeSinceStartup - at > 0.5f && LoadingScreen.Text.Length > 0)
+		{
+			loadingShot = true;
+			Shot("join-loading");
+		}
+		switch (step)
+		{
+		case 0:
+			if (PerkScreens.SpecOpen)
+			{
+				Next();
+			}
+			break;
+		case 1:
+			if (Since > 2.5f)
+			{
+				Shot("join-trade-forced");
+				Next();
+			}
+			break;
+		case 2:
+			if (Since > 1f)
+			{
+				PerkScreens.SpecContinue();
+				Next();
+			}
+			break;
+		case 3:
+			if (PerkScreens.PerksOpen && !PerkScreens.SpecOpen)
+			{
+				Next();
+			}
+			break;
+		case 4:
+			if (Since > 2.5f)
+			{
+				Shot("join-perks-forced");
+				Next();
+			}
+			break;
+		case 5:
+			if (Since > 1f)
+			{
+				PerkScreens.PerksContinue();
+				Next();
+			}
+			break;
+		case 6:
+			if (RandomReveal.Opened > 0 && HostPanels.MessageOpen(HostPanels.RevealWindow))
+			{
+				Next();
+			}
+			break;
+		case 7:
+			if (Since > 2.5f)
+			{
+				Shot("join-reveal");
+				Next();
+			}
+			break;
+		case 8:
+			if (Since > 1f)
+			{
+				HostPanels.CloseMessage(HostPanels.RevealWindow);
+				Next();
+			}
+			break;
+		case 9:
+			if (Repick.Mine == Repick.Trade && PerkScreens.SpecOpen && Since > 2f)
+			{
+				Next();
+			}
+			break;
+		case 10:
+			if (Since > 2.5f)
+			{
+				Shot("join-retrade-forced");
+				Next();
+			}
+			break;
+		case 11:
+			if (Since > 1f)
+			{
+				PerkScreens.Back();
+				Next();
+			}
+			break;
+		case 12:
+			if (Repick.Mine == Repick.PerksKind && PerkScreens.PerksOpen)
+			{
+				Next();
+			}
+			break;
+		case 13:
+			if (Since > 2.5f)
+			{
+				Shot("join-reperk-forced");
+				Next();
+			}
+			break;
+		case 14:
+			if (Since > 1f)
+			{
+				PerkScreens.Back();
+				Next();
+			}
+			break;
+		case 15:
 			if (Since > 2.5f)
 			{
 				Shot("join-back-in-the-shop");
