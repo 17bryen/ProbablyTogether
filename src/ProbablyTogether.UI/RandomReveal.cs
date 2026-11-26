@@ -49,7 +49,10 @@ internal static partial class HostPanels
 			{
 				sprite = newGameSpecializationFrame.FindIcon("icons_apprentice");
 			}
-			Log.Info("random: the icon of " + scenario.id + " (key '" + scenario.iconKey + "'): " + (((Object)(object)sprite != (Object)null) ? (sprite.name + " " + sprite.rect.width + "x" + sprite.rect.height) : ("none; the screen's frame " + ((Object)(object)newGameSpecializationFrame != (Object)null) + ", " + (newGameSpecializationFrame?.icons?.Length ?? -1) + " icon(s)")));
+			if ((Object)(object)sprite == (Object)null)
+			{
+				Log.Warn("random: no icon for " + scenario.id);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -100,6 +103,13 @@ internal static partial class HostPanels
 			Sprite sprite = TradeIcon(startingScenario);
 			if ((Object)(object)sprite != (Object)null)
 			{
+				// The trade icons are dark: on the slot the game's trade strip draws them on.
+				CustomUIManager instance = CustomUIManager.Instance;
+				NewGameSpecializationFrame newGameSpecializationFrame = ((Object)(object)instance != (Object)null && (Object)(object)instance.newGameSpecializationPrefab != (Object)null) ? instance.newGameSpecializationPrefab.GetComponent<NewGameSpecializationFrame>() : null;
+				if ((Object)(object)newGameSpecializationFrame != (Object)null && (Object)(object)newGameSpecializationFrame.slotSelected != (Object)null)
+				{
+					NewGameUIElements.NewImage(p.Body, "tradeslot", Left, y, Icon, Icon, newGameSpecializationFrame.slotSelected, Color.white);
+				}
 				Image image = NewGameUIElements.NewImage(p.Body, "tradeicon", Left, y, Icon, Icon, sprite, Color.white);
 				NewGameUIElements.FitPixelArt(image, Left, y, Icon, 38f);
 			}
