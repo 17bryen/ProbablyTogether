@@ -33,13 +33,27 @@ internal static partial class HostPanels
 			sprite = ((Object)(object)IconProvider.Instance != (Object)null) ? IconProvider.Instance.GetIcon(scenario.id) : null;
 			CustomUIManager instance = CustomUIManager.Instance;
 			NewGameSpecializationFrame newGameSpecializationFrame = ((Object)(object)instance != (Object)null && (Object)(object)instance.newGameSpecializationPrefab != (Object)null) ? instance.newGameSpecializationPrefab.GetComponent<NewGameSpecializationFrame>() : null;
+			if ((Object)(object)sprite == (Object)null && (Object)(object)newGameSpecializationFrame != (Object)null && !string.IsNullOrEmpty(scenario.iconKey))
+			{
+				sprite = newGameSpecializationFrame.FindIcon(scenario.iconKey);
+			}
+			if ((Object)(object)sprite == (Object)null && (Object)(object)instance != (Object)null && !string.IsNullOrEmpty(scenario.iconKey))
+			{
+				sprite = instance.GetSprite(scenario.iconKey);
+			}
 			if ((Object)(object)sprite == (Object)null && (Object)(object)newGameSpecializationFrame != (Object)null)
 			{
-				sprite = newGameSpecializationFrame.FindIcon(scenario.iconKey) ?? newGameSpecializationFrame.FindIcon("icons_" + scenario.id) ?? newGameSpecializationFrame.FindIcon("icons_apprentice");
+				sprite = newGameSpecializationFrame.FindIcon("icons_" + scenario.id);
 			}
+			if ((Object)(object)sprite == (Object)null && (Object)(object)newGameSpecializationFrame != (Object)null)
+			{
+				sprite = newGameSpecializationFrame.FindIcon("icons_apprentice");
+			}
+			Log.Info("random: the icon of " + scenario.id + " (key '" + scenario.iconKey + "'): " + (((Object)(object)sprite != (Object)null) ? (sprite.name + " " + sprite.rect.width + "x" + sprite.rect.height) : ("none; the screen's frame " + ((Object)(object)newGameSpecializationFrame != (Object)null) + ", " + (newGameSpecializationFrame?.icons?.Length ?? -1) + " icon(s)")));
 		}
-		catch
+		catch (Exception ex)
 		{
+			Log.Warn("random: the trade's icon threw: " + ex.Message);
 		}
 		return sprite;
 	}
@@ -174,7 +188,7 @@ internal static class RandomReveal
 		List<string> showPerks = RandomStarts.ShowPerks;
 		try
 		{
-			if (!Net.IsOnline || !Net.IsLive || !Game.ShopLoaded || Snapshot.IsLoading || PerkScreens.Covering || Repick.Mine.Length > 0 || !HostPanels.Available || HostPanels.MessageOpen(HostPanels.RevealWindow) || LoadingScreen.Text.Length > 0)
+			if (!Net.IsOnline || !Net.IsLive || !Game.ShopLoaded || Snapshot.IsLoading || PerkScreens.Covering || Repick.Mine.Length > 0 || !HostPanels.Available || HostPanels.MessageOpen(HostPanels.RevealWindow) || LoadingScreen.Visible)
 			{
 				return;
 			}

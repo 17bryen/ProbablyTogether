@@ -403,7 +403,7 @@ internal static class RandomBoxes
 			SelectStartable();
 		}
 		newGameSpecializationFrame.title.text = Lang.Tr("A trade at random");
-		newGameSpecializationFrame.tag.text = Lang.Tr("Dealt when the shop starts");
+		newGameSpecializationFrame.tag.text = Hosting ? Lang.Tr("Dealt when the shop starts") : Lang.Tr("Dealt when you continue");
 		newGameSpecializationFrame.tag.color = NewGameStyle.TagColor(StartingScenario.TagTone.Warning);
 		newGameSpecializationFrame.description.text = Hosting ? Lang.Tr("One of the trades is dealt to you when the shop starts, Rock Bottom included. You find out which once you are in the shop.") : Lang.Tr("One of the trades nobody in this shop has yet is dealt to you, Rock Bottom included. You find out which once you are in the shop.");
 		newGameSpecializationFrame.warning.text = (!Hosting && RandomStarts.ForceTrade) ? Lang.Tr("This shop deals every new player's trade at random.") : "";
@@ -480,7 +480,7 @@ internal static class RandomBoxes
 		{
 			return;
 		}
-		newGamePerksFrame.instruction.text = Lang.Tr("Your perks are dealt at random: three points' worth, good and bad mixed. You find out which once you are in the shop.");
+		newGamePerksFrame.instruction.text = Lang.Tr("Your perks are dealt at random: three points' worth, good and bad mixed. You find out which once you are in the shop.") + ((!Hosting && RandomStarts.ForcePerks) ? (" " + Lang.Tr("This shop deals every new player's perks at random.")) : "");
 		newGamePerksFrame.instruction.color = NewGameStyle.DESCRIPTION;
 		newGamePerksFrame.continueButton.interactable = true;
 		NewGameUIElements.RefreshContinueLook(newGamePerksFrame, hovered: false);
