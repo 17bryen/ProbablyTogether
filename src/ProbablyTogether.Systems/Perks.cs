@@ -196,7 +196,7 @@ public static class Perks
 		}
 	}
 
-	private static bool Excludes(string a, string b)
+	internal static bool Excludes(string a, string b)
 	{
 		StartingPerk startingPerk = Def(a);
 		StartingPerk startingPerk2 = Def(b);
@@ -768,6 +768,19 @@ public static class Perks
 		});
 	}
 
+	/// Asks the server to deal this player's perks at random.
+	public static void PickRandom()
+	{
+		if (Net.IsOnline)
+		{
+			Net.ToServer("perks.pick", new MsgPerksPick
+			{
+				ids = new string[0],
+				random = true
+			});
+		}
+	}
+
 	internal static void RefuseTo(int player, string why)
 	{
 		Refuse(player, why);
@@ -791,6 +804,22 @@ public static class Perks
 		}
 		int num = Members.SeatOf(from);
 		List<string> list = (m.ids ?? new string[0]).Where((string i) => !string.IsNullOrEmpty(i)).Select((string i) => i.Trim()).ToList();
+		if (!m.random && RandomStarts.ForcePerks)
+		{
+			Refuse(from, "This shop deals perks at random.");
+			return;
+		}
+		if (m.random && Enabled && num > 0 && !Picked(num))
+		{
+			list = RandomStarts.DrawPerks(num, (string id) => LockReason(num, id));
+		}
+		Deal(from, list, m.random, tell: true);
+	}
+
+	/// Server: this list becomes the player's pick; random: it was dealt (tell: shown to them in the reveal).
+	internal static void Deal(int from, List<string> list, bool random = true, bool tell = false)
+	{
+		int num = Members.SeatOf(from);
 		string text = Refusal(num, list);
 		if (text == null && list.Count > 0 && Bays.BayOf(num) == null)
 		{
@@ -806,7 +835,8 @@ public static class Perks
 		{
 			seat = num,
 			ids = list.ToArray(),
-			bay = (val != null) ? Ids.Of(val) : 0
+			bay = (val != null) ? Ids.Of(val) : 0,
+			random = random
 		};
 		string text2;
 		using (Replay.Server(out msgPerksSet.seed))
@@ -814,7 +844,15 @@ public static class Perks
 			text2 = Apply(num, list, val);
 		}
 		Net.ToAll("perks.set", msgPerksSet);
-		Log.Info("perks: " + Members.NameOf(num) + " (seat " + num + ") picked [" + string.Join(", ", list) + "]: " + text2);
+		if (random)
+		{
+			RandomStarts.Dealt(tell ? from : 0, num, null, list);
+		}
+		else
+		{
+			RandomStarts.HandPicked(num, trade: false);
+		}
+		Log.Info("perks: " + Members.NameOf(num) + " (seat " + num + ") " + (random ? "was dealt [" : "picked [") + string.Join(", ", list) + "]: " + text2);
 	}
 
 	private static void ClientSet(MsgPerksSet m)
@@ -830,11 +868,13 @@ public static class Perks
 			text = m.again ? Swap(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null) : Apply(m.seat, list, (m.bay != 0) ? Ids.Find(m.bay) : null, m.lab);
 		}
 		Log.Info("perks: " + Members.NameOf(m.seat) + (m.again ? " now has [" : " picked [") + string.Join(", ", list) + "]: " + text);
-		if (!DayLog.Replaying && m.again)
+		// Dealt perks are shown to their player alone, in the reveal.
+		bool flag = !DayLog.Replaying && !m.random;
+		if (flag && m.again)
 		{
 			Notices.Show((list.Count > 0) ? Lang.Trf("{0} chose their perks again: {1}.", Kit.Name(Members.NameOf(m.seat)), string.Join(", ", list.Select(NameOfPerk))) : Lang.Trf("{0} chose their perks again: none.", Kit.Name(Members.NameOf(m.seat))), "perks");
 		}
-		else if (!DayLog.Replaying && list.Count > 0)
+		else if (flag && list.Count > 0)
 		{
 			Notices.Show(Lang.Trf("{0} picked: {1}.", Kit.Name(Members.NameOf(m.seat)), string.Join(", ", list.Select(NameOfPerk))), "perks");
 		}
@@ -1045,7 +1085,7 @@ public static class Perks
 		return (notes.Count > 0) ? string.Join("; ", notes) : "nothing to hand out";
 	}
 
-	internal static string ServerSwap(int seat, List<string> ids)
+	internal static string ServerSwap(int seat, List<string> ids, bool random = false)
 	{
 		GameItem val = Bays.BayOf(seat);
 		MsgPerksSet msgPerksSet = new MsgPerksSet
@@ -1053,7 +1093,8 @@ public static class Perks
 			seat = seat,
 			ids = ids.ToArray(),
 			bay = (val != null) ? Ids.Of(val) : 0,
-			again = true
+			again = true,
+			random = random
 		};
 		string text;
 		using (Replay.Server(out msgPerksSet.seed))
@@ -1777,6 +1818,9 @@ public static class Perks
 public sealed class MsgPerksPick
 {
 	public string[] ids;
+
+	/// The server deals the perks; ids are ignored.
+	public bool random;
 }
 
 public sealed class MsgPerksSet
@@ -1792,6 +1836,9 @@ public sealed class MsgPerksSet
 
 	/// A repick: ids is the whole new pick.
 	public bool again;
+
+	/// Dealt at random by the server.
+	public bool random;
 
 	public Seed seed;
 }

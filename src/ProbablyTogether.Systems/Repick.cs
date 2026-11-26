@@ -22,6 +22,8 @@ public sealed class MsgRepickAsk
 	public string id;
 
 	public string[] ids;
+
+	public bool random;
 }
 
 public sealed class MsgRepickCancel
@@ -224,8 +226,19 @@ public static class Repick
 		if (flag)
 		{
 			string id = (m.id ?? "").Trim().ToUpperInvariant();
+			bool random = id == RandomStarts.Pick;
+			string text3 = (!random && RandomStarts.ForceTrade) ? "This shop deals trades at random." : null;
+			if (random && text3 == null)
+			{
+				text3 = Leaving.Check(num, whole: false);
+				id = (text3 == null) ? (RandomStarts.DrawTrade(num) ?? "") : "";
+				if (text3 == null && id.Length == 0)
+				{
+					text3 = "Every other trade is taken: there is none left to deal.";
+				}
+			}
 			int num2 = Specs.TakenBy(id);
-			string text3 = (!ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, id, StringComparison.OrdinalIgnoreCase)) || id == "ROCK_BOTTOM") ? "That is not a specialization this shop offers." : ((num2 == num) ? "That is your trade already." : ((num2 != 0) ? (Members.NameOf(num2) + " already has that specialization.") : ((Bays.BayOf(num) == null) ? "Your storage bay is not here yet. Try again in a moment." : Leaving.Check(num, whole: false))));
+			text3 = text3 ?? ((!ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, id, StringComparison.OrdinalIgnoreCase)) || (id == "ROCK_BOTTOM" && !random)) ? "That is not a specialization this shop offers." : ((num2 == num) ? "That is your trade already." : ((num2 != 0) ? (Members.NameOf(num2) + " already has that specialization.") : ((Bays.BayOf(num) == null) ? "Your storage bay is not here yet. Try again in a moment." : Leaving.Check(num, whole: false)))));
 			if (text3 != null)
 			{
 				LastRefusal = text3;
@@ -234,18 +247,28 @@ public static class Repick
 			}
 			string text4 = string.Join(", ", Leaving.TradesOf(num).Select(Specs.Label));
 			Leaving.GiveUp(num);
-			Specs.PickFor(from, id);
+			Specs.PickFor(from, id, random);
 			bool flag2 = Specs.Of(num) == id;
 			Done++;
-			Log.Info("repick: " + text2 + " (seat " + num + ") gave up " + text4 + " for " + id + (flag2 ? "" : ": THE NEW TRADE WAS REFUSED (" + Specs.LastRefusal + "); they pick again on the trade screen"));
-			End(num, from, flag2 ? ("You are now the shop's " + Specs.Label(id) + ".") : "");
+			Log.Info("repick: " + text2 + " (seat " + num + ") gave up " + text4 + " for " + id + (random ? " (dealt at random)" : "") + (flag2 ? "" : ": THE NEW TRADE WAS REFUSED (" + Specs.LastRefusal + "); they pick again on the trade screen"));
+			End(num, from, (flag2 && !random) ? ("You are now the shop's " + Specs.Label(id) + ".") : "");
 			if (player != from)
 			{
-				Tell(player, flag2 ? (text2 + " gave up " + text4 + " and is now the shop's " + Specs.Label(id) + ".") : (text2 + " gave up " + text4 + " and is picking a new trade."));
+				Tell(player, (flag2 && random) ? (text2 + " gave up " + text4 + " and was dealt a trade at random.") : (flag2 ? (text2 + " gave up " + text4 + " and is now the shop's " + Specs.Label(id) + ".") : (text2 + " gave up " + text4 + " and is picking a new trade.")));
 			}
 			return;
 		}
 		List<string> list = (m.ids ?? new string[0]).Where((string i) => !string.IsNullOrEmpty(i)).Select((string i) => i.Trim()).ToList();
+		if (!m.random && RandomStarts.ForcePerks)
+		{
+			LastRefusal = "This shop deals perks at random.";
+			Perks.RefuseTo(from, LastRefusal);
+			return;
+		}
+		if (m.random)
+		{
+			list = RandomStarts.DrawPerks(num, (string id) => Perks.LockReason(num, id));
+		}
 		string text5 = Perks.Refusal(num, list, again: true) ?? Leaving.Busy();
 		if (text5 != null)
 		{
@@ -254,7 +277,7 @@ public static class Repick
 			return;
 		}
 		List<string> ids = Perks.Of(num).Ids;
-		if (ids.Count == list.Count && !list.Except(ids).Any())
+		if (ids.Count == list.Count && !list.Except(ids).Any() && !m.random)
 		{
 			Cancelled++;
 			Log.Info("repick: " + text2 + " (seat " + num + ") confirmed the perks they already had: nothing to do");
@@ -265,13 +288,21 @@ public static class Repick
 			}
 			return;
 		}
-		Perks.ServerSwap(num, list);
+		Perks.ServerSwap(num, list, m.random);
+		if (m.random)
+		{
+			RandomStarts.Dealt(from, num, null, list);
+		}
+		else
+		{
+			RandomStarts.HandPicked(num, trade: false);
+		}
 		Done++;
 		string text6 = (list.Count > 0) ? string.Join(", ", list.Select(Perks.NameOfPerk)) : "none";
-		End(num, from, "Your perks now: " + text6 + ".");
+		End(num, from, m.random ? "" : ("Your perks now: " + text6 + "."));
 		if (player != from)
 		{
-			Tell(player, text2 + "'s perks now: " + text6 + ".");
+			Tell(player, m.random ? (text2 + " was dealt new perks at random.") : (text2 + "'s perks now: " + text6 + "."));
 		}
 	}
 
@@ -316,15 +347,17 @@ public static class Repick
 		}
 	}
 
-	internal static void Confirm(string kind, string id, IEnumerable<string> ids)
+	/// random: the server deals the trade or the perks (id and ids are ignored).
+	internal static void Confirm(string kind, string id, IEnumerable<string> ids, bool random = false)
 	{
 		if (Net.IsOnline)
 		{
 			Net.ToServer("repick.ask", new MsgRepickAsk
 			{
 				kind = kind,
-				id = id,
-				ids = (ids ?? new string[0]).ToArray()
+				id = random ? RandomStarts.Pick : id,
+				ids = (ids ?? new string[0]).ToArray(),
+				random = random
 			});
 		}
 	}

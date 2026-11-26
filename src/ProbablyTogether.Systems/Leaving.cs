@@ -213,7 +213,11 @@ public static class Leaving
 		}
 		else
 		{
-			Members.DropFacts(seat, "spec", "mach", Specs.MoreFact, Specs.KitFact, TradeVisits.DayFact);
+			Members.DropFacts(seat, "spec", "mach", Specs.MoreFact, Specs.KitFact, TradeVisits.DayFact, RandomStarts.TradeFact);
+			if (died != null)
+			{
+				Members.DropFacts(seat, RandomStarts.PerksFact);
+			}
 		}
 		Done++;
 		LastResult = text3;

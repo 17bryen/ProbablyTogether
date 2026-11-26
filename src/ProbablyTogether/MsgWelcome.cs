@@ -26,4 +26,9 @@ public sealed class MsgWelcome
 
 	/// The server hands out storage bays and trades.
 	public bool ownership;
+
+	/// Players who join are dealt their trade, their perks, at random.
+	public bool randomTrade;
+
+	public bool randomPerks;
 }

@@ -62,6 +62,9 @@ public static class Members
 	/// Players of the run that just ended, seated again in the run that replaces it.
 	private static MembersState carry;
 
+	/// Server: the members of the run before are still to be seated in the new one.
+	internal static bool Carrying => carry != null;
+
 	internal static int Refused;
 
 	public static MembersState State

@@ -481,7 +481,9 @@ internal static class Server
 				build = GameBuild.Id,
 				takeover = Locks.TakeoverSeconds,
 				outings = Systems.Outings.Individual,
-				ownership = Systems.Bays.Enabled
+				ownership = Systems.Bays.Enabled,
+				randomTrade = Systems.RandomStarts.ForceTrade,
+				randomPerks = Systems.RandomStarts.ForcePerks
 			});
 			BroadcastRoster(p.Info.Id, -1, null);
 			Net.RaisePlayerJoined(p.Info);

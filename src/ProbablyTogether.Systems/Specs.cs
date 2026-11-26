@@ -23,6 +23,9 @@ public sealed class MsgSpecKit
 
 	public long bay;
 
+	/// Dealt at random by the server.
+	public bool random;
+
 	public Seed seed;
 }
 
@@ -844,7 +847,8 @@ public static class Specs
 		}
 		Kits++;
 		Log.Info("specs: " + Members.NameOf(m.seat) + " is the shop's " + m.id + "; kit " + text);
-		if (!DayLog.Replaying)
+		// A dealt trade is shown to its player alone, in the reveal.
+		if (!DayLog.Replaying && !m.random)
 		{
 			Notices.Show(Lang.Trf("{0} is now the shop's {1}.", Kit.Name(Members.NameOf(m.seat)), Label(m.id)), "spec");
 		}
@@ -867,12 +871,13 @@ public static class Specs
 		Refuse(player, why);
 	}
 
-	internal static void PickFor(int player, string id)
+	/// dealt: the id was drawn at random by the server (Rock Bottom allowed); tell: the player sees it in the reveal.
+	internal static void PickFor(int player, string id, bool dealt = false, bool tell = true)
 	{
 		ServerPick(new MsgSpecPick
 		{
 			id = id
-		}, player);
+		}, player, dealt, tell);
 	}
 
 	private static void Refuse(int player, string why)
@@ -886,6 +891,11 @@ public static class Specs
 	}
 
 	private static void ServerPick(MsgSpecPick m, int from)
+	{
+		ServerPick(m, from, dealt: false, tell: true);
+	}
+
+	private static void ServerPick(MsgSpecPick m, int from, bool dealt, bool tell)
 	{
 		int num = Members.SeatOf(from);
 		if (m == null || !Game.ShopLoaded)
@@ -908,7 +918,27 @@ public static class Specs
 			return;
 		}
 		string id = (m.id ?? "").Trim().ToUpperInvariant();
-		if (!ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, id, StringComparison.OrdinalIgnoreCase)) || id == "ROCK_BOTTOM")
+		if (id == RandomStarts.Pick && !dealt)
+		{
+			if (Bays.BayOf(num) == null)
+			{
+				Refuse(from, "Your storage bay is not here yet. Try again in a moment.");
+				return;
+			}
+			id = RandomStarts.DrawTrade(num);
+			if (id == null)
+			{
+				Refuse(from, "Every trade is taken: there is none left to deal.");
+				return;
+			}
+			dealt = true;
+		}
+		else if (!dealt && RandomStarts.ForceTrade)
+		{
+			Refuse(from, "This shop deals trades at random.");
+			return;
+		}
+		if (!ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, id, StringComparison.OrdinalIgnoreCase)) || (id == "ROCK_BOTTOM" && !dealt))
 		{
 			Refuse(from, "That is not a specialization this shop offers.");
 			return;
@@ -934,7 +964,8 @@ public static class Specs
 		{
 			seat = num,
 			id = id,
-			bay = Ids.Of(val)
+			bay = Ids.Of(val),
+			random = dealt
 		};
 		string machines;
 		string text;
@@ -951,7 +982,15 @@ public static class Specs
 			{ KitFact, KitFactWith(num, id, LastKitIds) },
 			{ TradeVisits.DayFact, TradeVisits.DayForPick() }
 		});
-		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") is the shop's " + id + "; kit " + text);
+		if (dealt)
+		{
+			RandomStarts.Dealt(tell ? from : 0, num, id, null);
+		}
+		else
+		{
+			RandomStarts.HandPicked(num, trade: true);
+		}
+		Log.Info("specs: " + Members.NameOf(num) + " (seat " + num + ") is the shop's " + id + (dealt ? " (dealt at random)" : "") + "; kit " + text);
 	}
 
 	/// Chat: "/trade" lists what can still be picked, "/trade <name>" picks it.

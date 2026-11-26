@@ -23,6 +23,11 @@ public sealed class ServerConfig
 		public string difficulty = "normal";
 
 		public bool skipIntro = true;
+
+		/// The founder's trade and perks are dealt at random (Systems.RandomStarts).
+		public bool randomTrade;
+
+		public bool randomPerks;
 	}
 
 	public int port = 27700;
@@ -68,6 +73,11 @@ public sealed class ServerConfig
 
 	/// Players go out one by one while the others stay in. False: the stock group trip.
 	public bool individualOutings;
+
+	/// Players who join are dealt their trade, or their perks, at random (with playerOwnership only).
+	public bool forceRandomTrade;
+
+	public bool forceRandomPerks;
 
 	[JsonIgnore]
 	public string LoadedFrom;
