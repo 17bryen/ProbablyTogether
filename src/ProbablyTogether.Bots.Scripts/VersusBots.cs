@@ -75,7 +75,8 @@ public abstract class VersusBotBase : DayNightBotBase
 			EndOfDayUIManager.Instance.OnEndDayButtonClick();
 			return "pressed";
 		});
-		WaitFor("asked-for-bed-" + day, 15f, () => Versus.LocalReady && (Mine?.ready ?? false), () => Where);
+		// The last shop to ask ends the wait at once: the night or the run's end follows.
+		WaitFor("asked-for-bed-" + day, 15f, () => (Versus.LocalReady && (Mine?.ready ?? false)) || Versus.Ended || Versus.NightsRun > ((day == "day1") ? 0 : 1), () => Where);
 	}
 
 	protected void FinalChecks()
