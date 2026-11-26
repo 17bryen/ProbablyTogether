@@ -20,6 +20,8 @@ internal static partial class HostPanels
 
 	internal const string RulesWindow = "bellun_probably_together.host_rules";
 
+	internal const string VersusWindow = "bellun_probably_together.host_versus";
+
 	private const float Left = 58f;
 
 	private const float Width = 974f;
@@ -50,11 +52,15 @@ internal static partial class HostPanels
 
 	private static Panel rules;
 
+	private static Panel versus;
+
 	internal static string LastProblem = "";
 
 	internal static bool SetupOpen => setup != null && setup.Window != null && setup.Window.IsAlive;
 
 	internal static bool RulesOpen => rules != null && rules.Window != null && rules.Window.IsAlive;
+
+	internal static bool VersusOpen => versus != null && versus.Window != null && versus.Window.IsAlive;
 
 	private static Panel Open(string id, string title, Action onContinue, string layer = "menu")
 	{
@@ -398,6 +404,87 @@ internal static partial class HostPanels
 		Note(rules, text);
 	}
 
+	internal sealed class VersusRules
+	{
+		public string Name = "";
+
+		public int Players = 4;
+
+		public int Days = 14;
+
+		public int BedSeconds = 120;
+	}
+
+	/// A versus run: every player runs a shop of their own; the richest after the last day wins.
+	internal static void OpenVersus(VersusRules r, Action<VersusRules> onContinue)
+	{
+		Close(ref versus);
+		Panel p = Open(VersusWindow, Lang.Tr("New versus run"), delegate
+		{
+			VersusContinue(onContinue);
+		});
+		versus = p;
+		Label(p, "about", 112f, Lang.Tr("Every player runs a shop of their own. Cash minus debt after the last day wins."), 18f, dim: true, 28f, wrap: false);
+		Label(p, "namelabel", 160f, Lang.Tr("Run name"));
+		Input(p, "name", Left, 196f, Width, r.Name, 40);
+		Label(p, "maxlabel", 268f, Lang.Tr("Players"));
+		Input(p, "max", Left, 304f, 120f, r.Players.ToString(CultureInfo.InvariantCulture), 1);
+		Label(p, "maxhint", 304f, Lang.Tr("1 to 4, you included."), 18f, dim: true, 46f, wrap: false, Left + 144f, Width - 144f);
+		Rule(p, "rule1", 378f);
+		Label(p, "dayslabel", 400f, Lang.Tr("Days"));
+		Input(p, "days", Left, 436f, 120f, r.Days.ToString(CultureInfo.InvariantCulture), 3);
+		Label(p, "dayshint", 436f, Lang.Tr("1 to 365. The run ends at that day's bedtime."), 18f, dim: true, 46f, wrap: false, Left + 144f, Width - 144f);
+		Label(p, "bedlabel", 508f, Lang.Tr("Bedtime timer (seconds)"));
+		Input(p, "bed", Left, 544f, 120f, r.BedSeconds.ToString(CultureInfo.InvariantCulture), 3);
+		Label(p, "bedhint", 544f, Lang.Tr("5 to 600. Starts when the first shop is ready for bed; then every shop sleeps."), 18f, dim: true, 46f, wrap: false, Left + 144f, Width - 144f);
+		Label(p, "nexthint", 640f, Lang.Tr("Next: your own trade, perks and the difficulty everyone plays on."), 18f, dim: true, 28f, wrap: false);
+		p.Window.Show();
+	}
+
+	internal static void VersusContinue(Action<VersusRules> onContinue)
+	{
+		if (!VersusOpen)
+		{
+			return;
+		}
+		VersusRules versusRules = new VersusRules
+		{
+			Name = Text(versus, "name").Trim()
+		};
+		if (versusRules.Name.Length == 0)
+		{
+			Note(versus, Lang.Tr("Give the run a name."));
+			return;
+		}
+		if (!int.TryParse(Text(versus, "max").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out versusRules.Players) || versusRules.Players < 1 || versusRules.Players > 4)
+		{
+			Note(versus, Lang.Tr("Players must be 1 to 4."));
+			return;
+		}
+		if (!int.TryParse(Text(versus, "days").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out versusRules.Days) || versusRules.Days < 1 || versusRules.Days > 365)
+		{
+			Note(versus, Lang.Tr("Days must be a whole number from 1 to 365."));
+			return;
+		}
+		if (!int.TryParse(Text(versus, "bed").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out versusRules.BedSeconds) || versusRules.BedSeconds < 5 || versusRules.BedSeconds > 600)
+		{
+			Note(versus, Lang.Tr("The bedtime timer must be a whole number of seconds from 5 to 600."));
+			return;
+		}
+		Note(versus, "");
+		onContinue(versusRules);
+	}
+
+	internal static void VersusNote(string text)
+	{
+		Note(versus, text);
+	}
+
+	internal static void CloseVersus()
+	{
+		Close(ref versus);
+	}
+
 	private static void Close(ref Panel p)
 	{
 		Panel panel = p;
@@ -426,7 +513,7 @@ internal static partial class HostPanels
 
 	internal static void SetField(string id, string value)
 	{
-		foreach (Panel item in new Panel[2] { setup, rules })
+		foreach (Panel item in new Panel[3] { setup, rules, versus })
 		{
 			if (item != null && item.Inputs.TryGetValue(id, out var value2) && (Object)(object)value2 != (Object)null)
 			{

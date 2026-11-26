@@ -38,6 +38,11 @@ internal static class HostFlow
 	/// The new shop's rules give every player a trade of their own.
 	internal static bool OwnTrades => pending?.OwnTrades ?? true;
 
+	/// A versus run being set up (the versus rules screen, then the game's new-game screens).
+	private static HostPanels.VersusRules versusPending;
+
+	private static bool versusFlow;
+
 	private static bool syncing;
 
 	private static bool moving;
@@ -315,6 +320,12 @@ internal static class HostFlow
 				float num = ((Object)(object)panel != (Object)null) ? panel.rect.width : 1110f;
 				NewGameCommonButton.Build(loadGameFrame, ((Object)(object)panel != (Object)null) ? panel : (RectTransform)customUIWindow.root.transform, "bellun_probably_together_new_shop", num - 420f, 28f, 260f, 48f, Lang.Tr("New shop"), NewShop);
 			}
+			if (customUIWindow.root.transform.Find("bellun_probably_together_new_versus") == null && loadGameFrame.panel.Find("bellun_probably_together_new_versus") == null)
+			{
+				RectTransform panel2 = loadGameFrame.panel;
+				float num2 = ((Object)(object)panel2 != (Object)null) ? panel2.rect.width : 1110f;
+				NewGameCommonButton.Build(loadGameFrame, ((Object)(object)panel2 != (Object)null) ? panel2 : (RectTransform)customUIWindow.root.transform, "bellun_probably_together_new_versus", num2 - 700f, 28f, 260f, 48f, Lang.Tr("New versus run"), NewVersus);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -334,6 +345,8 @@ internal static class HostFlow
 			Slot = -1;
 			MorningFile = null;
 			RandomBoxes.ResetHost();
+			versusFlow = false;
+			versusPending = null;
 			NewGameData.Instance.saveSlot = -1;
 			NewGameData.Instance.saveFile = null;
 			LoadGameUI.Close();
@@ -348,6 +361,142 @@ internal static class HostFlow
 		{
 			moving = false;
 		}
+	}
+
+	/// A versus run: its rules first, then the game's new-game screens for the host's own shop.
+	internal static void NewVersus()
+	{
+		if (!Active)
+		{
+			return;
+		}
+		moving = true;
+		try
+		{
+			Slot = -1;
+			MorningFile = null;
+			versusFlow = true;
+			NewGameData.Instance.saveSlot = -1;
+			NewGameData.Instance.saveFile = null;
+			LoadGameUI.Close();
+			ShowVersus(null);
+			Log.Info("host: a new versus run: its rules first");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: the versus rules screen did not open: " + ex.Message);
+		}
+		finally
+		{
+			moving = false;
+		}
+	}
+
+	private static void ShowVersus(string note)
+	{
+		if (versusPending == null)
+		{
+			JObject jObject = Config();
+			versusPending = new HostPanels.VersusRules
+			{
+				Name = HostMenu.DefaultShopName(),
+				Players = Mathf.Clamp(((int?)jObject["maxPlayers"]) ?? 4, 1, 4),
+				Days = Mathf.Clamp(((int?)jObject["versusDays"]) ?? 14, 1, 365),
+				BedSeconds = Mathf.Clamp(((int?)jObject["readyTimeoutSeconds"]) ?? 120, 5, 600)
+			};
+		}
+		HostPanels.OpenVersus(versusPending, VersusDone);
+		if (!string.IsNullOrEmpty(note))
+		{
+			HostPanels.VersusNote(note);
+		}
+		last = HostPanels.VersusWindow;
+		HookBack(HostPanels.VersusWindow);
+		idleSince = -1f;
+	}
+
+	private static void VersusDone(HostPanels.VersusRules r)
+	{
+		moving = true;
+		try
+		{
+			versusPending = r;
+			HostPanels.CloseVersus();
+			NewGameSpecializationUI.Open();
+			last = SpecWindow;
+			HookBack(SpecWindow);
+			idleSince = -1f;
+			Log.Info("host: a new versus run '" + r.Name + "': " + r.Players + " player(s), " + r.Days + " day(s), bedtime timer " + r.BedSeconds + " s; the game's new game screens for the host's own shop");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("host: the game's new game screen did not open: " + ex.Message);
+		}
+		finally
+		{
+			moving = false;
+		}
+	}
+
+	/// Null when under way (the game then starts the host's own shop); else the reason it failed.
+	private static string LaunchVersus()
+	{
+		HostPanels.VersusRules versusRules = versusPending ?? new HostPanels.VersusRules
+		{
+			Name = HostMenu.DefaultShopName()
+		};
+		NewGameData instance = NewGameData.Instance;
+		JObject jObject = Config();
+		int port = ((int?)jObject["port"]) ?? 27700;
+		if (!HostPanels.PortFree(port))
+		{
+			return Lang.Trf("Port {0} is already in use on this PC.", port.ToString(CultureInfo.InvariantCulture));
+		}
+		jObject["maxPlayers"] = new JValue(versusRules.Players);
+		jObject["versusDays"] = new JValue(versusRules.Days);
+		jObject["readyTimeoutSeconds"] = new JValue(versusRules.BedSeconds);
+		try
+		{
+			WriteConfig(jObject);
+		}
+		catch (Exception ex)
+		{
+			return Lang.Tr("Could not write the shop settings: ") + ex.Message;
+		}
+		ServerConfig serverConfig = ServerConfig.Load();
+		serverConfig.name = versusRules.Name;
+		serverConfig.maxPlayers = versusRules.Players;
+		serverConfig.versus = true;
+		serverConfig.versusDays = versusRules.Days;
+		serverConfig.readyTimeoutSeconds = versusRules.BedSeconds;
+		string text = Args.Data;
+		string text2 = null;
+		if (!string.IsNullOrEmpty(text))
+		{
+			try
+			{
+				text2 = Path.GetFullPath(text).Replace('\\', '/');
+			}
+			catch
+			{
+				text2 = null;
+			}
+		}
+		string text3 = Systems.Versus.HostBegin(serverConfig, string.IsNullOrEmpty(instance.difficultyId) ? "normal" : instance.difficultyId, HostMenu.HostFolder, text2);
+		if (text3 != null)
+		{
+			return text3;
+		}
+		Reached++;
+		Active = false;
+		Slot = 0;
+		pending = null;
+		versusPending = null;
+		versusFlow = false;
+		last = "";
+		idleSince = -1f;
+		Systems.Versus.OnStartGame();
+		return null;
 	}
 
 	private static void ShowRules(string note)
@@ -403,6 +552,7 @@ internal static class HostFlow
 	{
 		if (!Active)
 		{
+			Systems.Versus.OnStartGame();
 			return true;
 		}
 		try
@@ -412,6 +562,17 @@ internal static class HostFlow
 			instance.skipIntro = instance.skipIntro || ((Object)(object)menu.skipIntroLock != (Object)null && menu.skipIntroLock.activeSelf) || ((Object)(object)menu.skipToggle != (Object)null && menu.skipToggle.isOn);
 			Slot = (instance.saveSlot > 0) ? instance.saveSlot : (-1);
 			MorningFile = (Slot > 0) ? instance.saveFile : null;
+			if (versusFlow && Slot < 0)
+			{
+				string text4 = LaunchVersus();
+				if (text4 == null)
+				{
+					return true;
+				}
+				Log.Warn("host: the versus run did not start: " + text4);
+				ShowVersus(text4);
+				return false;
+			}
 			string text = Launch();
 			if (text != null)
 			{
@@ -558,11 +719,14 @@ internal static class HostFlow
 		Slot = 0;
 		MorningFile = null;
 		pending = null;
+		versusPending = null;
+		versusFlow = false;
 		last = "";
 		idleSince = -1f;
 		HostPanels.CloseSetup();
 		HostPanels.CloseRules();
-		if (!Net.IsOnline && Net.Role != Role.Host)
+		HostPanels.CloseVersus();
+		if (!Net.IsOnline && Net.Role != Role.Host && !Net.Versus)
 		{
 			Paths.ClearOverride();
 			Paths.KeepSettings = false;
@@ -593,7 +757,7 @@ internal static class HostFlow
 			End("left the menu");
 			return;
 		}
-		string text = HostPanels.SetupOpen ? HostPanels.SetupWindow : ((Window(ListWindow) != null) ? ListWindow : (HostPanels.RulesOpen ? HostPanels.RulesWindow : ((Window(SpecWindow) != null) ? SpecWindow : ((Window(PerkWindow) != null) ? PerkWindow : ((Window(DifficultyWindow) != null) ? DifficultyWindow : null)))));
+		string text = HostPanels.SetupOpen ? HostPanels.SetupWindow : ((Window(ListWindow) != null) ? ListWindow : (HostPanels.RulesOpen ? HostPanels.RulesWindow : (HostPanels.VersusOpen ? HostPanels.VersusWindow : ((Window(SpecWindow) != null) ? SpecWindow : ((Window(PerkWindow) != null) ? PerkWindow : ((Window(DifficultyWindow) != null) ? DifficultyWindow : null))))));
 		if (text != null)
 		{
 			last = text;
@@ -621,11 +785,24 @@ internal static class HostFlow
 		{
 			if (from == SpecWindow)
 			{
-				ShowRules(null);
+				if (versusFlow)
+				{
+					ShowVersus(null);
+				}
+				else
+				{
+					ShowRules(null);
+				}
 			}
 			else if (from == HostPanels.RulesWindow)
 			{
 				pending = null;
+				ShowList();
+			}
+			else if (from == HostPanels.VersusWindow)
+			{
+				versusPending = null;
+				versusFlow = false;
 				ShowList();
 			}
 			else if (from == ListWindow)
