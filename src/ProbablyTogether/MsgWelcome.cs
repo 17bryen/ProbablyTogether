@@ -31,4 +31,7 @@ public sealed class MsgWelcome
 	public bool randomTrade;
 
 	public bool randomPerks;
+
+	/// Set when the server runs a versus run: its rules (Systems.Versus). Each player then starts a shop of their own.
+	public JToken versus;
 }

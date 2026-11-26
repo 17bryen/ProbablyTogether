@@ -142,7 +142,7 @@ internal static class ServerMode
 		}
 	}
 
-	private static string HostName()
+	internal static string HostName()
 	{
 		try
 		{
@@ -157,7 +157,7 @@ internal static class ServerMode
 		return Args.Name ?? "Host";
 	}
 
-	private static ulong HostSteamId()
+	internal static ulong HostSteamId()
 	{
 		if (Args.Bot != null && ulong.TryParse(Args.Get("--br-steamid") ?? "", out var result))
 		{

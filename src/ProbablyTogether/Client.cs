@@ -250,6 +250,10 @@ internal static class Client
 			Log.Info("client: disconnected from " + Address + ": " + why);
 		}
 		Snapshot.ClientAbort();
+		if (Net.Versus)
+		{
+			Systems.Versus.ClientLost(why);
+		}
 		Net.LeaveSession();
 		if (state != ClientState.Idle)
 		{
@@ -308,6 +312,15 @@ internal static class Client
 			MaxPlayers = msgWelcome.maxPlayers;
 			ServerMods = ModList.ReadServerMods(msgWelcome.mods);
 			ServerBuild = GameBuild.CleanId(msgWelcome.build);
+			if (msgWelcome.versus != null && msgWelcome.versus.Type == JTokenType.Object)
+			{
+				Net.Versus = true;
+				Net.EnterSession(msgWelcome.you, msgWelcome.players);
+				State = ClientState.Ready;
+				Log.Info("client: joined the versus run '" + ServerName + "' as player " + msgWelcome.you + "; players: " + Names(msgWelcome.players));
+				Systems.Versus.ClientWelcome(msgWelcome.versus);
+				break;
+			}
 			Locks.TakeoverSeconds = msgWelcome.takeover;
 			Systems.Outings.Individual = msgWelcome.outings;
 			Systems.Bays.Enabled = msgWelcome.ownership;
@@ -377,7 +390,11 @@ internal static class Client
 			break;
 		}
 		default:
-			if (kind.StartsWith("sys.", StringComparison.Ordinal))
+			if (Net.Versus && Systems.Versus.Owns(kind))
+			{
+				Systems.Versus.OnClientFrame(kind, d);
+			}
+			else if (kind.StartsWith("sys.", StringComparison.Ordinal))
 			{
 				Log.Warn("client: unexpected " + kind);
 			}

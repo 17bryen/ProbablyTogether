@@ -44,6 +44,12 @@ public sealed class ServerConfig
 
 	public int readyTimeoutSeconds = 120;
 
+	/// Each player runs their own shop and they compete (Systems.Versus); readyTimeoutSeconds is the bedtime timer.
+	public bool versus;
+
+	/// A versus run ends at the bedtime of this day.
+	public int versusDays = 14;
+
 	[JsonIgnore]
 	public string[] adminSteamIds = new string[0];
 
@@ -201,6 +207,14 @@ public sealed class ServerConfig
 		if (readyTimeoutSeconds < 5)
 		{
 			readyTimeoutSeconds = 5;
+		}
+		if (versusDays < 1)
+		{
+			versusDays = 1;
+		}
+		if (versusDays > 365)
+		{
+			versusDays = 365;
 		}
 		if (double.IsNaN(extraCustomersPerPlayer) || double.IsInfinity(extraCustomersPerPlayer))
 		{

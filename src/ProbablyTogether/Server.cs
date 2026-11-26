@@ -256,6 +256,10 @@ internal static class Server
 				Log.ForgetPrefix("s" + value.Info.Id + "|");
 				Net.Players.Remove(value.Info.Id);
 				Log.Info("server: " + value.Info.Name + " (player " + value.Info.Id + ") left: " + why + "; " + PlayerCount + "/" + Config.maxPlayers + " players");
+				if (Net.Versus)
+				{
+					Systems.Versus.OnLeft(value.Info);
+				}
 				Locks.ReleaseAll(value.Info.Id);
 				BroadcastRoster(-1, value.Info.Id, "left");
 				Net.RaisePlayerLeft(value.Info);
@@ -287,6 +291,11 @@ internal static class Server
 			{
 				Refuse(value, "protocol", "Expected a join request first.");
 			}
+			return;
+		}
+		if (Net.Versus && Systems.Versus.Owns(kind))
+		{
+			Systems.Versus.OnServerFrame(value.Info.Id, kind, d);
 			return;
 		}
 		switch (kind)
@@ -425,6 +434,11 @@ internal static class Server
 			{
 				return;
 			}
+			if (Net.Versus)
+			{
+				VersusHello(p, h);
+				return;
+			}
 			if (!ShopReady)
 			{
 				Refuse(p, "starting", "The server is still loading the shop. Try again in a minute.");
@@ -490,6 +504,56 @@ internal static class Server
 			Snapshot.SendTo(p.Info.Id, "join");
 			PanelLink.MarkDirty("join");
 		}
+	}
+
+	/// Versus: no seat and no shop to send; the player gets the run's rules and starts a shop of their own.
+	private static void VersusHello(Peer p, MsgHello h)
+	{
+		if (PlayerCount >= Config.maxPlayers)
+		{
+			Refuse(p, "full", "The server is full (" + PlayerCount + "/" + Config.maxPlayers + " players).");
+			return;
+		}
+		string text = CleanName(h.name);
+		if (text.Length == 0)
+		{
+			text = "Player";
+		}
+		string text2 = text;
+		int num = 2;
+		while (NameTaken(text))
+		{
+			text = text2 + " (" + num + ")";
+			num++;
+		}
+		ulong.TryParse(h.steamId ?? "", out var result);
+		p.Info = new PlayerInfo
+		{
+			Id = nextPlayerId++,
+			Name = text,
+			SteamId = result
+		};
+		p.State = PeerState.Ready;
+		p.ReadyMs = Clock.Ms;
+		p.ModVersion = Text.Clip((h.mod ?? "").Trim(), 24);
+		ByPlayer[p.Info.Id] = p;
+		Net.Players[p.Info.Id] = p.Info;
+		Log.Info("server: " + text + " (player " + p.Info.Id + ", " + p.Conn.Remote + ((result != 0L) ? (", steam " + result) : "") + ") joined the versus run; " + PlayerCount + "/" + Config.maxPlayers + " players");
+		p.Conn.Send("sys.welcome", new MsgWelcome
+		{
+			you = p.Info.Id,
+			server = Config.name,
+			maxPlayers = Config.maxPlayers,
+			players = PlayerList(),
+			mods = (JToken)(object)ModList.ForWelcome(),
+			modInfo = (JToken)(object)ModList.Describe(Config.WorkshopIdOf),
+			build = GameBuild.Id,
+			versus = Systems.Versus.RulesFor(p.Info)
+		});
+		BroadcastRoster(p.Info.Id, -1, null);
+		Net.RaisePlayerJoined(p.Info);
+		Systems.Versus.OnJoined(p.Info);
+		PanelLink.MarkDirty("join");
 	}
 
 	private static byte[] PasswordKey()
