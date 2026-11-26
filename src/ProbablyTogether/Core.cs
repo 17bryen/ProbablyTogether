@@ -14,7 +14,11 @@ internal static class Core
 
 	internal static void Start()
 	{
-		if (Net.IsServer)
+		if (Systems.Versus.FromArgs)
+		{
+			Systems.Versus.StartFromArgs();
+		}
+		else if (Net.IsServer)
 		{
 			ServerMode.Start();
 		}
@@ -23,25 +27,41 @@ internal static class Core
 	internal static void Tick()
 	{
 		DrainInbox();
-		if (Net.IsHost)
+		if (Net.Versus)
 		{
-			HostLoop.Drain();
-		}
-		if (Net.IsServer)
-		{
-			using (Systems.HostTrip.AtHome())
+			// Each copy plays its own shop: only the link runs, no shared-shop ticks.
+			if (Net.LinkServer)
 			{
-				ServerMode.Tick();
 				Server.Tick();
-				Snapshot.ServerTick();
-				Locks.Tick();
-				Digest.ServerTick();
 			}
+			else
+			{
+				Client.Tick();
+			}
+			Systems.Versus.Tick();
 		}
 		else
 		{
-			Client.Tick();
-			Snapshot.ClientTick();
+			if (Net.IsHost)
+			{
+				HostLoop.Drain();
+			}
+			if (Net.IsServer)
+			{
+				using (Systems.HostTrip.AtHome())
+				{
+					ServerMode.Tick();
+					Server.Tick();
+					Snapshot.ServerTick();
+					Locks.Tick();
+					Digest.ServerTick();
+				}
+			}
+			else
+			{
+				Client.Tick();
+				Snapshot.ClientTick();
+			}
 		}
 		MenuJobs();
 		SelfTest.Tick();
@@ -97,7 +117,7 @@ internal static class Core
 		Conn conn = x.Conn;
 		if (conn.ServerSide)
 		{
-			if (!Net.IsServer)
+			if (!Net.LinkServer)
 			{
 				conn.Close("not a server");
 				return;
@@ -152,7 +172,7 @@ internal static class Core
 		if (!menuJobsDone && !(Time.realtimeSinceStartup - menuSince < 2f))
 		{
 			menuJobsDone = true;
-			if (!Net.IsServer && !string.IsNullOrEmpty(Args.Join))
+			if (!Net.LinkServer && !string.IsNullOrEmpty(Args.Join))
 			{
 				Net.Connect(Args.Join, Args.Password ?? "", Args.Name);
 			}
@@ -171,7 +191,7 @@ internal static class Core
 
 	internal static void Shutdown(string why)
 	{
-		if (Net.IsServer)
+		if (Net.LinkServer)
 		{
 			Server.Stopping = true;
 			Server.Goodbye(why);

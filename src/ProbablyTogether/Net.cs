@@ -46,7 +46,36 @@ public static class Net
 	[ThreadStatic]
 	private static int actorPlus1;
 
-	public static Role Role { get; internal set; } = Role.Off;
+	private static Role link = Role.Off;
+
+	/// The role the game layer sees. In versus mode every copy plays its own shop, so it reads Off.
+	public static Role Role
+	{
+		get
+		{
+			if (!Versus)
+			{
+				return link;
+			}
+			return Role.Off;
+		}
+		internal set
+		{
+			link = value;
+		}
+	}
+
+	/// Versus mode: each player runs their own shop; the session carries only the versus link (Systems.Versus).
+	public static bool Versus { get; internal set; }
+
+	/// The session's own role, also in versus mode. Only the link layer reads it.
+	public static Role Link => link;
+
+	public static bool LinkServer => link == Role.Server || link == Role.Host;
+
+	public static bool LinkHost => link == Role.Host;
+
+	public static bool LinkOnline => link != Role.Off;
 
 	/// Authority that validates, applies and broadcasts requests: a dedicated server or a host.
 	public static bool IsServer => Role == Role.Server || Role == Role.Host;
@@ -229,7 +258,7 @@ public static class Net
 
 	public static void Connect(string address, string password = "", string name = null)
 	{
-		if (IsServer)
+		if (LinkServer)
 		{
 			Log.Warn("Connect called on the server");
 		}
@@ -241,7 +270,11 @@ public static class Net
 
 	public static void Disconnect()
 	{
-		if (IsHost)
+		if (Versus)
+		{
+			Systems.Versus.Leave("left");
+		}
+		else if (IsHost)
 		{
 			ServerMode.HostLeave();
 		}
@@ -265,7 +298,7 @@ public static class Net
 
 	public static string PlayerName(int id)
 	{
-		if (id != 0 || !IsServer)
+		if (id != 0 || !LinkServer)
 		{
 			if (!Players.TryGetValue(id, out var value))
 			{
@@ -278,7 +311,7 @@ public static class Net
 
 	internal static void EnterSession(int you, List<PlayerInfo> players)
 	{
-		Role = Role.Client;
+		link = Role.Client;
 		LocalPlayer = you;
 		Players.Clear();
 		if (players == null)
@@ -293,9 +326,10 @@ public static class Net
 
 	internal static void LeaveSession()
 	{
-		if (Role == Role.Client)
+		if (link == Role.Client)
 		{
-			Role = Role.Off;
+			link = Role.Off;
+			Versus = false;
 		}
 		LocalPlayer = 0;
 		Players.Clear();

@@ -64,6 +64,7 @@ internal static class Boot
 			}
 			else if (Args.Host)
 			{
+				Net.Versus = Systems.Versus.FromArgs;
 				Net.Role = Role.Host;
 				Paths.KeepSettings = true;
 			}
