@@ -309,6 +309,8 @@ public static class Versus
 
 	private static string autoPerks;
 
+	private static float menuSince = -1f;
+
 	/// Host: the session for a new versus run. The host's own shop starts after this, on the game's own new-game path.
 	internal static string HostBegin(ServerConfig cfg, string difficulty, string baseFolder = null, string restoreTo = null)
 	{
@@ -1054,7 +1056,7 @@ public static class Versus
 	/// The game wrote this copy's save (Versus.SavedPatch).
 	internal static void OnSlotWritten(int slot)
 	{
-		if (Net.Versus && slot > 0)
+		if (Net.Versus && slot >= 0)
 		{
 			savedSlot = slot;
 			saveDirty = true;
@@ -1063,7 +1065,7 @@ public static class Versus
 
 	private static void SaveTick()
 	{
-		if (!saveDirty || savedSlot <= 0)
+		if (!saveDirty || savedSlot < 0)
 		{
 			return;
 		}
@@ -1309,9 +1311,18 @@ public static class Versus
 	{
 		try
 		{
-			if (autoScenario != null && ProbablyTogether.UI.Ui.AtMenu && (Object)(object)NewGameData.Instance != (Object)null && Time.realtimeSinceStartup > 3f)
+			if (autoScenario != null && ProbablyTogether.UI.Ui.AtMenu && (Object)(object)NewGameData.Instance != (Object)null)
 			{
-				AutoStart();
+				// The menu's own jobs (the bot runner among them) start after 2 s on the menu.
+				if (menuSince < 0f)
+				{
+					menuSince = Time.realtimeSinceStartup;
+				}
+				else if (Time.realtimeSinceStartup - menuSince > 3f)
+				{
+					menuSince = -1f;
+					AutoStart();
+				}
 			}
 			PickTick();
 			if (!shopUp && loadStarted && Game.ShopLoaded)
@@ -1319,7 +1330,7 @@ public static class Versus
 				shopUp = true;
 				Log.Info("versus: our own shop is up (" + Game.Store.startType.ToString() + ", day " + Game.Day + ", cash " + Game.Store.playerCash + ", slot " + Game.Store.saveSlotId + ")");
 				SendStatus(force: true);
-				if (Game.Store.saveSlotId > 0 && File.Exists(Paths.Under(SaveFiles.Slot(Game.Store.saveSlotId))))
+				if (Game.Store.saveSlotId >= 0 && File.Exists(Paths.Under(SaveFiles.Slot(Game.Store.saveSlotId))))
 				{
 					OnSlotWritten(Game.Store.saveSlotId);
 				}
