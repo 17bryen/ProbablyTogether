@@ -2,12 +2,14 @@
 
 All changes to Probably Together.
 
-## Unreleased
+## 0.10.0 - 2026-11-27
+
+Protocol 18. Every player needs it.
 
 ### Added
 - Random trade and Random perks checkboxes on the game's trade and perk screens, for the host's new shop and for players who join. A random trade is drawn from the trades nobody has, Rock Bottom included; random perks spend the game's 3 points with good and bad perks mixed, and Colorful Character's extra slots can bring more perks.
-- On a shop where every player has their own trade, the host can force random trades, random perks or both on players who join. A forced screen shows Random ticked and locked; `/retrade` and `/reperk` follow the same rule.
-- After loading in, a window shows the player only what was dealt to them at random. Other players are not told.
+- On a shop where every player has their own trade, the host can set Random trade, Random perks or both to For All Players, which deals them at random to every player who joins. Their screen shows Random ticked and locked; `/retrade` and `/reperk` follow the same rule.
+- After loading in, a window shows the player only what was dealt to them at random, and scrolls when the deal is long. Other players are not told.
 - A new run keeps what each player was dealt.
 
 ## 0.9.22 - 2026-11-22
