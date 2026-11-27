@@ -172,3 +172,49 @@ public sealed class VersusC : VersusBotBase
 		FinalChecks();
 	}
 }
+
+/// Versus with random trades and perks forced for every player: each copy deals its own, the shops start with what
+/// was dealt, and the board shows each shop's own trade. One day.
+public abstract class VersusRandomBase : VersusBotBase
+{
+	protected static string Dealt => "dealt " + (Versus.DealtTrade ?? "-") + " [" + string.Join(",", Versus.DealtPerks ?? new List<string>()) + "]; shop " + (BotProbes.InShop ? DayNightBotBase.Ps.startType.ToString() : "-") + " [" + string.Join(",", (NewGameData.Instance?.startingPerks ?? new List<StartingPerk>()).Select((StartingPerk p) => p.id)) + "]";
+
+	protected void RandomSteps()
+	{
+		Check("the-rules-deal-both-at-random", () => Versus.Rules.randomTrade && Versus.Rules.randomPerks && Versus.Rules.days == 1, () => "random trade " + Versus.Rules.randomTrade + ", perks " + Versus.Rules.randomPerks + ", days " + Versus.Rules.days);
+		SoloChecks();
+		Check("this-copy-dealt-its-own", () => Versus.DealtTrade != null && Versus.DealtPerks != null && Versus.DealtPerks.Count > 0, () => Dealt);
+		Check("the-shop-has-the-dealt-trade", () => DayNightBotBase.Ps.startType.ToString() == Versus.DealtTrade, () => Dealt);
+		Check("the-new-game-had-the-dealt-perks", () => (NewGameData.Instance?.startingPerks ?? new List<StartingPerk>()).Select((StartingPerk p) => p.id).OrderBy((string x) => x).SequenceEqual(Versus.DealtPerks.OrderBy((string x) => x)), () => Dealt);
+		WaitFor("both-shops-on-the-board", 240f, () => Versus.Board.Count == 2 && Versus.Board.All((VsRow r) => r.spec.Length > 0), () => Where);
+		Check("the-board-shows-our-dealt-trade", () => Mine?.spec == Versus.DealtTrade, () => Where + "; " + Dealt);
+		CloseAndGoToBed("day1");
+		WaitFor("the-run-ends-after-day-1", 180f, () => Versus.Ended, () => Where);
+	}
+}
+
+public sealed class VersusRandomHost : VersusRandomBase
+{
+	public override string Name => "vs-rh";
+
+	public override float TimeoutSeconds => 480f;
+
+	protected override void Build()
+	{
+		WaitFor("lobby-open", 60f, () => Net.Versus && Net.LinkHost && ProbablyTogether.Server.Listening && Versus.Rules != null, () => Where);
+		RandomSteps();
+	}
+}
+
+public sealed class VersusRandomB : VersusRandomBase
+{
+	public override string Name => "vs-rb";
+
+	public override float TimeoutSeconds => 480f;
+
+	protected override void Build()
+	{
+		WaitFor("joined-a-versus-run", 90f, () => Net.Versus && Net.Link == ProbablyTogether.Role.Client && Versus.Rules != null, () => Where);
+		RandomSteps();
+	}
+}
