@@ -14,6 +14,8 @@ Protocol 19. Every player needs it.
 - Versus bedtime: every shop goes to sleep together once all are ready, or when the host's bedtime timer runs out; a
   shop still open then is closed.
 - The host keeps a checked copy of every player's latest save.
+- Random trade and Random perks work in versus runs: each player's own game draws for their shop, and For All Players
+  deals them to everyone who joins. Two shops may have the same trade.
 
 ## 0.10.0 - 2026-11-27
 
