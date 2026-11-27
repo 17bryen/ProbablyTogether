@@ -78,7 +78,7 @@ internal static partial class HostPanels
 	internal static void OpenReveal(string trade, IList<string> perks, Action onClosed, string layer)
 	{
 		CloseMessage(RevealWindow);
-		Panel p = Open(RevealWindow, Lang.Tr("Dealt at random"), delegate
+		Panel p = Open(RevealWindow, Lang.Tr("Dealt at Random"), delegate
 		{
 			CloseMessage(RevealWindow);
 		}, layer);
@@ -99,7 +99,7 @@ internal static partial class HostPanels
 		if (startingScenario != null)
 		{
 			Text(p, "tradehead", Left, y, Width, 26f, Lang.Tr("Your trade"), 20f, NewGameStyle.DIFF_OPTION_LABEL, wrap: false, TextAlignmentOptions.MidlineLeft);
-			y += 34f;
+			y += 42f;
 			Sprite sprite = TradeIcon(startingScenario);
 			if ((Object)(object)sprite != (Object)null)
 			{
@@ -136,7 +136,7 @@ internal static partial class HostPanels
 				NewGameUIElements.NewImage(p.Body, "rule", Left, y - 14f, Width, 2f, null, NewGameStyle.SEPARATOR);
 			}
 			Text(p, "perkshead", Left, y, Width, 26f, (list.Count > 0) ? Lang.Trf("Your perks ({0})", CostLabel(Perks.Points(list.Select((StartingPerk d) => d.id)))) : Lang.Tr("Your perks"), 20f, NewGameStyle.DIFF_OPTION_LABEL, wrap: false, TextAlignmentOptions.MidlineLeft);
-			y += 34f;
+			y += 42f;
 			if (list.Count == 0)
 			{
 				Text(p, "noperks", Left, y, Width, 30f, Lang.Tr("None: the dice dealt you no perks."), 20f, NewGameStyle.DESCRIPTION, wrap: false, TextAlignmentOptions.MidlineLeft);

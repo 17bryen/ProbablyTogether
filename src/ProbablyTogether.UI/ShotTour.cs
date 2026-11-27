@@ -26,6 +26,14 @@ internal static class ShotTour
 
 	private static bool random;
 
+	private static bool plainShot;
+
+	private static bool plainPerksShot;
+
+	private static bool ticked;
+
+	private static bool perksTicked;
+
 	private static int step;
 
 	private static float at;
@@ -49,7 +57,7 @@ internal static class ShotTour
 		count++;
 		string text = dir + "/" + prefix + "-" + count.ToString("00") + "-" + name + ".png";
 		ScreenCapture.CaptureScreenshot(text);
-		Log.Info("shots: " + text);
+		Log.Info("shots: " + text + (random ? (" (random trade " + RandomBoxes.TradeOn + ", perks " + RandomBoxes.PerksOn + ")") : ""));
 	}
 
 	private static bool Alive(string id)
@@ -194,14 +202,29 @@ internal static class ShotTour
 				});
 				if (random)
 				{
-					RandomBoxes.LabTick(trade: true, force: false);
-					RandomBoxes.LabTick(trade: true, force: true);
+					SelectScenario("DRUG_DEALER");
 				}
 				Next();
 			}
 			break;
 		case 8:
-			if (Since > 2f)
+			if (Since > 2f && random && !plainShot)
+			{
+				// Unticked first: the row of boxes next to a long description.
+				plainShot = true;
+				Shot("new-shop-trade-unticked");
+				at = Time.realtimeSinceStartup;
+			}
+			else if (Since > 1f && random && plainShot && !ticked)
+			{
+				// A picture is taken at the end of the frame: tick a step after it.
+				ticked = true;
+				RandomBoxes.LabTick(trade: true, force: false);
+				RandomBoxes.LabTick(trade: true, force: true);
+				RandomBoxes.LabOpenSelect(trade: true);
+				at = Time.realtimeSinceStartup;
+			}
+			else if (Since > 2f)
 			{
 				Shot("new-shop-trade");
 				Next();
@@ -216,7 +239,7 @@ internal static class ShotTour
 				instance2.startScenarioId = startingScenario.id;
 				NewGameSpecializationUI.Close();
 				instance.OpenPerkInterface();
-				foreach (string item in (random ? "" : (Args.Get("--br-ui-host-perks") ?? "saving,alert")).Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+				foreach (string item in (Args.Get("--br-ui-host-perks") ?? "saving,alert").Split(new char[1] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					StartingPerk startingPerk = Perks.Def(item.Trim());
 					if (startingPerk != null)
@@ -225,16 +248,24 @@ internal static class ShotTour
 					}
 				}
 				PerkScreens.Unlock();
-				if (random)
-				{
-					RandomBoxes.LabTick(trade: false, force: false);
-					RandomBoxes.LabTick(trade: false, force: true);
-				}
 				Next();
 			}
 			break;
 		case 10:
-			if (Since > 2f)
+			if (Since > 2f && random && !plainPerksShot)
+			{
+				plainPerksShot = true;
+				Shot("new-shop-perks-unticked");
+				at = Time.realtimeSinceStartup;
+			}
+			else if (Since > 1f && random && plainPerksShot && !perksTicked)
+			{
+				perksTicked = true;
+				RandomBoxes.LabTick(trade: false, force: false);
+				RandomBoxes.LabTick(trade: false, force: true);
+				at = Time.realtimeSinceStartup;
+			}
+			else if (Since > 2f)
 			{
 				Shot("new-shop-perks");
 				Next();

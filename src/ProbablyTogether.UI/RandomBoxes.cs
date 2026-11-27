@@ -22,6 +22,8 @@ internal static class RandomBoxes
 
 		public GameObject Mark;
 
+		public TextMeshProUGUI Text;
+
 		public Button Button;
 
 		public CanvasGroup Group;
@@ -81,11 +83,7 @@ internal static class RandomBoxes
 
 	private static Box tradeBox;
 
-	private static Box tradeForce;
-
 	private static Box perksBox;
-
-	private static Box perksForce;
 
 	private static NewGameSpecializationFrame specFrame;
 
@@ -172,6 +170,7 @@ internal static class RandomBoxes
 		Box box = new Box
 		{
 			Root = gameObject,
+			Text = componentInChildren,
 			Mark = ((Object)(object)image != (Object)null) ? image.gameObject : null,
 			Button = gameObject.GetComponentInChildren<Button>(includeInactive: true),
 			Group = canvasGroup
@@ -194,6 +193,84 @@ internal static class RandomBoxes
 		return box;
 	}
 
+	/// "For Yourself" or "For All Players", right after the Random box's label so the two read as one phrase.
+	private sealed class Select
+	{
+		public RectTransform Root;
+
+		public TextMeshProUGUI Text;
+
+		public RectTransform List;
+
+		public readonly List<TextMeshProUGUI> Options = new List<TextMeshProUGUI>();
+
+		public CanvasGroup Group;
+
+		public bool All;
+
+		public Action<bool> Changed;
+
+		public void Set(bool all)
+		{
+			All = all;
+			Text.text = all ? Lang.Tr("For All Players") : Lang.Tr("For Yourself");
+			for (int i = 0; i < Options.Count; i++)
+			{
+				Options[i].color = ((i == 1) == all) ? NewGameStyle.BUTTON_HOVER : NewGameStyle.START_WITH;
+			}
+		}
+
+		public void Enable(bool on)
+		{
+			Group.alpha = on ? 1f : 0.4f;
+			Group.interactable = on;
+			Group.blocksRaycasts = on;
+			if (!on)
+			{
+				Open(open: false);
+			}
+		}
+
+		public void Open(bool open)
+		{
+			if ((Object)(object)List != (Object)null)
+			{
+				List.gameObject.SetActive(open);
+				if (open)
+				{
+					List.SetAsLastSibling();
+				}
+			}
+		}
+
+		public void Show(bool show)
+		{
+			Root.gameObject.SetActive(show);
+			if (!show)
+			{
+				Open(open: false);
+			}
+		}
+	}
+
+	private const float BoxGap = 8f;
+
+	private const float RowHeight = 32f;
+
+	private static Select tradeSelect;
+
+	private static Select perksSelect;
+
+	/// Lab: the trade screen's list of choices is open.
+	internal static void LabOpenSelect(bool trade)
+	{
+		Select select = trade ? tradeSelect : perksSelect;
+		if (select != null && (Object)(object)select.Root != (Object)null)
+		{
+			select.Open(open: true);
+		}
+	}
+
 	/// Where the screen's Continue button is, in the coordinates of a rect laid over the panel.
 	private static Rect ContinueRect(NewGamePanelFrame frame, RectTransform body)
 	{
@@ -214,6 +291,100 @@ internal static class RandomBoxes
 		{
 		}
 		return new Rect(427f, 890f, 256f, 40f);
+	}
+
+	/// A dark plate with the checkbox's border, as the game's own fields have.
+	private static Image Plate(RectTransform parent, NewGamePanelFrame frame, string name, float x, float y, float w, float h)
+	{
+		Image image = NewGameUIElements.NewImage(parent, name + "_bg", x, y, w, h, null, NewGameStyle.DIFF_CHECKBOX_BG, raycast: true);
+		Image image2 = NewGameUIElements.NewImage(parent, name + "_border", x, y, w, h, frame.frame2Square, NewGameStyle.DIFF_CHECKBOX_BORDER);
+		image2.type = Image.Type.Sliced;
+		return image;
+	}
+
+	private static Select NewSelect(NewGamePanelFrame frame, RectTransform parent, string id, float x, float y, float width, float size, Color color, Action<bool> changed)
+	{
+		Select select = new Select
+		{
+			Changed = changed
+		};
+		RectTransform rectTransform = NewGameUIElements.NewRect(parent, "bellun_probably_together_" + id, x, y, width, RowHeight);
+		select.Root = rectTransform;
+		select.Group = rectTransform.gameObject.AddComponent<CanvasGroup>();
+		Image image = Plate(rectTransform, frame, "field", 0f, 0f, width, RowHeight);
+		select.Text = NewGameUIElements.NewText(frame, rectTransform, "text", 10f, 0f, width - 38f, RowHeight, FontLoader.FontRole.Noto_Sans, size, color, TextAlignmentOptions.MidlineLeft, wrap: false);
+		// The game's "next" arrow, turned to point down.
+		Image image2 = NewGameUIElements.NewImage(rectTransform, "arrow", width - 26f, 8f, 16f, 16f, frame.arrowNextNormal, NewGameStyle.BULLET);
+		image2.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+		image2.rectTransform.anchoredPosition += new Vector2(8f, -8f);
+		image2.rectTransform.localEulerAngles = new Vector3(0f, 0f, -90f);
+		Button button = image.gameObject.AddComponent<Button>();
+		button.targetGraphic = image;
+		button.onClick.AddListener(delegate
+		{
+			NewGameUIElements.PlayClick();
+			select.Open(!select.List.gameObject.activeSelf);
+		});
+		// The list opens upwards: the row sits at the bottom of the panel.
+		select.List = NewGameUIElements.NewRect(parent, "bellun_probably_together_" + id + "_list", x, y - 2f * RowHeight - 4f, width, 2f * RowHeight);
+		string[] array = new string[2] { Lang.Tr("For Yourself"), Lang.Tr("For All Players") };
+		for (int i = 0; i < 2; i++)
+		{
+			bool all = i == 1;
+			Image image3 = Plate(select.List, frame, "option" + i, 0f, (float)i * RowHeight, width, RowHeight);
+			TextMeshProUGUI textMeshProUGUI = NewGameUIElements.NewText(frame, select.List, "option" + i + "_text", 10f, (float)i * RowHeight, width - 20f, RowHeight, FontLoader.FontRole.Noto_Sans, size, color, TextAlignmentOptions.MidlineLeft, wrap: false);
+			textMeshProUGUI.text = array[i];
+			textMeshProUGUI.raycastTarget = false;
+			select.Options.Add(textMeshProUGUI);
+			Button button2 = image3.gameObject.AddComponent<Button>();
+			button2.targetGraphic = image3;
+			ColorBlock colors = button2.colors;
+			colors.highlightedColor = new Color(1.6f, 1.6f, 1.6f, 1f);
+			colors.colorMultiplier = 2f;
+			button2.colors = colors;
+			button2.onClick.AddListener(delegate
+			{
+				NewGameUIElements.PlayClick();
+				select.Set(all);
+				select.Open(open: false);
+				select.Changed(all);
+			});
+		}
+		select.Text.raycastTarget = false;
+		select.Open(open: false);
+		select.Set(all: false);
+		return select;
+	}
+
+	/// The Random box and, for the host, its select, left of Continue on the button line.
+	private static void Row(NewGamePanelFrame frame, RectTransform body, string id, string label, Action<bool> randomChanged, Action<bool> allChanged, out Box box, out Select select)
+	{
+		Rect rect = ContinueRect(frame, body);
+		float y = rect.y + (rect.height - RowHeight) / 2f;
+		float num = rect.x - 24f;
+		box = NewBox(body, "random_" + id, Left, y, num - Left, label, randomChanged);
+		select = null;
+		if (box == null || (Object)(object)box.Text == (Object)null)
+		{
+			return;
+		}
+		TextMeshProUGUI text = box.Text;
+		float fontSize = text.fontSize;
+		float num2 = 44f + Mathf.Ceil(text.GetPreferredValues(label).x) + 2f;
+		float num3 = 0f;
+		if (Hosting)
+		{
+			num3 = Mathf.Ceil(Mathf.Max(text.GetPreferredValues(Lang.Tr("For Yourself")).x, text.GetPreferredValues(Lang.Tr("For All Players")).x)) + 48f;
+		}
+		// Starts where the panel's text starts, or further left when the row needs the room.
+		float num4 = Mathf.Clamp(num - num2 - ((num3 > 0f) ? (BoxGap + num3) : 0f), 30f, Left);
+		WildNetworkUI.SetRect((RectTransform)box.Root.transform, num4, y, num2, RowHeight);
+		WildNetworkUI.SetRect(text.rectTransform, 44f, 0f, num2 - 44f, RowHeight);
+		if (num3 > 0f)
+		{
+			select = NewSelect(frame, body, "all_" + id, num4 + num2 + BoxGap, y, Mathf.Min(num3, num - num4 - num2 - BoxGap), fontSize, text.color, allChanged);
+		}
+		Log.Info("random: the " + id + " row at x " + num4.ToString("0") + ": box " + num2.ToString("0") + ", select " + num3.ToString("0") + ", room up to " + num.ToString("0") + ", font " + fontSize.ToString("0.#"));
 	}
 
 	private static RectTransform Body(NewGamePanelFrame frame)
@@ -239,9 +410,7 @@ internal static class RandomBoxes
 		{
 			specFrame = newGameSpecializationFrame;
 			RectTransform rectTransform = Body(newGameSpecializationFrame);
-			Rect rect = ContinueRect(newGameSpecializationFrame, rectTransform);
-			float y = rect.y + (rect.height - 32f) / 2f;
-			tradeBox = NewBox(rectTransform, "random_trade", Left, y, rect.x - Left - 24f, Lang.Tr("Random trade"), delegate(bool on)
+			Row(newGameSpecializationFrame, rectTransform, "trade", Lang.Tr("Random trade"), delegate(bool on)
 			{
 				if (Hosting)
 				{
@@ -252,11 +421,10 @@ internal static class RandomBoxes
 					JoinTrade = on;
 				}
 				SpecLook();
-			});
-			tradeForce = Hosting ? NewBox(rectTransform, "force_trade", rect.xMax + 24f, y, rectTransform.rect.width - rect.xMax - 24f - Left, Lang.Tr("Force on players who join"), delegate(bool on)
+			}, delegate(bool all)
 			{
-				HostForceTrade = on;
-			}) : null;
+				HostForceTrade = all;
+			}, out tradeBox, out tradeSelect);
 			Log.Info("random: boxes on the trade screen (" + (Hosting ? "host" : "joining player") + ")");
 		}
 		if (tradeBox != null)
@@ -265,10 +433,7 @@ internal static class RandomBoxes
 			tradeBox.Set(TradeOn);
 			tradeBox.Lock(flag);
 		}
-		if (tradeForce != null)
-		{
-			tradeForce.Set(HostForceTrade);
-		}
+		tradeSelect?.Set(HostForceTrade);
 		SpecLook();
 	}
 
@@ -284,9 +449,7 @@ internal static class RandomBoxes
 		{
 			perksFrame = newGamePerksFrame;
 			RectTransform rectTransform = Body(newGamePerksFrame);
-			Rect rect = ContinueRect(newGamePerksFrame, rectTransform);
-			float y = rect.y + (rect.height - 32f) / 2f;
-			perksBox = NewBox(rectTransform, "random_perks", Left, y, rect.x - Left - 24f, Lang.Tr("Random perks"), delegate(bool on)
+			Row(newGamePerksFrame, rectTransform, "perks", Lang.Tr("Random perks"), delegate(bool on)
 			{
 				if (Hosting)
 				{
@@ -297,11 +460,10 @@ internal static class RandomBoxes
 					JoinPerks = on;
 				}
 				PerksChanged(on);
-			});
-			perksForce = Hosting ? NewBox(rectTransform, "force_perks", rect.xMax + 24f, y, rectTransform.rect.width - rect.xMax - 24f - Left, Lang.Tr("Force on players who join"), delegate(bool on)
+			}, delegate(bool all)
 			{
-				HostForcePerks = on;
-			}) : null;
+				HostForcePerks = all;
+			}, out perksBox, out perksSelect);
 			Log.Info("random: boxes on the perk screen (" + (Hosting ? "host" : "joining player") + ")");
 		}
 		if (perksBox != null)
@@ -310,10 +472,7 @@ internal static class RandomBoxes
 			perksBox.Set(PerksOn);
 			perksBox.Lock(flag);
 		}
-		if (perksForce != null)
-		{
-			perksForce.Set(HostForcePerks);
-		}
+		perksSelect?.Set(HostForcePerks);
 		if (PerksOn)
 		{
 			PerksChanged(on: true);
@@ -324,26 +483,37 @@ internal static class RandomBoxes
 		}
 	}
 
-	/// A force box only for a shop of own trades, and only while the host's own is random.
+	/// The select only for a shop of own trades; it can be changed only while the host's own is random.
 	private static void ForceShown()
 	{
-		bool ownTrades = HostFlow.OwnTrades;
-		if (tradeForce != null)
+		bool flag = Hosting && HostFlow.OwnTrades;
+		// A screen closed since: its select is gone with it.
+		if (tradeSelect != null && (Object)(object)tradeSelect.Root == (Object)null)
 		{
-			tradeForce.Show(Hosting && ownTrades && HostTrade);
-			if (!HostTrade || !ownTrades)
+			tradeSelect = null;
+		}
+		if (perksSelect != null && (Object)(object)perksSelect.Root == (Object)null)
+		{
+			perksSelect = null;
+		}
+		if (tradeSelect != null)
+		{
+			tradeSelect.Show(flag);
+			tradeSelect.Enable(HostTrade);
+			if (!HostTrade || !flag)
 			{
 				HostForceTrade = false;
-				tradeForce.Set(on: false);
+				tradeSelect.Set(all: false);
 			}
 		}
-		if (perksForce != null)
+		if (perksSelect != null)
 		{
-			perksForce.Show(Hosting && ownTrades && HostPerks);
-			if (!HostPerks || !ownTrades)
+			perksSelect.Show(flag);
+			perksSelect.Enable(HostPerks);
+			if (!HostPerks || !flag)
 			{
 				HostForcePerks = false;
-				perksForce.Set(on: false);
+				perksSelect.Set(all: false);
 			}
 		}
 	}
@@ -480,7 +650,7 @@ internal static class RandomBoxes
 		{
 			return;
 		}
-		newGamePerksFrame.instruction.text = Lang.Tr("Your perks are dealt at random: three points' worth, good and bad mixed. You find out which once you are in the shop.") + ((!Hosting && RandomStarts.ForcePerks) ? (" " + Lang.Tr("This shop deals every new player's perks at random.")) : "");
+		newGamePerksFrame.instruction.text = (!Hosting && RandomStarts.ForcePerks) ? Lang.Tr("This shop deals every new player's perks at random: 3 points, good and bad mixed.") : Lang.Tr("Your perks are dealt at random when you continue: 3 points, good and bad mixed.");
 		newGamePerksFrame.instruction.color = NewGameStyle.DESCRIPTION;
 		newGamePerksFrame.continueButton.interactable = true;
 		NewGameUIElements.RefreshContinueLook(newGamePerksFrame, hovered: false);
@@ -494,7 +664,7 @@ internal static class RandomBoxes
 			if (force)
 			{
 				HostForceTrade = true;
-				tradeForce?.Set(on: true);
+				tradeSelect?.Set(all: true);
 			}
 			else if (Hosting)
 			{
@@ -510,7 +680,7 @@ internal static class RandomBoxes
 		if (force)
 		{
 			HostForcePerks = true;
-			perksForce?.Set(on: true);
+			perksSelect?.Set(all: true);
 		}
 		else if (Hosting)
 		{
