@@ -76,6 +76,8 @@ internal static partial class HostPanels
 
 	private const float RowsTop = 130f;
 
+	private const float BarRoom = 30f;
+
 	private static ScrollRect revealScroll;
 
 	/// Lab: scrolls the reveal (1 top, 0 bottom).
@@ -90,7 +92,7 @@ internal static partial class HostPanels
 	/// A thin track and a framed handle, in the colours of the game's credits scroll bar.
 	private static Scrollbar RevealBar(Panel p, float height)
 	{
-		float num = Left + Width + 14f;
+		float num = Left + Width - BarRoom + 12f;
 		NewGameUIElements.NewImage(p.Body, "rows_track", num + 6f, RowsTop, 2f, height, null, NewGameStyle.CREDITS_SCROLL_TRACK);
 		RectTransform rectTransform = NewGameUIElements.NewRect(p.Body, "rows_bar", num, RowsTop, 14f, height);
 		RectTransform rectTransform2 = NewGameUIElements.NewRect(rectTransform, "area", 0f, 0f, 14f, height);
@@ -118,29 +120,14 @@ internal static partial class HostPanels
 		return scrollbar;
 	}
 
-	/// Only what was dealt: the trade, the perks, or both. One OK button.
-	internal static void OpenReveal(string trade, IList<string> perks, Action onClosed, string layer)
+	/// The trade's and the perks' rows from the top of `rows`, `width` wide; returns their height.
+	private static float BuildRows(Panel p, RectTransform rows, string trade, IList<string> perks, List<StartingPerk> list, float width)
 	{
-		CloseMessage(RevealWindow);
-		Panel p = Open(RevealWindow, Lang.Tr("Dealt at Random"), delegate
-		{
-			CloseMessage(RevealWindow);
-		}, layer);
-		messages[RevealWindow] = p;
 		const float Icon = 64f;
 		const float Gap = 20f;
+		const float num = 18f;
 		float textX = Left + Icon + Gap;
-		float textW = Width - Icon - Gap;
-		List<StartingPerk> list = (perks ?? new string[0]).Select(Perks.Def).Where((StartingPerk d) => d != null).ToList();
-		float num = 18f;
-		// The rows scroll when they are longer than the space over the line above OK.
-		float num5 = Mathf.Max(200f, ContinueRect(p).y - 34f - RowsTop);
-		RectTransform rectTransform = NewGameUIElements.NewRect(p.Body, "rows_view", 0f, RowsTop, p.Body.rect.width, num5);
-		Image image0 = rectTransform.gameObject.AddComponent<Image>();
-		image0.color = new Color(0f, 0f, 0f, 0f);
-		image0.raycastTarget = true;
-		rectTransform.gameObject.AddComponent<RectMask2D>();
-		RectTransform rows = NewGameUIElements.NewRect(rectTransform, "rows", 0f, 0f, p.Body.rect.width, num5);
+		float textW = width - Icon - Gap;
 		float y = 10f;
 		StartingScenario startingScenario = null;
 		if (Enum.TryParse<NewGameData.StartType>(trade ?? "", ignoreCase: true, out var result))
@@ -149,7 +136,7 @@ internal static partial class HostPanels
 		}
 		if (startingScenario != null)
 		{
-			Text(p, rows, "tradehead", Left, y, Width, 26f, Lang.Tr("Your trade"), 20f, NewGameStyle.DIFF_OPTION_LABEL, wrap: false, TextAlignmentOptions.MidlineLeft);
+			Text(p, rows, "tradehead", Left, y, width, 26f, Lang.Tr("Your trade"), 20f, NewGameStyle.DIFF_OPTION_LABEL, wrap: false, TextAlignmentOptions.MidlineLeft);
 			y += 42f;
 			Sprite sprite = TradeIcon(startingScenario);
 			if ((Object)(object)sprite != (Object)null)
@@ -177,20 +164,20 @@ internal static partial class HostPanels
 		}
 		else if (trade != null)
 		{
-			Text(p, rows, "tradename", Left, y, Width, 34f, Lang.Trf("Your trade: {0}", Specs.Label(trade)), 24f, NewGameStyle.TITLE, wrap: false, TextAlignmentOptions.MidlineLeft);
+			Text(p, rows, "tradename", Left, y, width, 34f, Lang.Trf("Your trade: {0}", Specs.Label(trade)), 24f, NewGameStyle.TITLE, wrap: false, TextAlignmentOptions.MidlineLeft);
 			y += 50f;
 		}
 		if (perks != null)
 		{
 			if (startingScenario != null || trade != null)
 			{
-				NewGameUIElements.NewImage(rows, "rule", Left, y - 14f, Width, 2f, null, NewGameStyle.SEPARATOR);
+				NewGameUIElements.NewImage(rows, "rule", Left, y - 14f, width, 2f, null, NewGameStyle.SEPARATOR);
 			}
-			Text(p, rows, "perkshead", Left, y, Width, 26f, (list.Count > 0) ? Lang.Trf("Your perks ({0})", CostLabel(Perks.Points(list.Select((StartingPerk d) => d.id)))) : Lang.Tr("Your perks"), 20f, NewGameStyle.DIFF_OPTION_LABEL, wrap: false, TextAlignmentOptions.MidlineLeft);
+			Text(p, rows, "perkshead", Left, y, width, 26f, (list.Count > 0) ? Lang.Trf("Your perks ({0})", CostLabel(Perks.Points(list.Select((StartingPerk d) => d.id)))) : Lang.Tr("Your perks"), 20f, NewGameStyle.DIFF_OPTION_LABEL, wrap: false, TextAlignmentOptions.MidlineLeft);
 			y += 42f;
 			if (list.Count == 0)
 			{
-				Text(p, rows, "noperks", Left, y, Width, 30f, Lang.Tr("None: the dice dealt you no perks."), 20f, NewGameStyle.DESCRIPTION, wrap: false, TextAlignmentOptions.MidlineLeft);
+				Text(p, rows, "noperks", Left, y, width, 30f, Lang.Tr("None: the dice dealt you no perks."), 20f, NewGameStyle.DESCRIPTION, wrap: false, TextAlignmentOptions.MidlineLeft);
 				y += 40f;
 			}
 			for (int i = 0; i < list.Count; i++)
@@ -209,6 +196,37 @@ internal static partial class HostPanels
 				Text(p, rows, "perkdesc" + i, textX, y + 30f, textW, num3, text, num, NewGameStyle.DESCRIPTION, wrap: true);
 				y += Mathf.Max(Icon, 30f + num3) + 14f;
 			}
+		}
+		return y;
+	}
+
+	/// Only what was dealt: the trade, the perks, or both. One OK button.
+	internal static void OpenReveal(string trade, IList<string> perks, Action onClosed, string layer)
+	{
+		CloseMessage(RevealWindow);
+		Panel p = Open(RevealWindow, Lang.Tr("Dealt at Random"), delegate
+		{
+			CloseMessage(RevealWindow);
+		}, layer);
+		messages[RevealWindow] = p;
+		List<StartingPerk> list = (perks ?? new string[0]).Select(Perks.Def).Where((StartingPerk d) => d != null).ToList();
+		// The rows scroll when they are longer than the space over the line above OK.
+		float num5 = Mathf.Max(200f, ContinueRect(p).y - 34f - RowsTop);
+		RectTransform rectTransform = NewGameUIElements.NewRect(p.Body, "rows_view", 0f, RowsTop, p.Body.rect.width, num5);
+		Image image0 = rectTransform.gameObject.AddComponent<Image>();
+		image0.color = new Color(0f, 0f, 0f, 0f);
+		image0.raycastTarget = true;
+		rectTransform.gameObject.AddComponent<RectMask2D>();
+		RectTransform rows = NewGameUIElements.NewRect(rectTransform, "rows", 0f, 0f, p.Body.rect.width, num5);
+		float y = BuildRows(p, rows, trade, perks, list, Width);
+		if (y + 6f > num5)
+		{
+			// Scrolls: the rows make room for the bar, inside the panel's frame.
+			for (int i = rows.childCount - 1; i >= 0; i--)
+			{
+				Object.DestroyImmediate(rows.GetChild(i).gameObject);
+			}
+			y = BuildRows(p, rows, trade, perks, list, Width - BarRoom);
 		}
 		float num6 = y + 6f;
 		rows.sizeDelta = new Vector2(rows.sizeDelta.x, Mathf.Max(num5, num6));
