@@ -125,6 +125,8 @@ internal static class ServerMode
 		Systems.Members.ServerReset();
 		Systems.Outings.Individual = cfg.individualOutings;
 		Systems.Bays.Enabled = cfg.playerOwnership;
+		Systems.RandomStarts.ForceTrade = cfg.playerOwnership && cfg.forceRandomTrade;
+		Systems.RandomStarts.ForcePerks = cfg.playerOwnership && cfg.forceRandomPerks;
 		Net.LocalPlayer = 0;
 		if (!Server.Start(cfg))
 		{
@@ -337,6 +339,7 @@ internal static class ServerMode
 			{
 				ConfigureNewRun(instance);
 			}
+			Systems.RandomStarts.Founding(instance, cfg.newRun.randomTrade, cfg.newRun.randomPerks);
 			Log.Info("server: no save in slot " + cfg.saveSlot + "; starting a new run (" + instance.startType.ToString() + ", " + instance.difficultyId + ", skip intro " + instance.skipIntro + ")");
 		}
 		BeginLoad();
@@ -419,6 +422,8 @@ internal static class ServerMode
 			o["playerOwnership"] = new Newtonsoft.Json.Linq.JValue(cfg.playerOwnership);
 			o["customersPerPlayer"] = new Newtonsoft.Json.Linq.JValue(cfg.customersPerPlayer);
 			o["rentPercentPerPlayer"] = new Newtonsoft.Json.Linq.JValue((long)cfg.rentPercentPerPlayer);
+			o["forceRandomTrade"] = new Newtonsoft.Json.Linq.JValue(cfg.forceRandomTrade);
+			o["forceRandomPerks"] = new Newtonsoft.Json.Linq.JValue(cfg.forceRandomPerks);
 			if (Systems.DayNightRun.RunOver)
 			{
 				o["ended"] = new Newtonsoft.Json.Linq.JValue(Systems.DayNightRun.Ending ?? "");
@@ -672,6 +677,7 @@ internal static class ServerMode
 		Ending = "";
 		Server.ShopReady = false;
 		ConfigureNewRun(instance);
+		Systems.RandomStarts.NewRunFounder(instance);
 		Snapshot.SuppressRotate = true;
 		newRun = true;
 		inPlace = true;

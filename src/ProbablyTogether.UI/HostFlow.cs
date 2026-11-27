@@ -35,6 +35,9 @@ internal static class HostFlow
 
 	private static HostPanels.Rules pending;
 
+	/// The new shop's rules give every player a trade of their own.
+	internal static bool OwnTrades => pending?.OwnTrades ?? true;
+
 	private static bool syncing;
 
 	private static bool moving;
@@ -330,6 +333,7 @@ internal static class HostFlow
 		{
 			Slot = -1;
 			MorningFile = null;
+			RandomBoxes.ResetHost();
 			NewGameData.Instance.saveSlot = -1;
 			NewGameData.Instance.saveFile = null;
 			LoadGameUI.Close();
@@ -469,7 +473,7 @@ internal static class HostFlow
 				Name = HostMenu.DefaultShopName()
 			};
 			string scenario = instance.startType.ToString();
-			if (!ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, scenario, StringComparison.OrdinalIgnoreCase)))
+			if (!RandomBoxes.HostTrade && !ServerMode.PlayableScenarioList().Any((KeyValuePair<string, string> s) => string.Equals(s.Key, scenario, StringComparison.OrdinalIgnoreCase)))
 			{
 				return Lang.Tr("That trade cannot start a shared shop. Pick another.");
 			}
@@ -479,7 +483,11 @@ internal static class HostFlow
 			jObject2["scenario"] = new JValue(scenario);
 			jObject2["difficulty"] = new JValue(string.IsNullOrEmpty(instance.difficultyId) ? "normal" : instance.difficultyId);
 			jObject2["skipIntro"] = new JValue(instance.skipIntro);
+			jObject2["randomTrade"] = new JValue(RandomBoxes.HostTrade);
+			jObject2["randomPerks"] = new JValue(RandomBoxes.HostPerks);
 			jObject["newRun"] = jObject2;
+			jObject["forceRandomTrade"] = new JValue(rules.OwnTrades && RandomBoxes.HostTrade && RandomBoxes.HostForceTrade);
+			jObject["forceRandomPerks"] = new JValue(rules.OwnTrades && RandomBoxes.HostPerks && RandomBoxes.HostForcePerks);
 			jObject["endless"] = new JValue(instance.endlessMode);
 		}
 		else
@@ -497,6 +505,9 @@ internal static class HostFlow
 				CustomersPerPlayer = ((double?)jObject3["customersPerPlayer"]) ?? ((double?)jObject["customersPerPlayer"]) ?? 2.0,
 				RentPercentPerPlayer = ((int?)jObject3["rentPercentPerPlayer"]) ?? ((int?)jObject["rentPercentPerPlayer"]) ?? 50
 			};
+			// A shop's own rule; shops from before it deal nothing at random.
+			jObject["forceRandomTrade"] = new JValue(((bool?)jObject3["forceRandomTrade"]) ?? false);
+			jObject["forceRandomPerks"] = new JValue(((bool?)jObject3["forceRandomPerks"]) ?? false);
 		}
 		int port = ((int?)jObject["port"]) ?? 27700;
 		if (!HostPanels.PortFree(port))
@@ -521,7 +532,7 @@ internal static class HostFlow
 		Reached++;
 		Paths.KeepSettings = true;
 		Net.Role = Role.Host;
-		Log.Info("host: starting from the flow: '" + text + "' on port " + port + ", " + rules.Players + " player(s), slot " + num + (flag ? (" (new: " + instance.startType.ToString() + ", " + instance.difficultyId + ", " + ((instance.startingPerks != null) ? instance.startingPerks.Count : 0) + " perk(s))") : ((MorningFile != null) ? (" (continue from " + MorningFile + ")") : " (continue)")) + ", own trades " + rules.OwnTrades + ", solo trips " + rules.SoloTrips);
+		Log.Info("host: starting from the flow: '" + text + "' on port " + port + ", " + rules.Players + " player(s), slot " + num + (flag ? (" (new: " + instance.startType.ToString() + ", " + instance.difficultyId + ", " + ((instance.startingPerks != null) ? instance.startingPerks.Count : 0) + " perk(s))") : ((MorningFile != null) ? (" (continue from " + MorningFile + ")") : " (continue)")) + ", own trades " + rules.OwnTrades + ", solo trips " + rules.SoloTrips + (flag ? (", random trade " + RandomBoxes.HostTrade + " (forced " + (bool)jObject["forceRandomTrade"] + "), random perks " + RandomBoxes.HostPerks + " (forced " + (bool)jObject["forceRandomPerks"] + ")") : ""));
 		LoadingScreen.HostStarting = true;
 		// Keep the menu's choices (founder's perks, a mod's difficulty) instead of the server's defaults.
 		ServerMode.KeepMenuChoices = flag;
