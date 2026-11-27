@@ -376,6 +376,7 @@ internal static class HostFlow
 			Slot = -1;
 			MorningFile = null;
 			versusFlow = true;
+			RandomBoxes.ResetHost();
 			NewGameData.Instance.saveSlot = -1;
 			NewGameData.Instance.saveFile = null;
 			LoadGameUI.Close();
@@ -487,6 +488,10 @@ internal static class HostFlow
 		{
 			return text3;
 		}
+		Systems.Versus.Rules.randomTrade = RandomBoxes.HostTrade && RandomBoxes.HostForceTrade;
+		Systems.Versus.Rules.randomPerks = RandomBoxes.HostPerks && RandomBoxes.HostForcePerks;
+		Systems.Versus.SetHostRandom(RandomBoxes.HostTrade, RandomBoxes.HostPerks);
+		Log.Info("host: versus run: the host's own trade " + (RandomBoxes.HostTrade ? "at random" : "picked") + ", perks " + (RandomBoxes.HostPerks ? "at random" : "picked") + "; random for every player: trade " + Systems.Versus.Rules.randomTrade + ", perks " + Systems.Versus.Rules.randomPerks);
 		Reached++;
 		Active = false;
 		Slot = 0;

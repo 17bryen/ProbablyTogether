@@ -284,7 +284,7 @@ internal static class RandomReveal
 		List<string> showPerks = RandomStarts.ShowPerks;
 		try
 		{
-			if (!Net.IsOnline || !Net.IsLive || !Game.ShopLoaded || Snapshot.IsLoading || PerkScreens.Covering || Repick.Mine.Length > 0 || !HostPanels.Available || HostPanels.MessageOpen(HostPanels.RevealWindow) || LoadingScreen.Visible)
+			if ((!Net.Versus && (!Net.IsOnline || !Net.IsLive)) || (Net.Versus && !Versus.ShopUp) || !Game.ShopLoaded || Snapshot.IsLoading || PerkScreens.Covering || Repick.Mine.Length > 0 || !HostPanels.Available || HostPanels.MessageOpen(HostPanels.RevealWindow) || LoadingScreen.Visible)
 			{
 				return;
 			}

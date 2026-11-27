@@ -160,6 +160,26 @@ public static class RandomStarts
 		}
 	}
 
+	/// Versus: this copy deals its own player's trade and perks for a shop of their own, and shows them once it is up.
+	internal static void DealOwn(NewGameData ngd, bool trade, bool perks)
+	{
+		if (trade)
+		{
+			string text = DrawTrade(Math.Max(1, Net.LocalPlayer), founding: true);
+			if (text != null && Enum.TryParse<NewGameData.StartType>(text, ignoreCase: true, out var result))
+			{
+				SetScenario(ngd, result);
+				ShowTrade = text;
+			}
+		}
+		if (perks)
+		{
+			List<string> list = DrawPerks(Math.Max(1, Net.LocalPlayer), (string _) => null);
+			ngd.startingPerks = list.Select(Perks.Def).Where((StartingPerk p) => p != null).ToList();
+			ShowPerks = list;
+		}
+	}
+
 	private static void SetScenario(NewGameData ngd, NewGameData.StartType type)
 	{
 		ngd.startType = type;

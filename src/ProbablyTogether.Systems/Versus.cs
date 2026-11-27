@@ -30,6 +30,11 @@ public sealed class VsRules
 	public int lobbyDay = 1;
 
 	public bool ended;
+
+	/// Every player's trade, perks, are dealt at random on their own copy.
+	public bool randomTrade;
+
+	public bool randomPerks;
 }
 
 public sealed class VsRow
@@ -232,6 +237,11 @@ public static class Versus
 
 	internal static bool NightAllowed;
 
+	/// What this copy's own shop was dealt at random (null: picked).
+	internal static string DealtTrade;
+
+	internal static List<string> DealtPerks;
+
 	internal static int NightsRun;
 
 	internal static int NightsForced;
@@ -257,6 +267,14 @@ public static class Versus
 	internal static bool LocalReady => localReady;
 
 	internal static bool ShopUp => shopUp;
+
+	/// A joiner on the game's new-game screens for their own shop.
+	internal static bool Picking => picking && !loadStarted;
+
+	/// The host's own trade, perks, dealt at random (its own choice; the rules' force applies to the others).
+	private static bool hostRandomTrade;
+
+	private static bool hostRandomPerks;
 
 	internal static string RunFolder => runFolder;
 
@@ -301,8 +319,18 @@ public static class Versus
 			Log.Error("versus: the run could not start: " + why);
 			return;
 		}
+		Rules.randomTrade = cfg.forceRandomTrade;
+		Rules.randomPerks = cfg.forceRandomPerks;
+		SetHostRandom(cfg.newRun.randomTrade || cfg.forceRandomTrade, cfg.newRun.randomPerks || cfg.forceRandomPerks);
+		WriteRun();
 		autoScenario = cfg.newRun.scenario;
 		autoPerks = Args.Get("--br-versus-perks");
+	}
+
+	internal static void SetHostRandom(bool trade, bool perks)
+	{
+		hostRandomTrade = trade;
+		hostRandomPerks = perks;
 	}
 
 	private static string autoScenario;
@@ -317,6 +345,8 @@ public static class Versus
 		bool flag = baseFolder == null;
 		string text0 = Paths.Override;
 		Reset();
+		hostRandomTrade = false;
+		hostRandomPerks = false;
 		Rules = new VsRules
 		{
 			run = "vs-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture),
@@ -385,6 +415,9 @@ public static class Versus
 			Rules.run = "vs-unnamed";
 		}
 		UseRunFolder(Paths.Root, Paths.Override);
+		RandomStarts.ForceTrade = Rules.randomTrade;
+		RandomStarts.ForcePerks = Rules.randomPerks;
+		ProbablyTogether.UI.RandomBoxes.ResetJoin();
 		try
 		{
 			ProbablyTogether.UI.JoinMenu.OnJoined();
@@ -392,7 +425,7 @@ public static class Versus
 		catch
 		{
 		}
-		Log.Info("versus: joined run " + Rules.run + " '" + Rules.name + "' on lobby day " + Rules.lobbyDay + " of " + Rules.days + " (difficulty " + Rules.difficulty + ", bedtime timer " + Rules.bedSeconds + " s); folder " + runFolder);
+		Log.Info("versus: joined run " + Rules.run + " '" + Rules.name + "' on lobby day " + Rules.lobbyDay + " of " + Rules.days + " (difficulty " + Rules.difficulty + ", bedtime timer " + Rules.bedSeconds + " s" + (Rules.randomTrade ? ", random trades" : "") + (Rules.randomPerks ? ", random perks" : "") + "); folder " + runFolder);
 		string text = Args.Get("--br-versus-scenario");
 		if (!string.IsNullOrEmpty(text))
 		{
@@ -442,6 +475,11 @@ public static class Versus
 		instance.isLoadFromMainMenu = false;
 		instance.disableTutorialHint = true;
 		instance.difficultyId = Rules.difficulty;
+		bool flag = Net.LinkHost ? hostRandomTrade : (ProbablyTogether.UI.RandomBoxes.TradeOn || Rules.randomTrade);
+		bool flag2 = Net.LinkHost ? hostRandomPerks : (ProbablyTogether.UI.RandomBoxes.PerksOn || Rules.randomPerks);
+		RandomStarts.DealOwn(instance, flag, flag2);
+		DealtTrade = flag ? instance.startType.ToString() : null;
+		DealtPerks = flag2 ? (instance.startingPerks ?? new List<StartingPerk>()).Select((StartingPerk p) => p.id).ToList() : null;
 		picking = false;
 		loadStarted = true;
 		Log.Info("versus: our own shop starts (" + instance.startType.ToString() + ", " + instance.difficultyId + ", " + ((instance.startingPerks != null) ? instance.startingPerks.Count : 0) + " perk(s))");
@@ -1435,6 +1473,8 @@ public static class Versus
 			RestoreFolders();
 			Reset();
 			Rules = null;
+			RandomStarts.ForceTrade = false;
+			RandomStarts.ForcePerks = false;
 		}
 	}
 }

@@ -103,7 +103,7 @@ internal static class RandomBoxes
 
 	private static bool Hosting => HostFlow.Active;
 
-	private static bool Joining => !HostFlow.Active && PerkScreens.Covering;
+	private static bool Joining => !HostFlow.Active && (PerkScreens.Covering || Versus.Picking);
 
 	internal static bool TradeOn => Hosting ? HostTrade : (Joining && (JoinTrade || RandomStarts.ForceTrade));
 
