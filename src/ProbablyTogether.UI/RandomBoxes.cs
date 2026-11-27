@@ -357,12 +357,87 @@ internal static class RandomBoxes
 	}
 
 	/// The Random box and, for the host, its select, left of Continue on the button line.
-	private static void Row(NewGamePanelFrame frame, RectTransform body, string id, string label, Action<bool> randomChanged, Action<bool> allChanged, out Box box, out Select select)
+	private static void Corners(RectTransform r, RectTransform body, out float left, out float top, out float bottom)
+	{
+		Vector3[] array = new Vector3[4];
+		r.GetWorldCorners(array);
+		left = body.InverseTransformPoint(array[1]).x;
+		top = 0f - body.InverseTransformPoint(array[1]).y;
+		bottom = 0f - body.InverseTransformPoint(array[0]).y;
+	}
+
+	/// Just over the line over Continue, as far from it as the line is from the button. What the screen has there
+	/// (the trade screen's warning, the perk screen's counters) moves up a row, not into what is above it.
+	/// roomy: a tall host whose own content sits at its top (the trade's "Start with" list), not in the way.
+	private static float PlaceRow(NewGamePanelFrame frame, RectTransform body, Rect cont, RectTransform roomy)
+	{
+		float num = -1f;
+		foreach (Image componentsInChild in frame.panel.GetComponentsInChildren<Image>(includeInactive: false))
+		{
+			RectTransform rectTransform = componentsInChild.rectTransform;
+			if (rectTransform.rect.height <= 3f && rectTransform.rect.width >= 500f && !rectTransform.IsChildOf(body))
+			{
+				Corners(rectTransform, body, out var _, out var top, out var _);
+				if (top < cont.y && top > num)
+				{
+					num = top;
+				}
+			}
+		}
+		if (num < 0f)
+		{
+			return cont.y - RowHeight - 16f;
+		}
+		float num2 = Mathf.Max(8f, cont.y - num - 2f);
+		float num3 = num - num2 - RowHeight;
+		List<RectTransform> list = new List<RectTransform>();
+		float num4 = float.MinValue;
+		float num5 = float.MaxValue;
+		List<KeyValuePair<float, float>> list2 = new List<KeyValuePair<float, float>>();
+		foreach (Transform item in frame.panel)
+		{
+			RectTransform rectTransform2 = item as RectTransform;
+			if ((Object)(object)rectTransform2 == (Object)null || (Object)(object)rectTransform2 == (Object)(object)body || !item.gameObject.activeSelf || rectTransform2.rect.height <= 3f)
+			{
+				continue;
+			}
+			Corners(rectTransform2, body, out var _, out var top2, out var bottom);
+			if (top2 >= num3 - 40f && top2 < num && bottom <= num + 1f)
+			{
+				list.Add(rectTransform2);
+				num4 = Mathf.Max(num4, bottom);
+				num5 = Mathf.Min(num5, top2);
+			}
+			else if ((Object)(object)rectTransform2 != (Object)(object)roomy)
+			{
+				list2.Add(new KeyValuePair<float, float>(top2, bottom));
+			}
+		}
+		if (list.Count > 0)
+		{
+			float num6 = num4 - (num3 - 8f);
+			float num7 = list2.Where((KeyValuePair<float, float> p) => p.Value <= num5).Select((KeyValuePair<float, float> p) => p.Value).DefaultIfEmpty(0f).Max();
+			num6 = Mathf.Min(num6, Mathf.Max(0f, num5 - num7 - 6f));
+			if (num6 > 0f)
+			{
+				foreach (RectTransform item2 in list)
+				{
+					item2.anchoredPosition += new Vector2(0f, num6 / Mathf.Max(0.01f, item2.lossyScale.y / body.lossyScale.y));
+				}
+			}
+			Log.Info("random: " + list.Count + " thing(s) over the line moved up " + num6.ToString("0") + " for the row");
+		}
+		return num3;
+	}
+
+	/// The Random box and, for the host, its select: in the text column, just over the line over Continue.
+	private static void Row(NewGamePanelFrame frame, RectTransform body, RectTransform column, RectTransform roomy, string id, string label, Action<bool> randomChanged, Action<bool> allChanged, out Box box, out Select select)
 	{
 		Rect rect = ContinueRect(frame, body);
-		float y = rect.y + (rect.height - RowHeight) / 2f;
-		float num = rect.x - 24f;
-		box = NewBox(body, "random_" + id, Left, y, num - Left, label, randomChanged);
+		Corners(column, body, out var left, out var _, out var _);
+		float num = Mathf.Max(20f, left);
+		float y = PlaceRow(frame, body, rect, roomy);
+		box = NewBox(body, "random_" + id, num, y, 400f, label, randomChanged);
 		select = null;
 		if (box == null || (Object)(object)box.Text == (Object)null)
 		{
@@ -371,20 +446,14 @@ internal static class RandomBoxes
 		TextMeshProUGUI text = box.Text;
 		float fontSize = text.fontSize;
 		float num2 = 44f + Mathf.Ceil(text.GetPreferredValues(label).x) + 2f;
-		float num3 = 0f;
+		WildNetworkUI.SetRect((RectTransform)box.Root.transform, num, y, num2, RowHeight);
+		WildNetworkUI.SetRect(text.rectTransform, 44f, 0f, num2 - 44f, RowHeight);
 		if (Hosting)
 		{
-			num3 = Mathf.Ceil(Mathf.Max(text.GetPreferredValues(Lang.Tr("For Yourself")).x, text.GetPreferredValues(Lang.Tr("For All Players")).x)) + 48f;
+			float width = Mathf.Ceil(Mathf.Max(text.GetPreferredValues(Lang.Tr("For Yourself")).x, text.GetPreferredValues(Lang.Tr("For All Players")).x)) + 48f;
+			select = NewSelect(frame, body, "all_" + id, num + num2 + BoxGap, y, width, fontSize, text.color, allChanged);
 		}
-		// Starts where the panel's text starts, or further left when the row needs the room.
-		float num4 = Mathf.Clamp(num - num2 - ((num3 > 0f) ? (BoxGap + num3) : 0f), 30f, Left);
-		WildNetworkUI.SetRect((RectTransform)box.Root.transform, num4, y, num2, RowHeight);
-		WildNetworkUI.SetRect(text.rectTransform, 44f, 0f, num2 - 44f, RowHeight);
-		if (num3 > 0f)
-		{
-			select = NewSelect(frame, body, "all_" + id, num4 + num2 + BoxGap, y, Mathf.Min(num3, num - num4 - num2 - BoxGap), fontSize, text.color, allChanged);
-		}
-		Log.Info("random: the " + id + " row at x " + num4.ToString("0") + ": box " + num2.ToString("0") + ", select " + num3.ToString("0") + ", room up to " + num.ToString("0") + ", font " + fontSize.ToString("0.#"));
+		Log.Info("random: the " + id + " row at " + num.ToString("0") + "," + y.ToString("0") + ", Continue at " + rect.y.ToString("0"));
 	}
 
 	private static RectTransform Body(NewGamePanelFrame frame)
@@ -410,7 +479,7 @@ internal static class RandomBoxes
 		{
 			specFrame = newGameSpecializationFrame;
 			RectTransform rectTransform = Body(newGameSpecializationFrame);
-			Row(newGameSpecializationFrame, rectTransform, "trade", Lang.Tr("Random trade"), delegate(bool on)
+			Row(newGameSpecializationFrame, rectTransform, newGameSpecializationFrame.description.rectTransform, newGameSpecializationFrame.bulletsHost, "trade", Lang.Tr("Random trade"), delegate(bool on)
 			{
 				if (Hosting)
 				{
@@ -449,7 +518,7 @@ internal static class RandomBoxes
 		{
 			perksFrame = newGamePerksFrame;
 			RectTransform rectTransform = Body(newGamePerksFrame);
-			Row(newGamePerksFrame, rectTransform, "perks", Lang.Tr("Random perks"), delegate(bool on)
+			Row(newGamePerksFrame, rectTransform, newGamePerksFrame.instruction.rectTransform, null, "perks", Lang.Tr("Random perks"), delegate(bool on)
 			{
 				if (Hosting)
 				{
