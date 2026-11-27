@@ -310,7 +310,11 @@ internal static class ShotTour
 			break;
 		// The host asks to leave.
 		case 16:
-			if (random && Since > 1.5f && HostPanels.MessageOpen(HostPanels.RevealWindow))
+			if (random && longReveal < 4)
+			{
+				LongReveal();
+			}
+			else if (random && Since > 1.5f && HostPanels.MessageOpen(HostPanels.RevealWindow))
 			{
 				HostPanels.CloseMessage(HostPanels.RevealWindow);
 				at = Time.realtimeSinceStartup;
@@ -726,6 +730,49 @@ internal static class ShotTour
 			{
 				Shot("join-back-in-the-shop");
 				Next();
+			}
+			break;
+		}
+	}
+
+	private static int longReveal;
+
+	/// The reveal of a long deal (a trade and seven perks, shown only, not dealt): at the top, then scrolled down.
+	private static void LongReveal()
+	{
+		switch (longReveal)
+		{
+		case 0:
+			if (Since > 1.5f)
+			{
+				HostPanels.CloseMessage(HostPanels.RevealWindow);
+				HostPanels.OpenReveal("GUNSMITH", new string[7] { "colorful_character", "aug_menace", "sentinel", "welfare_program", "secret_admirer", "gambling_addiction", "sawyer_crew" }, null, "meta");
+				longReveal = 1;
+				at = Time.realtimeSinceStartup;
+			}
+			break;
+		case 1:
+			if (Since > 2.5f)
+			{
+				Shot("host-long-reveal-top");
+				longReveal = 2;
+				at = Time.realtimeSinceStartup;
+			}
+			break;
+		case 2:
+			if (Since > 1f)
+			{
+				HostPanels.LabScrollReveal(0f);
+				longReveal = 3;
+				at = Time.realtimeSinceStartup;
+			}
+			break;
+		case 3:
+			if (Since > 1.5f)
+			{
+				Shot("host-long-reveal-bottom");
+				longReveal = 4;
+				at = Time.realtimeSinceStartup;
 			}
 			break;
 		}
