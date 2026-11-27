@@ -369,8 +369,11 @@ internal static class RandomBoxes
 	/// Just over the line over Continue, as far from it as the line is from the button. What the screen has there
 	/// (the trade screen's warning, the perk screen's counters) moves up a row, not into what is above it.
 	/// roomy: a tall host whose own content sits at its top (the trade's "Start with" list), not in the way.
-	private static float PlaceRow(NewGamePanelFrame frame, RectTransform body, Rect cont, RectTransform roomy)
+	private static float PlaceRow(NewGamePanelFrame frame, RectTransform body, Rect cont, RectTransform roomy, out float movedTop, out float movedBottom, out float lineTop)
 	{
+		movedTop = -1f;
+		movedBottom = -1f;
+		lineTop = -1f;
 		float num = -1f;
 		foreach (Image componentsInChild in frame.panel.GetComponentsInChildren<Image>(includeInactive: false))
 		{
@@ -388,6 +391,7 @@ internal static class RandomBoxes
 		{
 			return cont.y - RowHeight - 16f;
 		}
+		lineTop = num;
 		float num2 = Mathf.Max(8f, cont.y - num - 2f);
 		float num3 = num - num2 - RowHeight;
 		List<RectTransform> list = new List<RectTransform>();
@@ -425,9 +429,35 @@ internal static class RandomBoxes
 					item2.anchoredPosition += new Vector2(0f, num6 / Mathf.Max(0.01f, item2.lossyScale.y / body.lossyScale.y));
 				}
 			}
+			movedTop = num5 - Mathf.Max(0f, num6);
+			movedBottom = num4 - Mathf.Max(0f, num6);
 			Log.Info("random: " + list.Count + " thing(s) over the line moved up " + num6.ToString("0") + " for the row");
 		}
 		return num3;
+	}
+
+	private static void CentreSelected(NewGamePerksFrame frame, RectTransform body, float countersTop)
+	{
+		try
+		{
+			Corners(frame.selectedLabel.rectTransform, body, out var _, out var _, out var bottom);
+			Corners(frame.selectedSlots, body, out var _, out var top, out var _);
+			// A selected perk's slot is 72 high, built at the top of its row.
+			float num = bottom + (countersTop - bottom - 72f) / 2f - top;
+			foreach (Component item in new Component[3] { frame.selectedSlots, frame.selectedPrevButton, frame.selectedNextButton })
+			{
+				RectTransform rectTransform = ((Object)(object)item != (Object)null) ? (item.transform as RectTransform) : null;
+				if ((Object)(object)rectTransform != (Object)null)
+				{
+					rectTransform.anchoredPosition -= new Vector2(0f, num / Mathf.Max(0.01f, rectTransform.lossyScale.y / body.lossyScale.y));
+				}
+			}
+			Log.Info("random: the selected perks moved " + num.ToString("0") + " (heading ends " + bottom.ToString("0") + ", counters start " + countersTop.ToString("0") + ")");
+		}
+		catch (Exception ex)
+		{
+			Log.Warn("random: placing the selected perks threw: " + ex.Message);
+		}
 	}
 
 	/// The Random box and, for the host, its select: in the text column, just over the line over Continue.
@@ -436,7 +466,13 @@ internal static class RandomBoxes
 		Rect rect = ContinueRect(frame, body);
 		Corners(column, body, out var left, out var _, out var _);
 		float num = Mathf.Max(20f, left);
-		float y = PlaceRow(frame, body, rect, roomy);
+		float y = PlaceRow(frame, body, rect, roomy, out var movedTop, out var movedBottom, out var lineTop);
+		if (frame is NewGamePerksFrame perks && movedBottom > 0f && lineTop > movedBottom)
+		{
+			// Midway between the counters and the line; the selected perks midway between their heading and the counters.
+			y = movedBottom + (lineTop - movedBottom - RowHeight) / 2f;
+			CentreSelected(perks, body, movedTop);
+		}
 		box = NewBox(body, "random_" + id, num, y, 400f, label, randomChanged);
 		select = null;
 		if (box == null || (Object)(object)box.Text == (Object)null)
